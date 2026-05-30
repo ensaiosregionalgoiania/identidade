@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Membro - Identidade Ministerial</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-header h2 {
+            font-size: 1.3rem;
+        }
+
+        .btn-voltar {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .card-body {
+            padding: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .select-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .select-wrapper select {
+            flex: 1;
+        }
+
+        .btn-add {
+            background: #27ae60;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn-add:hover {
+            background: #219a52;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 14px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        .btn-submit:hover {
+            background: #219a52;
+        }
+
+        .qr-code-area {
+            text-align: center;
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .qr-code-area img {
+            max-width: 200px;
+            margin: 10px auto;
+        }
+
+        /* Modal para adicionar novo item */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .modal-content h3 {
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        .modal-content input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-buttons button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .btn-salvar-modal {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-cancelar-modal {
+            background: #95a5a6;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h2 id="tituloPagina">Cadastro de Membro</h2>
+                <a href="index.html" class="btn-voltar">← Voltar</a>
+            </div>
+            <div class="card-body">
+                <form id="memberForm">
+                    <input type="hidden" id="memberId" value="0">
+                    
+                    <div class="form-group">
+                        <label>Nome Completo *</label>
+                        <input type="text" id="nome" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Instrumento *</label>
+                        <div class="select-wrapper">
+                            <select id="instrumentoId" required></select>
+                            <button type="button" class="btn-add" onclick="abrirModalAdicionar('instrumento')">+</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Congregação *</label>
+                        <div class="select-wrapper">
+                            <select id="congregacaoId" required></select>
+                            <button type="button" class="btn-add" onclick="abrirModalAdicionar('congregacao')">+</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Cargo *</label>
+                        <div class="select-wrapper">
+                            <select id="cargoId" required></select>
+                            <button type="button" class="btn-add" onclick="abrirModalAdicionar('cargo')">+</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Nível *</label>
+                        <div class="select-wrapper">
+                            <select id="nivelId" required></select>
+                            <button type="button" class="btn-add" onclick="abrirModalAdicionar('nivel')">+</button>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-submit">💾 Salvar Membro</button>
+                </form>
+
+                <div id="qrArea" class="qr-code-area" style="display: none;">
+                    <h3>QR Code do Membro</h3>
+                    <div id="qrCode"></div>
+                    <button onclick="baixarQRCode()" class="btn-submit" style="margin-top: 10px; background: #9b59b6;">📥 Baixar QR Code</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para adicionar novo item -->
+    <div id="modalAdd" class="modal">
+        <div class="modal-content">
+            <h3 id="modalTitulo">Adicionar Novo</h3>
+            <input type="text" id="novoItemNome" placeholder="Digite o nome">
+            <div class="modal-buttons">
+                <button class="btn-cancelar-modal" onclick="fecharModalAdd()">Cancelar</button>
+                <button class="btn-salvar-modal" onclick="salvarNovoItem()">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="dados.js"></script>
+    <script>
+        let tipoAdicionando = null;
+        let qrcodeObj = null;
+        let membroAtual = null;
+
+        // Carregar dados ao iniciar
+        document.addEventListener('DOMContentLoaded', () => {
+            carregarSelects();
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            const id = parseInt(urlParams.get('id'));
+            const mostrarQR = urlParams.get('qr') === 'true';
+            
+            if (id && id > 0) {
+                document.getElementById('tituloPagina').textContent = 'Editar Membro';
+                carregarMembroParaEdicao(id);
+                if (mostrarQR) {
+                    document.getElementById('qrArea').style.display = 'block';
+                }
+            } else {
+                document.getElementById('tituloPagina').textContent = 'Novo Membro';
+            }
+        });
+
+        function carregarSelects() {
+            // Instrumentos
+            const instrumentoSelect = document.getElementById('instrumentoId');
+            instrumentoSelect.innerHTML = '<option value="">Selecione...</option>';
+            instrumentos.forEach(inst => {
+                instrumentoSelect.innerHTML += `<option value="${inst.id}">${inst.nome}</option>`;
+            });
+
+            // Congregações
+            const congregacaoSelect = document.getElementById('congregacaoId');
+            congregacaoSelect.innerHTML = '<option value="">Selecione...</option>';
+            congregacoes.forEach(cong => {
+                congregacaoSelect.innerHTML += `<option value="${cong.id}">${cong.nome}</option>`;
+            });
+
+            // Cargos
+            const cargoSelect = document.getElementById('cargoId');
+            cargoSelect.innerHTML = '<option value="">Selecione...</option>';
+            cargos.forEach(cargo => {
+                cargoSelect.innerHTML += `<option value="${cargo.id}">${cargo.nome}</option>`;
+            });
+
+            // Níveis
+            const nivelSelect = document.getElementById('nivelId');
+            nivelSelect.innerHTML = '<option value="">Selecione...</option>';
+            niveis.forEach(nivel => {
+                nivelSelect.innerHTML += `<option value="${nivel.id}">${nivel.nome}</option>`;
+            });
+        }
+
+        function carregarMembroParaEdicao(id) {
+            const membro = membros.find(m => m.id === id);
+            if (membro) {
+                membroAtual = membro;
+                document.getElementById('memberId').value = membro.id;
+                document.getElementById('nome').value = membro.nome;
+                document.getElementById('instrumentoId').value = membro.instrumentoId;
+                document.getElementById('congregacaoId').value = membro.congregacaoId;
+                document.getElementById('cargoId').value = membro.cargoId;
+                document.getElementById('nivelId').value = membro.nivelId;
+            }
+        }
+
+        function abrirModalAdicionar(tipo) {
+            tipoAdicionando = tipo;
+            let titulo = '';
+            if (tipo === 'instrumento') titulo = 'Novo Instrumento';
+            else if (tipo === 'congregacao') titulo = 'Nova Congregação';
+            else if (tipo === 'cargo') titulo = 'Novo Cargo';
+            else if (tipo === 'nivel') titulo = 'Novo Nível';
+            
+            document.getElementById('modalTitulo').textContent = titulo;
+            document.getElementById('novoItemNome').value = '';
+            document.getElementById('modalAdd').style.display = 'flex';
+        }
+
+        function fecharModalAdd() {
+            document.getElementById('modalAdd').style.display = 'none';
+            tipoAdicionando = null;
+        }
+
+        function salvarNovoItem() {
+            const novoNome = document.getElementById('novoItemNome').value.trim();
+            if (!novoNome) {
+                alert('Digite um nome válido');
+                return;
+            }
+
+            let novoId = 1;
+            
+            if (tipoAdicionando === 'instrumento') {
+                novoId = Math.max(...instrumentos.map(i => i.id), 0) + 1;
+                instrumentos.push({ id: novoId, nome: novoNome });
+                salvarDados();
+                carregarSelects();
+                document.getElementById('instrumentoId').value = novoId;
+            }
+            else if (tipoAdicionando === 'congregacao') {
+                novoId = Math.max(...congregacoes.map(c => c.id), 0) + 1;
+                congregacoes.push({ id: novoId, nome: novoNome });
+                salvarDados();
+                carregarSelects();
+                document.getElementById('congregacaoId').value = novoId;
+            }
+            else if (tipoAdicionando === 'cargo') {
+                novoId = Math.max(...cargos.map(c => c.id), 0) + 1;
+                cargos.push({ id: novoId, nome: novoNome });
+                salvarDados();
+                carregarSelects();
+                document.getElementById('cargoId').value = novoId;
+            }
+            else if (tipoAdicionando === 'nivel') {
+                novoId = Math.max(...niveis.map(n => n.id), 0) + 1;
+                niveis.push({ id: novoId, nome: novoNome });
+                salvarDados();
+                carregarSelects();
+                document.getElementById('nivelId').value = novoId;
+            }
+            
+            fecharModalAdd();
+            mostrarToast('Item adicionado com sucesso!');
+        }
+
+        // Salvar membro
+        document.getElementById('memberForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const id = parseInt(document.getElementById('memberId').value);
+            const nome = document.getElementById('nome').value;
+            const instrumentoId = parseInt(document.getElementById('instrumentoId').value);
+            const congregacaoId = parseInt(document.getElementById('congregacaoId').value);
+            const cargoId = parseInt(document.getElementById('cargoId').value);
+            const nivelId = parseInt(document.getElementById('nivelId').value);
+            
+            if (!nome || !instrumentoId || !congregacaoId || !cargoId || !nivelId) {
+                alert('Preencha todos os campos!');
+                return;
+            }
+            
+            if (id === 0) {
+                // Novo membro
+                const novoId = Math.max(...membros.map(m => m.id), 0) + 1;
+                membros.push({
+                    id: novoId,
+                    nome: nome,
+                    instrumentoId: instrumentoId,
+                    congregacaoId: congregacaoId,
+                    cargoId: cargoId,
+                    nivelId: nivelId
+                });
+                mostrarToast('Membro adicionado com sucesso!');
+                membroAtual = { id: novoId, nome: nome };
+            } else {
+                // Editar
+                const index = membros.findIndex(m => m.id === id);
+                if (index !== -1) {
+                    membros[index] = {
+                        id: id,
+                        nome: nome,
+                        instrumentoId: instrumentoId,
+                        congregacaoId: congregacaoId,
+                        cargoId: cargoId,
+                        nivelId: nivelId
+                    };
+                    mostrarToast('Membro atualizado com sucesso!');
+                    membroAtual = membros[index];
+                }
+            }
+            
+            salvarDados();
+            
+            // Gerar QR Code se a área estiver visível
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('qr') === 'true' || document.getElementById('qrArea').style.display === 'block') {
+                gerarQRCodeParaMembro();
+                document.getElementById('qrArea').style.display = 'block';
+            } else {
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 1000);
+            }
+        });
+
+        function gerarQRCodeParaMembro() {
+            const membroCompleto = getMembroCompleto(membroAtual || { 
+                id: parseInt(document.getElementById('memberId').value),
+                nome: document.getElementById('nome').value,
+                instrumentoId: parseInt(document.getElementById('instrumentoId').value),
+                congregacaoId: parseInt(document.getElementById('congregacaoId').value),
+                cargoId: parseInt(document.getElementById('cargoId').value),
+                nivelId: parseInt(document.getElementById('nivelId').value)
+            });
+            
+            const dadosQR = JSON.stringify(membroCompleto);
+            const qrDiv = document.getElementById('qrCode');
+            qrDiv.innerHTML = '';
+            qrcodeObj = new QRCode(qrDiv, {
+                text: dadosQR,
+                width: 200,
+                height: 200
+            });
+        }
+
+        function baixarQRCode() {
+            const qrImg = document.querySelector('#qrCode img');
+            if (qrImg) {
+                const link = document.createElement('a');
+                link.download = `qrcode_${document.getElementById('nome').value.replace(/\s/g, '_')}.png`;
+                link.href = qrImg.src;
+                link.click();
+            }
+        }
+
+        function mostrarToast(mensagem) {
+            const toast = document.createElement('div');
+            toast.textContent = mensagem;
+            toast.style.position = 'fixed';
+            toast.style.bottom = '20px';
+            toast.style.right = '20px';
+            toast.style.background = '#27ae60';
+            toast.style.color = 'white';
+            toast.style.padding = '12px 24px';
+            toast.style.borderRadius = '8px';
+            toast.style.zIndex = '1000';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+    </script>
+</body>
+</html>
