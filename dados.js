@@ -205,3 +205,15 @@ function carregarDados() {
 
 // Carregar dados ao iniciar
 carregarDados();
+
+// Função para buscar membro pelo ID
+function buscarMembroPorId(id) {
+    return membros.find(m => m.id === id) || null;
+}
+
+// Função para buscar dados completos do membro pelo ID do QR Code
+function getMembroCompletoPorId(id) {
+    const membro = buscarMembroPorId(id);
+    if (!membro) return null;
+    return getMembroCompleto(membro);
+}
