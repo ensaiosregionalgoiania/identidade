@@ -45,8 +45,6 @@ const niveis = [
 
 // ========== VETOR PRINCIPAL DE MEMBROS ==========
 
-// ========== VETOR PRINCIPAL DE MEMBROS (COMPLETO) ==========
-
 let membros = [
     { id: 1, nome: "ALEXANDRE SANTOS PEREIRA", instrumentoId: 1, congregacaoId: 1, cargoId: 1, nivelId: 1 },
     { id: 2, nome: "ANTONIO EDUARDO ABREU SILVA", instrumentoId: 1, congregacaoId: 1, cargoId: 1, nivelId: 2 },
@@ -171,6 +169,18 @@ function getMembroCompleto(membro) {
     };
 }
 
+// ========== FUNÇÃO PARA LISTAR TODOS OS MEMBROS COMPLETOS ==========
+function listarMembrosCompletos() {
+    return membros.map(m => getMembroCompleto(m));
+}
+
+// ========== FUNÇÃO PARA BUSCAR MEMBRO POR ID ==========
+function getMembroCompletoPorId(id) {
+    const membro = membros.find(m => m.id === id);
+    if (!membro) return null;
+    return getMembroCompleto(membro);
+}
+
 // ========== PERSISTÊNCIA (localStorage) ==========
 
 function salvarDados() {
@@ -206,14 +216,6 @@ function carregarDados() {
 // Carregar dados ao iniciar
 carregarDados();
 
-// Função para buscar membro pelo ID
-function buscarMembroPorId(id) {
-    return membros.find(m => m.id === id) || null;
-}
-
-// Função para buscar dados completos do membro pelo ID do QR Code
-function getMembroCompletoPorId(id) {
-    const membro = buscarMembroPorId(id);
-    if (!membro) return null;
-    return getMembroCompleto(membro);
-}
+// Teste para verificar se a função está funcionando
+console.log('Total de membros carregados:', membros.length);
+console.log('Primeiros membros:', listarMembrosCompletos().slice(0, 3));
