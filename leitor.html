@@ -2,66 +2,456 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teste de QR Code</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Leitor de Identidade Ministerial</title>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial;
-            text-align: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             padding: 20px;
         }
-        textarea {
-            width: 100%;
-            height: 100px;
-            margin: 10px 0;
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
         }
-        button {
-            padding: 10px 20px;
-            background: #27ae60;
+
+        /* Área do leitor */
+        .reader-area {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .reader-header {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .reader-header h2 {
+            color: #2c3e50;
+            font-size: 1.3rem;
+        }
+
+        .reader-header p {
+            color: #7f8c8d;
+            font-size: 0.85rem;
+            margin-top: 5px;
+        }
+
+        #reader {
+            width: 100%;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .btn-toggle {
+            width: 100%;
+            padding: 12px;
+            margin-top: 15px;
+            background: #3498db;
             color: white;
             border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .resultado {
-            margin-top: 20px;
-            padding: 15px;
-            background: #f0f0f0;
             border-radius: 10px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-toggle:hover {
+            background: #2980b9;
+        }
+
+        /* Status */
+        .status {
+            text-align: center;
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+        }
+
+        .status.success {
+            background: #d5f4e6;
+            color: #27ae60;
+        }
+
+        .status.error {
+            background: #fee;
+            color: #e74c3c;
+        }
+
+        .status.info {
+            background: #e3f2fd;
+            color: #3498db;
+        }
+
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        /* Identidade Ministerial */
+        .identity-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .card-header h1 {
+            font-size: 1.3rem;
+            margin-bottom: 5px;
+        }
+
+        .card-header p {
+            font-size: 0.7rem;
+            opacity: 0.9;
+        }
+
+        .card-content {
+            padding: 25px;
+        }
+
+        .photo-frame {
+            width: 150px;
+            height: 200px;
+            background: #f0f0f0;
+            border: 3px solid #3498db;
+            border-radius: 10px;
+            margin: 0 auto 20px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .photo-placeholder {
+            text-align: center;
+            color: #999;
+        }
+
+        .photo-placeholder i {
+            font-size: 50px;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .info-field {
+            margin-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 10px;
+        }
+
+        .info-label {
+            font-size: 0.7rem;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .info-value {
+            font-size: 1.1rem;
+            color: #2c3e50;
+            font-weight: 500;
+            margin-top: 5px;
+            word-break: break-word;
+        }
+
+        .level-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+
+        .level-oficializado { background: #27ae60; color: white; }
+        .level-rjm { background: #f39c12; color: white; }
+        .level-culte { background: #3498db; color: white; }
+        .level-meia { background: #95a5a6; color: white; }
+
+        .card-footer {
+            background: #ecf0f1;
+            padding: 15px;
+            text-align: center;
+            font-size: 0.7rem;
+            color: #7f8c8d;
+        }
+
+        .btn-nova-leitura {
+            width: 100%;
+            padding: 12px;
+            margin-top: 15px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
-    <h1>Teste de Leitura do QR Code</h1>
-    <p>Cole o conteúdo lido do QR Code abaixo:</p>
-    <textarea id="qrTexto" placeholder='{"id": 20}'></textarea>
-    <button onclick="lerQRCode()">Buscar Membro</button>
-    
-    <div id="resultado" class="resultado"></div>
+    <div class="container">
+        <!-- Área do Leitor QR Code -->
+        <div class="reader-area" id="readerArea">
+            <div class="reader-header">
+                <h2>📷 Leitor de QR Code</h2>
+                <p>Aponte a câmera para o QR Code do membro</p>
+            </div>
+            <div id="reader"></div>
+            <button class="btn-toggle" id="toggleCameraBtn">📷 Iniciar Câmera</button>
+            <div id="status" class="status info">✅ Clique em "Iniciar Câmera" para começar</div>
+        </div>
+
+        <!-- Identidade Ministerial (escondida inicialmente) -->
+        <div class="identity-card" id="identityCard">
+            <div class="card-header">
+                <h1>🎵 IDENTIDADE MINISTERIAL</h1>
+                <p>Assembleia de Deus | Setor de Música</p>
+            </div>
+            <div class="card-content">
+                <div class="photo-frame">
+                    <div class="photo-placeholder" id="photoPlaceholder">
+                        <i>📸</i>
+                        <span>Foto 3x4</span>
+                    </div>
+                </div>
+
+                <div class="info-field">
+                    <div class="info-label">📌 Nome Completo</div>
+                    <div class="info-value" id="nome">---</div>
+                </div>
+
+                <div class="info-field">
+                    <div class="info-label">🏛️ Congregação</div>
+                    <div class="info-value" id="congregacao">---</div>
+                </div>
+
+                <div class="info-field">
+                    <div class="info-label">⭐ Cargo/Ministério</div>
+                    <div class="info-value" id="cargo">---</div>
+                </div>
+
+                <div class="info-field">
+                    <div class="info-label">📊 Nível</div>
+                    <div class="info-value" id="nivel">---</div>
+                </div>
+
+                <div class="info-field">
+                    <div class="info-label">🎷 Instrumento</div>
+                    <div class="info-value" id="instrumento">---</div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <div>📅 Emitido em: Janeiro/2026</div>
+                <div>🔒 Válido em todo território nacional</div>
+            </div>
+            <button class="btn-nova-leitura" id="novaLeituraBtn">🔄 Nova Leitura</button>
+        </div>
+    </div>
 
     <script src="dados.js"></script>
     <script>
-        function lerQRCode() {
-            const texto = document.getElementById('qrTexto').value;
+        let html5QrCode = null;
+        let leitorAtivo = false;
+        let leituraRealizada = false;
+
+        // Elementos
+        const readerArea = document.getElementById('readerArea');
+        const identityCard = document.getElementById('identityCard');
+        const statusDiv = document.getElementById('status');
+        const toggleCameraBtn = document.getElementById('toggleCameraBtn');
+        const novaLeituraBtn = document.getElementById('novaLeituraBtn');
+
+        // Função para mostrar status
+        function mostrarStatus(mensagem, tipo) {
+            statusDiv.textContent = mensagem;
+            statusDiv.className = `status ${tipo}`;
+        }
+
+        // Função para exibir a identidade
+        function exibirIdentidade(membro) {
+            document.getElementById('nome').textContent = membro.nome;
+            document.getElementById('congregacao').textContent = membro.congregacao;
+            document.getElementById('cargo').textContent = membro.cargo;
+            document.getElementById('instrumento').textContent = membro.instrumento;
+            
+            // Nível com cor específica
+            let nivelClass = 'level-badge';
+            if (membro.nivel === 'OFICIALIZADO(A)') nivelClass += ' level-oficializado';
+            else if (membro.nivel === 'RJM') nivelClass += ' level-rjm';
+            else if (membro.nivel === 'CULTO OFICIAL') nivelClass += ' level-culte';
+            else nivelClass += ' level-meia';
+            
+            document.getElementById('nivel').innerHTML = `<span class="${nivelClass}">${membro.nivel}</span>`;
+            
+            // Esconder leitor e mostrar identidade
+            readerArea.style.display = 'none';
+            identityCard.style.display = 'block';
+            
+            // Feedback visual
+            mostrarStatus(`✅ Identidade carregada: ${membro.nome}`, 'success');
+        }
+
+        // Função para processar o QR Code lido
+        function processarQRCode(decodedText) {
+            if (leituraRealizada) return; // Evita processar múltiplas vezes
+            
             try {
-                const dados = JSON.parse(texto);
-                const membro = getMembroCompletoPorId(dados.id);
+                console.log('QR Code lido:', decodedText);
                 
-                if (membro) {
-                    document.getElementById('resultado').innerHTML = `
-                        <h3>✅ Membro Encontrado!</h3>
-                        <p><strong>Nome:</strong> ${membro.nome}</p>
-                        <p><strong>Instrumento:</strong> ${membro.instrumento}</p>
-                        <p><strong>Congregação:</strong> ${membro.congregacao}</p>
-                        <p><strong>Cargo:</strong> ${membro.cargo}</p>
-                        <p><strong>Nível:</strong> ${membro.nivel}</p>
-                    `;
-                } else {
-                    document.getElementById('resultado').innerHTML = `<p style="color:red">❌ Membro com ID ${dados.id} não encontrado!</p>`;
+                // Tentar fazer o parse do JSON
+                let dados = JSON.parse(decodedText);
+                let membroId = dados.id;
+                
+                if (!membroId) {
+                    mostrarStatus('❌ QR Code inválido: ID não encontrado', 'error');
+                    return;
                 }
-            } catch(e) {
-                document.getElementById('resultado').innerHTML = `<p style="color:red">❌ QR Code inválido: ${e.message}</p>`;
+                
+                // Buscar o membro pelo ID
+                const membroCompleto = getMembroCompletoPorId(membroId);
+                
+                if (!membroCompleto) {
+                    mostrarStatus(`❌ Membro com ID ${membroId} não encontrado no sistema`, 'error');
+                    return;
+                }
+                
+                // Sucesso! Exibir a identidade
+                leituraRealizada = true;
+                exibirIdentidade(membroCompleto);
+                
+                // Parar a câmera para economizar bateria
+                if (leitorAtivo) {
+                    pararLeitor();
+                }
+                
+            } catch (error) {
+                console.error('Erro ao processar QR Code:', error);
+                mostrarStatus('❌ QR Code inválido. Certifique-se de que é um código válido do sistema.', 'error');
             }
+        }
+
+        // Iniciar a câmera e o leitor
+        async function iniciarLeitor() {
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("reader");
+            }
+            
+            try {
+                await html5QrCode.start(
+                    { facingMode: "environment" }, // câmera traseira
+                    {
+                        fps: 10,
+                        qrbox: { width: 300, height: 300 }
+                    },
+                    (decodedText) => {
+                        processarQRCode(decodedText);
+                    },
+                    (errorMessage) => {
+                        // Erros de leitura normais - não mostrar para o usuário
+                        // console.log("Erro de leitura:", errorMessage);
+                    }
+                );
+                leitorAtivo = true;
+                toggleCameraBtn.textContent = '🔴 Parar Câmera';
+                mostrarStatus('📷 Câmera ativa. Aponte para o QR Code do membro.', 'success');
+            } catch (err) {
+                console.error("Erro ao iniciar câmera:", err);
+                mostrarStatus('❌ Não foi possível acessar a câmera. Verifique as permissões e use HTTPS.', 'error');
+                leitorAtivo = false;
+            }
+        }
+
+        // Parar a câmera
+        async function pararLeitor() {
+            if (html5QrCode && leitorAtivo) {
+                try {
+                    await html5QrCode.stop();
+                    leitorAtivo = false;
+                    toggleCameraBtn.textContent = '📷 Iniciar Câmera';
+                    mostrarStatus('⏹️ Câmera parada. Clique em "Iniciar Câmera" para uma nova leitura.', 'info');
+                } catch (err) {
+                    console.error("Erro ao parar leitor:", err);
+                }
+            }
+        }
+
+        // Reset para nova leitura
+        function novaLeitura() {
+            // Resetar flags
+            leituraRealizada = false;
+            
+            // Esconder identidade e mostrar leitor
+            identityCard.style.display = 'none';
+            readerArea.style.display = 'block';
+            
+            // Limpar dados da identidade
+            document.getElementById('nome').textContent = '---';
+            document.getElementById('congregacao').textContent = '---';
+            document.getElementById('cargo').textContent = '---';
+            document.getElementById('nivel').innerHTML = '---';
+            document.getElementById('instrumento').textContent = '---';
+            
+            // Reiniciar a câmera automaticamente
+            setTimeout(() => {
+                if (!leitorAtivo && !leituraRealizada) {
+                    iniciarLeitor();
+                }
+            }, 500);
+        }
+
+        // Eventos dos botões
+        toggleCameraBtn.addEventListener('click', () => {
+            if (leitorAtivo) {
+                pararLeitor();
+            } else {
+                leituraRealizada = false;
+                iniciarLeitor();
+            }
+        });
+        
+        novaLeituraBtn.addEventListener('click', () => {
+            novaLeitura();
+        });
+
+        // Verificar se a página está rodando em HTTPS (necessário para câmera)
+        if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+            mostrarStatus('⚠️ Atenção: Para usar a câmera, esta página precisa estar em HTTPS. Alguns navegadores podem bloquear.', 'warning');
         }
     </script>
 </body>
