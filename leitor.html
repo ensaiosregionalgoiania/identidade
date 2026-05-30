@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Leitor de Identidade Ministerial</title>
+    <title>Leitor de Presença - Identidade Ministerial</title>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <style>
         * {
@@ -20,11 +20,45 @@
         }
 
         .container {
-            max-width: 500px;
+            max-width: 600px;
             margin: 0 auto;
         }
 
-        /* Área do leitor */
+        /* Abas */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active {
+            background: white;
+            color: #2c3e50;
+        }
+
+        /* Conteúdo das abas */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Leitor */
         .reader-area {
             background: white;
             border-radius: 20px;
@@ -41,12 +75,6 @@
         .reader-header h2 {
             color: #2c3e50;
             font-size: 1.3rem;
-        }
-
-        .reader-header p {
-            color: #7f8c8d;
-            font-size: 0.85rem;
-            margin-top: 5px;
         }
 
         #reader {
@@ -66,14 +94,8 @@
             font-size: 1rem;
             font-weight: bold;
             cursor: pointer;
-            transition: all 0.3s ease;
         }
 
-        .btn-toggle:hover {
-            background: #2980b9;
-        }
-
-        /* Status */
         .status {
             text-align: center;
             margin-top: 15px;
@@ -97,276 +119,510 @@
             color: #3498db;
         }
 
-        .status.warning {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        /* Identidade Ministerial */
+        /* Identidade */
         .identity-card {
             background: white;
             border-radius: 20px;
             overflow: hidden;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-top: 20px;
             display: none;
-            animation: fadeIn 0.5s ease;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
         }
 
         .card-header {
             background: linear-gradient(135deg, #2c3e50, #3498db);
             color: white;
-            padding: 20px;
+            padding: 15px;
             text-align: center;
         }
 
-        .card-header h1 {
-            font-size: 1.3rem;
-            margin-bottom: 5px;
-        }
-
-        .card-header p {
-            font-size: 0.7rem;
-            opacity: 0.9;
+        .card-header h3 {
+            font-size: 1.1rem;
         }
 
         .card-content {
-            padding: 25px;
-        }
-
-        .photo-frame {
-            width: 150px;
-            height: 200px;
-            background: #f0f0f0;
-            border: 3px solid #3498db;
-            border-radius: 10px;
-            margin: 0 auto 20px auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .photo-placeholder {
-            text-align: center;
-            color: #999;
-        }
-
-        .photo-placeholder i {
-            font-size: 50px;
-            display: block;
-            margin-bottom: 10px;
+            padding: 20px;
         }
 
         .info-field {
-            margin-bottom: 15px;
-            border-bottom: 2px solid #e0e0e0;
-            padding-bottom: 10px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 8px;
         }
 
         .info-label {
             font-size: 0.7rem;
             color: #7f8c8d;
             text-transform: uppercase;
-            font-weight: 600;
-            letter-spacing: 1px;
         }
 
         .info-value {
-            font-size: 1.1rem;
+            font-size: 1rem;
             color: #2c3e50;
             font-weight: 500;
-            margin-top: 5px;
-            word-break: break-word;
         }
 
         .level-badge {
             display: inline-block;
-            padding: 5px 15px;
+            padding: 4px 12px;
             border-radius: 20px;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
+            font-weight: bold;
+            background: #27ae60;
+            color: white;
+        }
+
+        /* Estatísticas */
+        .stats-area {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .stats-header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .stats-header h2 {
+            color: #2c3e50;
+        }
+
+        .stats-resumo {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            flex: 1;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
             font-weight: bold;
         }
 
-        .level-oficializado { background: #27ae60; color: white; }
-        .level-rjm { background: #f39c12; color: white; }
-        .level-culte { background: #3498db; color: white; }
-        .level-meia { background: #95a5a6; color: white; }
-
-        .card-footer {
-            background: #ecf0f1;
-            padding: 15px;
-            text-align: center;
-            font-size: 0.7rem;
+        .stat-label {
+            font-size: 0.8rem;
             color: #7f8c8d;
         }
 
-        .btn-nova-leitura {
+        .stat-card.presentes .stat-number {
+            color: #27ae60;
+        }
+
+        .stat-card.ausentes .stat-number {
+            color: #e74c3c;
+        }
+
+        .stat-card.total .stat-number {
+            color: #3498db;
+        }
+
+        .filtro-busca {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .lista-membros {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .membro-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .membro-item:hover {
+            background: #f8f9fa;
+        }
+
+        .membro-info {
+            flex: 1;
+        }
+
+        .membro-nome {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .membro-instrumento {
+            font-size: 0.75rem;
+            color: #7f8c8d;
+        }
+
+        .status-presenca {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        .status-presente {
+            background: #d5f4e6;
+            color: #27ae60;
+        }
+
+        .status-ausente {
+            background: #fee;
+            color: #e74c3c;
+        }
+
+        .btn-limpar {
             width: 100%;
             padding: 12px;
             margin-top: 15px;
-            background: #3498db;
+            background: #95a5a6;
             color: white;
             border: none;
             border-radius: 10px;
-            font-size: 1rem;
-            font-weight: bold;
             cursor: pointer;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: #27ae60;
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            z-index: 1000;
+            animation: fadeInUp 0.3s ease;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                transform: translateY(100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Área do Leitor QR Code -->
-        <div class="reader-area" id="readerArea">
-            <div class="reader-header">
-                <h2>📷 Leitor de QR Code</h2>
-                <p>Aponte a câmera para o QR Code do membro</p>
-            </div>
-            <div id="reader"></div>
-            <button class="btn-toggle" id="toggleCameraBtn">📷 Iniciar Câmera</button>
-            <div id="status" class="status info">✅ Clique em "Iniciar Câmera" para começar</div>
+        <!-- Abas -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="trocarAba('leitor')">📷 Leitor</button>
+            <button class="tab-btn" onclick="trocarAba('estatisticas')">📊 Estatísticas</button>
         </div>
 
-        <!-- Identidade Ministerial (escondida inicialmente) -->
-        <div class="identity-card" id="identityCard">
-            <div class="card-header">
-                <h1>🎵 IDENTIDADE MINISTERIAL</h1>
-                <p>Assembleia de Deus | Setor de Música</p>
+        <!-- Aba Leitor -->
+        <div id="abaLeitor" class="tab-content active">
+            <div class="reader-area">
+                <div class="reader-header">
+                    <h2>📷 Leitor de QR Code</h2>
+                    <p>Aponte a câmera para o QR Code do membro</p>
+                </div>
+                <div id="reader"></div>
+                <button class="btn-toggle" id="toggleCameraBtn">📷 Iniciar Câmera</button>
+                <div id="status" class="status info">✅ Clique em "Iniciar Câmera" para começar</div>
             </div>
-            <div class="card-content">
-                <div class="photo-frame">
-                    <div class="photo-placeholder" id="photoPlaceholder">
-                        <i>📸</i>
-                        <span>Foto 3x4</span>
+
+            <!-- Identidade que aparece após leitura -->
+            <div class="identity-card" id="identityCard">
+                <div class="card-header">
+                    <h3>🎵 IDENTIDADE MINISTERIAL</h3>
+                </div>
+                <div class="card-content">
+                    <div class="info-field">
+                        <div class="info-label">📌 Nome Completo</div>
+                        <div class="info-value" id="nome">---</div>
+                    </div>
+                    <div class="info-field">
+                        <div class="info-label">🏛️ Congregação</div>
+                        <div class="info-value" id="congregacao">---</div>
+                    </div>
+                    <div class="info-field">
+                        <div class="info-label">⭐ Cargo</div>
+                        <div class="info-value" id="cargo">---</div>
+                    </div>
+                    <div class="info-field">
+                        <div class="info-label">📊 Nível</div>
+                        <div class="info-value" id="nivel">---</div>
+                    </div>
+                    <div class="info-field">
+                        <div class="info-label">🎷 Instrumento</div>
+                        <div class="info-value" id="instrumento">---</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Aba Estatísticas -->
+        <div id="abaEstatisticas" class="tab-content">
+            <div class="stats-area">
+                <div class="stats-header">
+                    <h2>📊 Controle de Presença</h2>
+                    <p id="dataAtual"></p>
+                </div>
+
+                <div class="stats-resumo">
+                    <div class="stat-card total">
+                        <div class="stat-number" id="totalMembros">0</div>
+                        <div class="stat-label">Total de Membros</div>
+                    </div>
+                    <div class="stat-card presentes">
+                        <div class="stat-number" id="totalPresentes">0</div>
+                        <div class="stat-label">Presentes</div>
+                    </div>
+                    <div class="stat-card ausentes">
+                        <div class="stat-number" id="totalAusentes">0</div>
+                        <div class="stat-label">Ausentes</div>
                     </div>
                 </div>
 
-                <div class="info-field">
-                    <div class="info-label">📌 Nome Completo</div>
-                    <div class="info-value" id="nome">---</div>
-                </div>
+                <input type="text" id="buscaMembro" class="filtro-busca" placeholder="🔍 Buscar por nome..." onkeyup="filtrarMembros()">
 
-                <div class="info-field">
-                    <div class="info-label">🏛️ Congregação</div>
-                    <div class="info-value" id="congregacao">---</div>
-                </div>
+                <div class="lista-membros" id="listaMembros"></div>
 
-                <div class="info-field">
-                    <div class="info-label">⭐ Cargo/Ministério</div>
-                    <div class="info-value" id="cargo">---</div>
-                </div>
-
-                <div class="info-field">
-                    <div class="info-label">📊 Nível</div>
-                    <div class="info-value" id="nivel">---</div>
-                </div>
-
-                <div class="info-field">
-                    <div class="info-label">🎷 Instrumento</div>
-                    <div class="info-value" id="instrumento">---</div>
-                </div>
+                <button class="btn-limpar" onclick="limparPresencasHoje()">🗑️ Limpar Presenças de Hoje</button>
             </div>
-            <div class="card-footer">
-                <div>📅 Emitido em: Janeiro/2026</div>
-                <div>🔒 Válido em todo território nacional</div>
-            </div>
-            <button class="btn-nova-leitura" id="novaLeituraBtn">🔄 Nova Leitura</button>
         </div>
     </div>
 
     <script src="dados.js"></script>
     <script>
+        // ========== VARIÁVEIS ==========
         let html5QrCode = null;
         let leitorAtivo = false;
         let leituraRealizada = false;
+        
+        // Chave para armazenar presenças no localStorage
+        const STORAGE_KEY = 'presencas_identidade';
 
-        // Elementos
-        const readerArea = document.getElementById('readerArea');
-        const identityCard = document.getElementById('identityCard');
-        const statusDiv = document.getElementById('status');
-        const toggleCameraBtn = document.getElementById('toggleCameraBtn');
-        const novaLeituraBtn = document.getElementById('novaLeituraBtn');
+        // ========== FUNÇÕES DE PRESENÇA ==========
+        
+        // Obter a data de hoje no formato YYYY-MM-DD
+        function getDataHoje() {
+            const hoje = new Date();
+            return hoje.toISOString().split('T')[0];
+        }
 
-        // Função para mostrar status
+        // Carregar presenças do localStorage
+        function carregarPresencas() {
+            const salvo = localStorage.getItem(STORAGE_KEY);
+            if (salvo) {
+                return JSON.parse(salvo);
+            }
+            return {};
+        }
+
+        // Salvar presenças no localStorage
+        function salvarPresencas(presencas) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(presencas));
+        }
+
+        // Registrar presença de um membro
+        function registrarPresenca(membroId, membroNome) {
+            const hoje = getDataHoje();
+            const presencas = carregarPresencas();
+            
+            if (!presencas[hoje]) {
+                presencas[hoje] = {};
+            }
+            
+            if (presencas[hoje][membroId]) {
+                return false; // Já registrado hoje
+            }
+            
+            presencas[hoje][membroId] = {
+                id: membroId,
+                nome: membroNome,
+                timestamp: new Date().toISOString()
+            };
+            
+            salvarPresencas(presencas);
+            return true; // Registrado com sucesso
+        }
+
+        // Verificar se um membro está presente hoje
+        function estaPresente(membroId) {
+            const hoje = getDataHoje();
+            const presencas = carregarPresencas();
+            return presencas[hoje] && presencas[hoje][membroId] ? true : false;
+        }
+
+        // Obter todos os membros com status de presença
+        function getMembrosComStatus() {
+            const membrosCompletos = listarMembrosCompletos();
+            const hoje = getDataHoje();
+            const presencas = carregarPresencas();
+            const presencasHoje = presencas[hoje] || {};
+            
+            return membrosCompletos.map(membro => ({
+                ...membro,
+                presente: !!presencasHoje[membro.id]
+            }));
+        }
+
+        // ========== FUNÇÕES DA ABA ESTATÍSTICAS ==========
+        
+        function atualizarEstatisticas() {
+            const membrosComStatus = getMembrosComStatus();
+            const total = membrosComStatus.length;
+            const presentes = membrosComStatus.filter(m => m.presente).length;
+            const ausentes = total - presentes;
+            
+            document.getElementById('totalMembros').textContent = total;
+            document.getElementById('totalPresentes').textContent = presentes;
+            document.getElementById('totalAusentes').textContent = ausentes;
+            document.getElementById('dataAtual').textContent = `📅 ${new Date().toLocaleDateString('pt-BR')}`;
+            
+            return membrosComStatus;
+        }
+
+        function exibirListaMembros(filtro = '') {
+            let membrosComStatus = getMembrosComStatus();
+            
+            if (filtro) {
+                membrosComStatus = membrosComStatus.filter(m => 
+                    m.nome.toLowerCase().includes(filtro.toLowerCase())
+                );
+            }
+            
+            const listaDiv = document.getElementById('listaMembros');
+            
+            if (membrosComStatus.length === 0) {
+                listaDiv.innerHTML = '<p style="text-align: center; padding: 20px; color: #999;">Nenhum membro encontrado</p>';
+                return;
+            }
+            
+            let html = '';
+            for (const m of membrosComStatus) {
+                const statusClass = m.presente ? 'status-presente' : 'status-ausente';
+                const statusText = m.presente ? '✅ Presente' : '❌ Ausente';
+                
+                html += `
+                    <div class="membro-item">
+                        <div class="membro-info">
+                            <div class="membro-nome">${m.nome}</div>
+                            <div class="membro-instrumento">${m.instrumento} • ${m.cargo}</div>
+                        </div>
+                        <div class="status-presenca ${statusClass}">${statusText}</div>
+                    </div>
+                `;
+            }
+            listaDiv.innerHTML = html;
+        }
+
+        function filtrarMembros() {
+            const filtro = document.getElementById('buscaMembro').value;
+            exibirListaMembros(filtro);
+        }
+
+        function limparPresencasHoje() {
+            if (confirm('Tem certeza que deseja limpar todas as presenças de hoje?')) {
+                const hoje = getDataHoje();
+                const presencas = carregarPresencas();
+                delete presencas[hoje];
+                salvarPresencas(presencas);
+                
+                // Recarregar estatísticas
+                atualizarEstatisticas();
+                exibirListaMembros();
+                
+                mostrarToast('✅ Presenças de hoje foram limpas!');
+            }
+        }
+
+        // ========== FUNÇÕES DO LEITOR ==========
+        
         function mostrarStatus(mensagem, tipo) {
+            const statusDiv = document.getElementById('status');
             statusDiv.textContent = mensagem;
             statusDiv.className = `status ${tipo}`;
         }
 
-        // Função para exibir a identidade
+        function mostrarToast(mensagem) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = mensagem;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
         function exibirIdentidade(membro) {
             document.getElementById('nome').textContent = membro.nome;
             document.getElementById('congregacao').textContent = membro.congregacao;
             document.getElementById('cargo').textContent = membro.cargo;
+            document.getElementById('nivel').innerHTML = `<span class="level-badge">${membro.nivel}</span>`;
             document.getElementById('instrumento').textContent = membro.instrumento;
             
-            // Nível com cor específica
-            let nivelClass = 'level-badge';
-            if (membro.nivel === 'OFICIALIZADO(A)') nivelClass += ' level-oficializado';
-            else if (membro.nivel === 'RJM') nivelClass += ' level-rjm';
-            else if (membro.nivel === 'CULTO OFICIAL') nivelClass += ' level-culte';
-            else nivelClass += ' level-meia';
-            
-            document.getElementById('nivel').innerHTML = `<span class="${nivelClass}">${membro.nivel}</span>`;
-            
-            // Esconder leitor e mostrar identidade
-            readerArea.style.display = 'none';
-            identityCard.style.display = 'block';
-            
-            // Feedback visual
-            mostrarStatus(`✅ Identidade carregada: ${membro.nome}`, 'success');
+            document.getElementById('identityCard').style.display = 'block';
         }
 
-        // Função para processar o QR Code lido
         function processarQRCode(decodedText) {
-            if (leituraRealizada) return; // Evita processar múltiplas vezes
+            if (leituraRealizada) return;
             
             try {
-                console.log('QR Code lido:', decodedText);
-                
-                // Tentar fazer o parse do JSON
-                let dados = JSON.parse(decodedText);
-                let membroId = dados.id;
+                const dados = JSON.parse(decodedText);
+                const membroId = dados.id;
                 
                 if (!membroId) {
                     mostrarStatus('❌ QR Code inválido: ID não encontrado', 'error');
                     return;
                 }
                 
-                // Buscar o membro pelo ID
-                const membroCompleto = getMembroCompletoPorId(membroId);
+                const membro = getMembroCompletoPorId(membroId);
                 
-                if (!membroCompleto) {
-                    mostrarStatus(`❌ Membro com ID ${membroId} não encontrado no sistema`, 'error');
+                if (!membro) {
+                    mostrarStatus(`❌ Membro com ID ${membroId} não encontrado`, 'error');
                     return;
                 }
                 
-                // Sucesso! Exibir a identidade
-                leituraRealizada = true;
-                exibirIdentidade(membroCompleto);
+                // Exibir identidade
+                exibirIdentidade(membro);
                 
-                // Parar a câmera para economizar bateria
-                if (leitorAtivo) {
-                    pararLeitor();
+                // Registrar presença
+                const registrado = registrarPresenca(membro.id, membro.nome);
+                
+                if (registrado) {
+                    mostrarStatus(`✅ Presença registrada: ${membro.nome}`, 'success');
+                    mostrarToast(`✅ ${membro.nome} - Presença registrada!`);
+                    leituraRealizada = true;
+                    
+                    // Parar a câmera após registrar
+                    setTimeout(() => {
+                        if (leitorAtivo) {
+                            pararLeitor();
+                            mostrarStatus('📷 Leitura concluída! Clique em "Iniciar Câmera" para próximo', 'info');
+                        }
+                    }, 2000);
+                } else {
+                    mostrarStatus(`⚠️ ${membro.nome} já registrou presença hoje!`, 'error');
+                    mostrarToast(`⚠️ ${membro.nome} já está presente!`);
                 }
                 
             } catch (error) {
-                console.error('Erro ao processar QR Code:', error);
-                mostrarStatus('❌ QR Code inválido. Certifique-se de que é um código válido do sistema.', 'error');
+                mostrarStatus('❌ QR Code inválido', 'error');
             }
         }
 
-        // Iniciar a câmera e o leitor
         async function iniciarLeitor() {
             if (!html5QrCode) {
                 html5QrCode = new Html5Qrcode("reader");
@@ -374,85 +630,85 @@
             
             try {
                 await html5QrCode.start(
-                    { facingMode: "environment" }, // câmera traseira
-                    {
-                        fps: 10,
-                        qrbox: { width: 300, height: 300 }
-                    },
+                    { facingMode: "environment" },
+                    { fps: 10, qrbox: { width: 300, height: 300 } },
                     (decodedText) => {
                         processarQRCode(decodedText);
                     },
-                    (errorMessage) => {
-                        // Erros de leitura normais - não mostrar para o usuário
-                        // console.log("Erro de leitura:", errorMessage);
-                    }
+                    (errorMessage) => {}
                 );
                 leitorAtivo = true;
-                toggleCameraBtn.textContent = '🔴 Parar Câmera';
-                mostrarStatus('📷 Câmera ativa. Aponte para o QR Code do membro.', 'success');
+                leituraRealizada = false;
+                document.getElementById('toggleCameraBtn').textContent = '🔴 Parar Câmera';
+                mostrarStatus('📷 Câmera ativa. Aponte para o QR Code.', 'success');
             } catch (err) {
-                console.error("Erro ao iniciar câmera:", err);
-                mostrarStatus('❌ Não foi possível acessar a câmera. Verifique as permissões e use HTTPS.', 'error');
-                leitorAtivo = false;
+                mostrarStatus('❌ Erro ao acessar câmera. Verifique as permissões.', 'error');
             }
         }
 
-        // Parar a câmera
         async function pararLeitor() {
             if (html5QrCode && leitorAtivo) {
                 try {
                     await html5QrCode.stop();
                     leitorAtivo = false;
-                    toggleCameraBtn.textContent = '📷 Iniciar Câmera';
-                    mostrarStatus('⏹️ Câmera parada. Clique em "Iniciar Câmera" para uma nova leitura.', 'info');
-                } catch (err) {
-                    console.error("Erro ao parar leitor:", err);
+                    document.getElementById('toggleCameraBtn').textContent = '📷 Iniciar Câmera';
+                    mostrarStatus('⏹️ Câmera parada.', 'info');
+                } catch (err) {}
+            }
+        }
+
+        function reiniciarLeitor() {
+            leituraRealizada = false;
+            document.getElementById('identityCard').style.display = 'none';
+            
+            if (!leitorAtivo) {
+                iniciarLeitor();
+            }
+        }
+
+        // ========== TROCAR ABA ==========
+        function trocarAba(aba) {
+            // Atualizar botões
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Mostrar/esconder conteúdo
+            document.getElementById('abaLeitor').classList.remove('active');
+            document.getElementById('abaEstatisticas').classList.remove('active');
+            
+            if (aba === 'leitor') {
+                document.getElementById('abaLeitor').classList.add('active');
+                reiniciarLeitor();
+            } else {
+                document.getElementById('abaEstatisticas').classList.add('active');
+                atualizarEstatisticas();
+                exibirListaMembros();
+                
+                // Parar câmera quando sair da aba leitor
+                if (leitorAtivo) {
+                    pararLeitor();
                 }
             }
         }
 
-        // Reset para nova leitura
-        function novaLeitura() {
-            // Resetar flags
-            leituraRealizada = false;
-            
-            // Esconder identidade e mostrar leitor
-            identityCard.style.display = 'none';
-            readerArea.style.display = 'block';
-            
-            // Limpar dados da identidade
-            document.getElementById('nome').textContent = '---';
-            document.getElementById('congregacao').textContent = '---';
-            document.getElementById('cargo').textContent = '---';
-            document.getElementById('nivel').innerHTML = '---';
-            document.getElementById('instrumento').textContent = '---';
-            
-            // Reiniciar a câmera automaticamente
-            setTimeout(() => {
-                if (!leitorAtivo && !leituraRealizada) {
-                    iniciarLeitor();
-                }
-            }, 500);
-        }
-
-        // Eventos dos botões
-        toggleCameraBtn.addEventListener('click', () => {
+        // ========== EVENTOS ==========
+        document.getElementById('toggleCameraBtn').addEventListener('click', () => {
             if (leitorAtivo) {
                 pararLeitor();
             } else {
                 leituraRealizada = false;
+                document.getElementById('identityCard').style.display = 'none';
                 iniciarLeitor();
             }
         });
-        
-        novaLeituraBtn.addEventListener('click', () => {
-            novaLeitura();
-        });
 
-        // Verificar se a página está rodando em HTTPS (necessário para câmera)
+        // Verificar HTTPS
         if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
-            mostrarStatus('⚠️ Atenção: Para usar a câmera, esta página precisa estar em HTTPS. Alguns navegadores podem bloquear.', 'warning');
+            mostrarStatus('⚠️ Para usar a câmera, a página precisa estar em HTTPS', 'error');
         }
+        
+        // Atualizar data atual
+        document.getElementById('dataAtual').textContent = `📅 ${new Date().toLocaleDateString('pt-BR')}`;
     </script>
 </body>
 </html>
