@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Identidade Ministerial - Sistema Completo</title>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        
+        /* Abas */
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab-btn {
+            flex: 1; padding: 12px; background: rgba(255,255,255,0.2); color: white;
+            border: none; border-radius: 10px; font-size: 1rem; font-weight: bold;
+            cursor: pointer; transition: all 0.3s ease;
+        }
+        .tab-btn.active { background: white; color: #2c3e50; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        /* Cards */
+        .card { background: white; border-radius: 20px; padding: 25px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .card-header { border-bottom: 2px solid #e0e0e0; margin-bottom: 20px; padding-bottom: 10px; }
+        .card-header h2 { color: #2c3e50; }
+        
+        /* Formulário */
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; color: #555; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; }
+        
+        /* Botões */
+        button { background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #219a52; }
+        .btn-danger { background: #e74c3c; }
+        .btn-danger:hover { background: #c0392b; }
+        .btn-edit { background: #3498db; }
+        .btn-edit:hover { background: #2980b9; }
+        
+        /* Tabela */
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e0e0e0; }
+        thead { background: #2c3e50; color: white; }
+        tr:hover { background: #f8f9fa; }
+        
+        /* Status */
+        .status-presente { background: #27ae60; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; display: inline-block; }
+        .status-ausente { background: #e74c3c; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; display: inline-block; }
+        
+        /* Modal */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; border-radius: 15px; padding: 25px; width: 90%; max-width: 500px; }
+        
+        .stats { display: flex; gap: 15px; margin-bottom: 20px; }
+        .stat-card { flex: 1; background: #f8f9fa; padding: 15px; border-radius: 10px; text-align: center; }
+        .stat-number { font-size: 2rem; font-weight: bold; }
+        .stat-label { font-size: 0.8rem; color: #7f8c8d; }
+        
+        .search-box { width: 100%; padding: 10px; margin-bottom: 20px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; }
+        
+        .toast { position: fixed; bottom: 20px; right: 20px; background: #27ae60; color: white; padding: 12px 24px; border-radius: 8px; z-index: 1000; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="tabs">
+            <button class="tab-btn active" onclick="trocarAba('lista')">📋 Lista de Membros</button>
+            <button class="tab-btn" onclick="trocarAba('estatisticas')">📊 Estatísticas</button>
+            <button class="tab-btn" onclick="trocarAba('adicionar')">➕ Adicionar Membro</button>
+        </div>
+
+        <!-- Aba Lista -->
+        <div id="abaLista" class="tab-content active">
+            <div class="card">
+                <div class="card-header"><h2>📋 Membros Cadastrados</h2></div>
+                <input type="text" id="busca" class="search-box" placeholder="🔍 Buscar por nome..." onkeyup="filtrarMembros()">
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>Nome</th><th>Instrumento</th><th>Cargo</th><th>Nível</th><th>Presença Hoje</th><th>Ações</th></tr></thead>
+                        <tbody id="tabelaMembros"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Aba Estatísticas -->
+        <div id="abaEstatisticas" class="tab-content">
+            <div class="card">
+                <div class="card-header"><h2>📊 Controle de Presença</h2></div>
+                <div class="stats">
+                    <div class="stat-card"><div class="stat-number" id="totalMembros">0</div><div class="stat-label">Total</div></div>
+                    <div class="stat-card"><div class="stat-number" id="totalPresentes">0</div><div class="stat-label">Presentes</div></div>
+                    <div class="stat-card"><div class="stat-number" id="totalAusentes">0</div><div class="stat-label">Ausentes</div></div>
+                </div>
+                <input type="text" id="buscaEst" class="search-box" placeholder="🔍 Buscar por nome..." onkeyup="filtrarEstatisticas()">
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>Nome</th><th>Instrumento</th><th>Status</th><th>Ação</th></tr></thead>
+                        <tbody id="tabelaEstatisticas"></tbody>
+                    </table>
+                </div>
+                <button class="btn-danger" onclick="limparPresencas()" style="margin-top: 20px;">🗑️ Limpar Presenças de Hoje</button>
+            </div>
+        </div>
+
+        <!-- Aba Adicionar -->
+        <div id="abaAdicionar" class="tab-content">
+            <div class="card">
+                <div class="card-header"><h2>➕ Adicionar Novo Membro</h2></div>
+                <form id="formMembro">
+                    <div class="form-group"><label>Nome Completo *</label><input type="text" id="nome" required></div>
+                    <div class="form-group"><label>Instrumento *</label><input type="text" id="instrumento" required></div>
+                    <div class="form-group"><label>Congregação</label><input type="text" id="congregacao" value="2 - JARDIM EUROPA"></div>
+                    <div class="form-group"><label>Cargo *</label><input type="text" id="cargo" required></div>
+                    <div class="form-group">
+                        <label>Nível</label>
+                        <select id="nivel">
+                            <option value="OFICIALIZADO(A)">OFICIALIZADO(A)</option>
+                            <option value="RJM">RJM</option>
+                            <option value="CULTO OFICIAL">CULTO OFICIAL</option>
+                            <option value="MEIA HORA">MEIA HORA</option>
+                        </select>
+                    </div>
+                    <button type="submit">💾 Salvar Membro</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de confirmação -->
+    <div id="modal" class="modal"><div class="modal-content"><h3>Confirmar exclusão</h3><p id="modalMsg"></p><button onclick="confirmarExclusao()">Excluir</button><button onclick="fecharModal()" style="background:#95a5a6;">Cancelar</button></div></div>
+
+    <script>
+        // 🔧 CONFIGURAÇÃO DO FIREBASE 🔧
+        const firebaseConfig = {
+            apiKey: "AIzaSyA4COgeJSENsHrQHDx39gpZvif3zVrGjYE",
+            authDomain: "identidadeccb.firebaseapp.com",
+            projectId: "identidadeccb",
+            storageBucket: "identidadeccb.firebasestorage.app",
+            messagingSenderId: "385467794937",
+            appId: "1:385467794937:web:d2eb32429586f018e2a928"
+        };
+
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const membrosCollection = db.collection("membros");
+        const presencasCollection = db.collection("presencas");
+
+        let todosMembros = [];
+        let membroParaExcluir = null;
+
+        // Funções auxiliares
+        function getDataHoje() { return new Date().toISOString().split('T')[0]; }
+        
+        function mostrarToast(msg) {
+            const toast = document.createElement('div'); toast.className = 'toast'; toast.textContent = msg;
+            document.body.appendChild(toast); setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Carregar membros do Firebase
+        async function carregarMembros() {
+            const snapshot = await membrosCollection.orderBy('nome').get();
+            todosMembros = [];
+            snapshot.forEach(doc => { todosMembros.push({ id: doc.id, ...doc.data() }); });
+            return todosMembros;
+        }
+
+        // Verificar presença de hoje
+        async function verificarPresencas() {
+            const hoje = getDataHoje();
+            const snapshot = await presencasCollection.where('data', '==', hoje).get();
+            const presentes = {};
+            snapshot.forEach(doc => { presentes[doc.data().membroId] = true; });
+            return presentes;
+        }
+
+        // Renderizar tabela principal
+        async function renderizarTabela() {
+            await carregarMembros();
+            const presentes = await verificarPresencas();
+            const busca = document.getElementById('busca')?.value.toLowerCase() || '';
+            const filtrados = todosMembros.filter(m => m.nome?.toLowerCase().includes(busca));
+            
+            const tbody = document.getElementById('tabelaMembros');
+            if (filtrados.length === 0) { tbody.innerHTML = '<tr><td colspan="6">Nenhum membro encontrado</td></tr>'; return; }
+            
+            let html = '';
+            for (const m of filtrados) {
+                const presente = presentes[m.id] ? '<span class="status-presente">✅ Presente</span>' : '<span class="status-ausente">❌ Ausente</span>';
+                html += `<tr>
+                    <td><strong>${m.nome || ''}</strong></td>
+                    <td>${m.instrumento || ''}</td>
+                    <td>${m.cargo || ''}</td>
+                    <td>${m.nivel || ''}</td>
+                    <td>${presente}</td>
+                    <td>
+                        <button class="btn-edit" onclick="editarMembro('${m.id}')">✏️ Editar</button>
+                        <button class="btn-danger" onclick="abrirModalExcluir('${m.id}', '${m.nome}')">🗑️ Excluir</button>
+                        <button onclick="registrarPresenca('${m.id}', '${m.nome}')">✅ Marcar Presença</button>
+                    </td>
+                </tr>`;
+            }
+            tbody.innerHTML = html;
+        }
+
+        // Renderizar estatísticas
+        async function renderizarEstatisticas() {
+            await carregarMembros();
+            const presentes = await verificarPresencas();
+            const busca = document.getElementById('buscaEst')?.value.toLowerCase() || '';
+            const filtrados = todosMembros.filter(m => m.nome?.toLowerCase().includes(busca));
+            
+            const total = filtrados.length;
+            const presentesCount = filtrados.filter(m => presentes[m.id]).length;
+            document.getElementById('totalMembros').textContent = total;
+            document.getElementById('totalPresentes').textContent = presentesCount;
+            document.getElementById('totalAusentes').textContent = total - presentesCount;
+            
+            const tbody = document.getElementById('tabelaEstatisticas');
+            if (filtrados.length === 0) { tbody.innerHTML = '<tr><td colspan="4">Nenhum membro encontrado</td></tr>'; return; }
+            
+            let html = '';
+            for (const m of filtrados) {
+                const presente = presentes[m.id];
+                html += `<tr>
+                    <td><strong>${m.nome || ''}</strong></td>
+                    <td>${m.instrumento || ''}</td>
+                    <td>${presente ? '<span class="status-presente">✅ Presente</span>' : '<span class="status-ausente">❌ Ausente</span>'}</td>
+                    <td>${!presente ? `<button onclick="registrarPresenca('${m.id}', '${m.nome}')">✅ Marcar Presença</button>` : '-'}</td>
+                </tr>`;
+            }
+            tbody.innerHTML = html;
+        }
+
+        // Registrar presença
+        async function registrarPresenca(id, nome) {
+            const hoje = getDataHoje();
+            try {
+                const snapshot = await presencasCollection.where('membroId', '==', id).where('data', '==', hoje).get();
+                if (!snapshot.empty) { mostrarToast(`⚠️ ${nome} já registrou presença hoje!`); return; }
+                
+                await presencasCollection.add({ membroId: id, nome: nome, data: hoje, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+                mostrarToast(`✅ Presença registrada: ${nome}`);
+                renderizarTabela();
+                renderizarEstatisticas();
+            } catch(error) { mostrarToast('❌ Erro: ' + error.message); }
+        }
+
+        // Limpar presenças do dia
+        async function limparPresencas() {
+            if (!confirm('⚠️ Tem certeza? Isso vai apagar TODAS as presenças de hoje!')) return;
+            const hoje = getDataHoje();
+            const snapshot = await presencasCollection.where('data', '==', hoje).get();
+            for (const doc of snapshot.docs) await presencasCollection.doc(doc.id).delete();
+            mostrarToast('✅ Presenças de hoje foram limpas!');
+            renderizarTabela();
+            renderizarEstatisticas();
+        }
+
+        // Adicionar/Editar membro
+        document.getElementById('formMembro')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('memberId')?.value;
+            const dados = {
+                nome: document.getElementById('nome').value,
+                instrumento: document.getElementById('instrumento').value,
+                congregacao: document.getElementById('congregacao').value,
+                cargo: document.getElementById('cargo').value,
+                nivel: document.getElementById('nivel').value
+            };
+            try {
+                if (id) { await membrosCollection.doc(id).update(dados); mostrarToast('✅ Membro atualizado!'); }
+                else { await membrosCollection.add(dados); mostrarToast('✅ Membro adicionado!'); }
+                document.getElementById('formMembro').reset();
+                trocarAba('lista');
+                renderizarTabela();
+                renderizarEstatisticas();
+            } catch(error) { mostrarToast('❌ Erro: ' + error.message); }
+        });
+
+        function editarMembro(id) {
+            const membro = todosMembros.find(m => m.id === id);
+            if (membro) {
+                document.getElementById('memberId')?.setAttribute('value', id);
+                document.getElementById('nome').value = membro.nome || '';
+                document.getElementById('instrumento').value = membro.instrumento || '';
+                document.getElementById('congregacao').value = membro.congregacao || '';
+                document.getElementById('cargo').value = membro.cargo || '';
+                document.getElementById('nivel').value = membro.nivel || '';
+                trocarAba('adicionar');
+            }
+        }
+
+        function abrirModalExcluir(id, nome) { membroParaExcluir = id; document.getElementById('modalMsg').innerHTML = `Excluir <strong>${nome}</strong>?`; document.getElementById('modal').style.display = 'flex'; }
+        function fecharModal() { document.getElementById('modal').style.display = 'none'; membroParaExcluir = null; }
+        async function confirmarExclusao() {
+            if (membroParaExcluir) { await membrosCollection.doc(membroParaExcluir).delete(); mostrarToast('✅ Membro excluído!'); renderizarTabela(); renderizarEstatisticas(); fecharModal(); }
+        }
+
+        function filtrarMembros() { renderizarTabela(); }
+        function filtrarEstatisticas() { renderizarEstatisticas(); }
+
+        function trocarAba(aba) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`aba${aba.charAt(0).toUpperCase() + aba.slice(1)}`).classList.add('active');
+            event.target.classList.add('active');
+            if (aba === 'lista') renderizarTabela();
+            if (aba === 'estatisticas') renderizarEstatisticas();
+        }
+
+        // Inicializar
+        renderizarTabela();
+        renderizarEstatisticas();
+    </script>
+</body>
+</html>
