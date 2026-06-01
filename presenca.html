@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Presença - Identidade Ministerial</title>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        
+        .top-bar {
+            background: white;
+            border-radius: 15px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+        .logo h1 { color: #2c3e50; font-size: 1.3rem; }
+        .logo h1 i { color: #9b59b6; margin-right: 10px; }
+        .top-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn-voltar { background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; }
+        
+        .card { background: white; border-radius: 20px; padding: 25px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .card-header { border-bottom: 2px solid #e0e0e0; margin-bottom: 20px; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        .card-header h2 { color: #2c3e50; }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; color: #555; }
+        .form-group select { width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; }
+        
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e0e0e0; }
+        thead { background: #2c3e50; color: white; }
+        tr:hover { background: #f8f9fa; }
+        
+        .status-presente { background: #27ae60; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; display: inline-block; }
+        .status-ausente { background: #e74c3c; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; display: inline-block; }
+        
+        .btn-toggle-presente { background: #27ae60; padding: 6px 12px; font-size: 0.8rem; border: none; border-radius: 6px; cursor: pointer; color: white; }
+        .btn-toggle-presente:hover { background: #219a52; }
+        .btn-toggle-ausente { background: #e74c3c; padding: 6px 12px; font-size: 0.8rem; border: none; border-radius: 6px; cursor: pointer; color: white; }
+        .btn-toggle-ausente:hover { background: #c0392b; }
+        
+        .btn-desabilitado { background: #95a5a6; padding: 6px 12px; font-size: 0.8rem; border: none; border-radius: 6px; cursor: not-allowed; color: white; opacity: 0.6; }
+        
+        .stats { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
+        .stat-card { flex: 1; background: #f8f9fa; padding: 15px; border-radius: 10px; text-align: center; cursor: pointer; transition: all 0.3s ease; }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .stat-number { font-size: 2rem; font-weight: bold; }
+        .stat-label { font-size: 0.8rem; color: #7f8c8d; }
+        
+        .search-box { width: 100%; padding: 10px; margin-bottom: 20px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; }
+        
+        .toast { position: fixed; bottom: 20px; right: 20px; background: #27ae60; color: white; padding: 12px 24px; border-radius: 8px; z-index: 1000; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .loading { text-align: center; padding: 20px; color: #999; }
+        
+        .info-evento { background: #e3f2fd; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
+        .info-evento h3 { color: #2c3e50; margin-bottom: 5px; }
+        .info-evento p { color: #7f8c8d; font-size: 0.85rem; }
+        
+        .aviso-data { background: #fff3cd; color: #856404; padding: 10px; border-radius: 8px; margin-top: 10px; text-align: center; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="top-bar">
+            <div class="logo">
+                <h1><i class="fas fa-check-circle"></i> Controle de Presença</h1>
+            </div>
+            <div class="top-buttons">
+                <a href="sistema_completo.html" class="btn-voltar">📋 Manutenção</a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>📅 Selecionar Evento</h2>
+            </div>
+            <div class="form-group">
+                <label>Evento:</label>
+                <select id="eventoSelect" required>
+                    <option value="">Selecione um evento...</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="infoEvento" class="info-evento" style="display: none;">
+            <h3 id="eventoNome"></h3>
+            <p id="eventoData"></p>
+            <p id="eventoPermissoes"></p>
+            <div id="avisoData" class="aviso-data" style="display: none;">
+                <i>⚠️</i> Este evento não pode ser alterado porque a data é diferente de hoje
+            </div>
+        </div>
+
+        <div id="presencaCard" class="card" style="display: none;">
+            <div class="card-header">
+                <h2>📋 Lista de Membros Autorizados</h2>
+            </div>
+            <div class="stats">
+                <div class="stat-card" onclick="filtrarPorStatus('todos')">
+                    <div class="stat-number" id="totalMembros">0</div>
+                    <div class="stat-label">Total</div>
+                </div>
+                <div class="stat-card" onclick="filtrarPorStatus('presentes')">
+                    <div class="stat-number" id="totalPresentes">0</div>
+                    <div class="stat-label">Presentes</div>
+                </div>
+                <div class="stat-card" onclick="filtrarPorStatus('ausentes')">
+                    <div class="stat-number" id="totalAusentes">0</div>
+                    <div class="stat-label">Ausentes</div>
+                </div>
+            </div>
+            <input type="text" id="buscaMembros" class="search-box" placeholder="🔍 Buscar por nome..." onkeyup="filtrarMembros()">
+            <div class="table-container">
+                <table id="tabelaMembros">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Instrumento</th>
+                            <th>Cargo</th>
+                            <th>Nível</th>
+                            <th>Status</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="corpoTabela">
+                        <tr><td colspan="6" class="loading">Selecione um evento</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Config
+        const firebaseConfig = {
+            apiKey: "SUA_API_KEY_AQUI",
+            authDomain: "identidadeccb.firebaseapp.com",
+            projectId: "identidadeccb",
+            storageBucket: "identidadeccb.appspot.com",
+            messagingSenderId: "SEU_MESSAGING_SENDER_ID",
+            appId: "SEU_APP_ID"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Coleções
+        const eventosCollection = db.collection("eventos");
+        const tiposEventoCollection = db.collection("tipos_evento");
+        const permissoesCollection = db.collection("permissoes_evento");
+        const membrosCollection = db.collection("membros");
+        const instrumentosCollection = db.collection("instrumentos");
+        const cargosCollection = db.collection("cargos");
+        const niveisCollection = db.collection("niveis");
+        const congregacoesCollection = db.collection("congregacoes");
+        const presencasCollection = db.collection("presencas");
+
+        // Variáveis globais
+        let eventos = [];
+        let tiposEvento = [];
+        let eventoSelecionado = null;
+        let permissoesEvento = [];
+        let membrosAutorizados = [];
+        let membrosCompletos = [];
+        let instrumentos = [];
+        let cargos = [];
+        let niveis = [];
+        let congregacoes = [];
+        
+        let statusFiltro = 'todos';
+        let buscaFiltro = '';
+        let podeAlterar = false;
+
+        function mostrarToast(msg) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Carregar dados iniciais
+        async function carregarDados() {
+            console.log('🔄 Carregando dados...');
+            
+            const instSnapshot = await instrumentosCollection.get();
+            instrumentos = [];
+            instSnapshot.forEach(doc => {
+                const data = doc.data();
+                instrumentos.push({ id: data.id, nome: data.nome });
+            });
+            
+            const cargoSnapshot = await cargosCollection.get();
+            cargos = [];
+            cargoSnapshot.forEach(doc => {
+                const data = doc.data();
+                cargos.push({ id: data.id, nome: data.nome });
+            });
+
+            const nivelSnapshot = await niveisCollection.get();
+            niveis = [];
+            nivelSnapshot.forEach(doc => {
+                const data = doc.data();
+                niveis.push({ id: data.id, nome: data.nome });
+            });
+
+            const congSnapshot = await congregacoesCollection.get();
+            congregacoes = [];
+            congSnapshot.forEach(doc => congregacoes.push({ id: doc.id, nome: doc.data().nome }));
+
+            const tipoSnapshot = await tiposEventoCollection.get();
+            tiposEvento = [];
+            tipoSnapshot.forEach(doc => tiposEvento.push({ id: doc.id, nome: doc.data().nome }));
+
+            const membroSnapshot = await membrosCollection.get();
+            membrosCompletos = [];
+            membroSnapshot.forEach(doc => {
+                const data = doc.data();
+                membrosCompletos.push({
+                    id: doc.id,
+                    nome: data.nome,
+                    instrumentoId: data.instrumentoId,
+                    cargoId: data.cargoId,
+                    nivelId: data.nivelId
+                });
+            });
+            console.log(`📋 Membros totais: ${membrosCompletos.length}`);
+        }
+
+        // Carregar eventos
+        async function carregarEventos() {
+            const snapshot = await eventosCollection.orderBy('data', 'desc').get();
+            eventos = [];
+            
+            for (const doc of snapshot.docs) {
+                const data = doc.data();
+                const tipoEvento = tiposEvento.find(t => t.id === data.tipoEventoId);
+                const congregacao = congregacoes.find(c => c.id === data.congregacaoId);
+                
+                eventos.push({
+                    id: doc.id,
+                    data: data.data,
+                    congregacaoId: data.congregacaoId,
+                    congregacaoNome: congregacao ? congregacao.nome : 'Desconhecida',
+                    tipoEventoId: data.tipoEventoId,
+                    tipoEventoNome: tipoEvento ? tipoEvento.nome : 'Desconhecido'
+                });
+            }
+            
+            renderizarSelectEventos();
+        }
+
+        function renderizarSelectEventos() {
+            const select = document.getElementById('eventoSelect');
+            select.innerHTML = '<option value="">Selecione um evento...</option>';
+            
+            for (const evento of eventos) {
+                const dataFormatada = new Date(evento.data).toLocaleDateString('pt-BR');
+                select.innerHTML += `<option value="${evento.id}">${dataFormatada} - ${evento.tipoEventoNome} - ${evento.congregacaoNome}</option>`;
+            }
+        }
+
+        async function buscarPermissoes(tipoEventoId) {
+            const permissoesSnapshot = await permissoesCollection.where('tipoEventoId', '==', tipoEventoId).get();
+            permissoesEvento = [];
+            permissoesSnapshot.forEach(doc => {
+                const permissao = doc.data();
+                permissoesEvento.push({
+                    cargoId: permissao.cargoId,
+                    nivelId: permissao.nivelId
+                });
+            });
+            console.log(`📋 Permissões: ${permissoesEvento.length}`);
+        }
+
+        function isMembroAutorizado(membro) {
+            if (permissoesEvento.length === 0) return true;
+            return permissoesEvento.some(permissao => 
+                Number(permissao.cargoId) === Number(membro.cargoId) && 
+                Number(permissao.nivelId) === Number(membro.nivelId)
+            );
+        }
+
+        function filtrarMembrosAutorizados() {
+            membrosAutorizados = membrosCompletos.filter(m => isMembroAutorizado(m));
+            console.log(`✅ Membros autorizados: ${membrosAutorizados.length}`);
+            return membrosAutorizados;
+        }
+
+        async function verificarPresencasEvento(eventoId) {
+            const snapshot = await presencasCollection.where('eventoId', '==', eventoId).get();
+            const presentes = {};
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                presentes[data.membroId] = doc.id;
+            });
+            return presentes;
+        }
+
+        async function alternarPresenca(membroId, membroNome, estaPresente, presencaDocId) {
+            if (!podeAlterar) {
+                mostrarToast('⚠️ Este evento não pode ser alterado! Apenas eventos com data igual a hoje podem ser modificados.');
+                return;
+            }
+            
+            try {
+                if (estaPresente) {
+                    await presencasCollection.doc(presencaDocId).delete();
+                    mostrarToast(`✅ Presença removida: ${membroNome}`);
+                } else {
+                    await presencasCollection.add({
+                        eventoId: eventoSelecionado.id,
+                        membroId: membroId,
+                        nome: membroNome,
+                        dataEvento: eventoSelecionado.data,
+                        dataHora: new Date().toISOString(),
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    mostrarToast(`✅ Presença registrada: ${membroNome}`);
+                }
+                await renderizarListaMembros();
+            } catch(error) {
+                mostrarToast('❌ Erro: ' + error.message);
+            }
+        }
+
+        function getCargoNome(cargoId) {
+            const cargo = cargos.find(c => Number(c.id) === Number(cargoId));
+            return cargo ? cargo.nome : `Cargo ${cargoId}`;
+        }
+
+        function getNivelNome(nivelId) {
+            const nivel = niveis.find(n => Number(n.id) === Number(nivelId));
+            return nivel ? nivel.nome : `Nível ${nivelId}`;
+        }
+
+        function getInstrumentoNome(instrumentoId) {
+            const instrumento = instrumentos.find(i => Number(i.id) === Number(instrumentoId));
+            return instrumento ? instrumento.nome : `Instrumento ${instrumentoId}`;
+        }
+
+        async function renderizarListaMembros() {
+            if (!eventoSelecionado) return;
+            
+            const presentesMap = await verificarPresencasEvento(eventoSelecionado.id);
+            
+            let filtrados = [...membrosAutorizados];
+            
+            if (statusFiltro === 'presentes') {
+                filtrados = filtrados.filter(m => presentesMap[m.id]);
+            } else if (statusFiltro === 'ausentes') {
+                filtrados = filtrados.filter(m => !presentesMap[m.id]);
+            }
+            
+            if (buscaFiltro) {
+                filtrados = filtrados.filter(m => m.nome.toLowerCase().includes(buscaFiltro));
+            }
+            
+            const total = membrosAutorizados.length;
+            const presentes = membrosAutorizados.filter(m => presentesMap[m.id]).length;
+            document.getElementById('totalMembros').textContent = total;
+            document.getElementById('totalPresentes').textContent = presentes;
+            document.getElementById('totalAusentes').textContent = total - presentes;
+            
+            const tbody = document.getElementById('corpoTabela');
+            if (filtrados.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="loading">Nenhum membro encontrado</td></tr>';
+                return;
+            }
+            
+            let html = '';
+            for (const m of filtrados) {
+                const instrumento = getInstrumentoNome(m.instrumentoId);
+                const cargo = getCargoNome(m.cargoId);
+                const nivel = getNivelNome(m.nivelId);
+                const estaPresente = !!presentesMap[m.id];
+                const presencaDocId = presentesMap[m.id] || '';
+                
+                let botaoTexto = estaPresente ? '❌ Marcar Ausente' : '✅ Marcar Presente';
+                let botaoClasse = estaPresente ? 'btn-toggle-ausente' : 'btn-toggle-presente';
+                
+                if (!podeAlterar) {
+                    botaoClasse = 'btn-desabilitado';
+                }
+                
+                html += `<tr>
+                    <td><strong>${m.nome}</strong></td>
+                    <td>${instrumento}</td>
+                    <td>${cargo}</td>
+                    <td>${nivel}</td>
+                    <td>${estaPresente ? '<span class="status-presente">✅ Presente</span>' : '<span class="status-ausente">❌ Ausente</span>'}</td>
+                    <td>
+                        <button class="${botaoClasse}" 
+                                onclick="alternarPresenca('${m.id}', '${m.nome}', ${estaPresente}, '${presencaDocId}')"
+                                ${!podeAlterar ? 'disabled' : ''}>
+                            ${botaoTexto}
+                        </button>
+                    </td>
+                </tr>`;
+            }
+            tbody.innerHTML = html;
+        }
+
+        // Evento de seleção
+        document.getElementById('eventoSelect').addEventListener('change', async (e) => {
+            const eventoId = e.target.value;
+            
+            if (!eventoId) {
+                document.getElementById('presencaCard').style.display = 'none';
+                document.getElementById('infoEvento').style.display = 'none';
+                eventoSelecionado = null;
+                return;
+            }
+            
+            eventoSelecionado = eventos.find(ev => ev.id === eventoId);
+            
+            if (eventoSelecionado) {
+                await buscarPermissoes(eventoSelecionado.tipoEventoId);
+                filtrarMembrosAutorizados();
+                
+                const hoje = new Date().toISOString().split('T')[0];
+                podeAlterar = eventoSelecionado.data === hoje;
+                
+                const dataFormatada = new Date(eventoSelecionado.data).toLocaleDateString('pt-BR');
+                document.getElementById('eventoNome').innerHTML = `🎯 ${eventoSelecionado.tipoEventoNome}`;
+                document.getElementById('eventoData').innerHTML = `📅 ${dataFormatada} - 📍 ${eventoSelecionado.congregacaoNome}`;
+                document.getElementById('eventoPermissoes').innerHTML = permissoesEvento.length > 0 ? `📋 ${permissoesEvento.length} permissões configuradas` : '📋 Sem restrições';
+                
+                document.getElementById('avisoData').style.display = podeAlterar ? 'none' : 'block';
+                document.getElementById('infoEvento').style.display = 'block';
+                document.getElementById('presencaCard').style.display = 'block';
+                
+                await renderizarListaMembros();
+            }
+        });
+
+        function filtrarMembros() {
+            buscaFiltro = document.getElementById('buscaMembros').value.toLowerCase();
+            renderizarListaMembros();
+        }
+
+        function filtrarPorStatus(status) {
+            statusFiltro = status;
+            renderizarListaMembros();
+        }
+
+        async function init() {
+            await carregarDados();
+            await carregarEventos();
+            console.log('✅ Sistema inicializado!');
+        }
+        
+        init();
+    </script>
+</body>
+</html>

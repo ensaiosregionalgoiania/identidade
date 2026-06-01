@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Identidade Ministerial - Sistema Completo</title>
+    <title>Identidade Ministerial - Manutenção de Usuários</title>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     <style>
@@ -16,6 +16,24 @@
         }
         .container { max-width: 1200px; margin: 0 auto; }
         
+        .top-bar {
+            background: white;
+            border-radius: 15px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+        .logo h1 { color: #2c3e50; font-size: 1.3rem; }
+        .logo h1 i { color: #3498db; margin-right: 10px; }
+        .top-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn-evento { background: #f39c12; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; }
+        .btn-presenca { background: #9b59b6; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; }
+        
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
         .tab-btn {
             flex: 1; padding: 12px; background: rgba(255,255,255,0.2); color: white;
@@ -27,7 +45,7 @@
         .tab-content.active { display: block; }
         
         .card { background: white; border-radius: 20px; padding: 25px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-        .card-header { border-bottom: 2px solid #e0e0e0; margin-bottom: 20px; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        .card-header { border-bottom: 2px solid #e0e0e0; margin-bottom: 20px; padding-bottom: 10px; }
         .card-header h2 { color: #2c3e50; }
         
         .form-group { margin-bottom: 15px; }
@@ -40,8 +58,6 @@
         .btn-danger:hover { background: #c0392b; }
         .btn-edit { background: #3498db; }
         .btn-edit:hover { background: #2980b9; }
-        .btn-presenca { background: #9b59b6; }
-        .btn-presenca:hover { background: #8e44ad; }
         
         .table-container { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; }
@@ -49,18 +65,9 @@
         thead { background: #2c3e50; color: white; }
         tr:hover { background: #f8f9fa; }
         
-        .status-presente { background: #27ae60; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; display: inline-block; }
-        .status-ausente { background: #e74c3c; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; display: inline-block; }
-        
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: white; border-radius: 15px; padding: 25px; width: 90%; max-width: 500px; text-align: center; }
+        .modal-content { background: white; border-radius: 15px; padding: 25px; width: 90%; max-width: 400px; text-align: center; }
         .modal-buttons { margin-top: 20px; display: flex; gap: 10px; justify-content: center; }
-        
-        .stats { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
-        .stat-card { flex: 1; background: #f8f9fa; padding: 15px; border-radius: 10px; text-align: center; min-width: 100px; cursor: pointer; transition: all 0.3s ease; }
-        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-        .stat-number { font-size: 2rem; font-weight: bold; }
-        .stat-label { font-size: 0.8rem; color: #7f8c8d; }
         
         .search-box { width: 100%; padding: 10px; margin-bottom: 20px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; }
         
@@ -68,29 +75,29 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         
         .loading { text-align: center; padding: 20px; color: #999; }
-        
-        .filtro-data { display: flex; gap: 10px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
-        .filtro-data input { padding: 8px; border: 2px solid #e0e0e0; border-radius: 8px; }
-        
-        .btn-pequeno { padding: 5px 10px; font-size: 0.8rem; }
     </style>
 </head>
 <body>
     <div class="container">
+        <div class="top-bar">
+            <div class="logo">
+                <h1><i class="fas fa-church"></i> Identidade Ministerial</h1>
+            </div>
+            <div class="top-buttons">
+                <a href="presenca.html" class="btn-presenca">✅ Controle de Presença</a>
+                <button class="btn-evento" onclick="window.location.href='cadastro_evento.html'">🎉 Cadastrar Evento</button>
+            </div>
+        </div>
+
         <div class="tabs">
             <button class="tab-btn active" onclick="trocarAba('lista')">📋 Lista de Membros</button>
-            <button class="tab-btn" onclick="trocarAba('estatisticas')">📊 Estatísticas</button>
-            <button class="tab-btn" onclick="trocarAba('historico')">📅 Histórico de Presenças</button>
             <button class="tab-btn" onclick="trocarAba('adicionar')">➕ Adicionar Membro</button>
         </div>
 
         <!-- Aba Lista -->
         <div id="abaLista" class="tab-content active">
             <div class="card">
-                <div class="card-header">
-                    <h2>📋 Membros Cadastrados</h2>
-                    <div>📅 Data: <strong id="dataAtualLista"></strong></div>
-                </div>
+                <div class="card-header"><h2>📋 Membros Cadastrados</h2></div>
                 <input type="text" id="busca" class="search-box" placeholder="🔍 Buscar por nome..." onkeyup="filtrarMembros()">
                 <div class="table-container">
                     <table id="tabelaMembros">
@@ -98,99 +105,21 @@
                             <tr>
                                 <th>Nome</th>
                                 <th>Instrumento</th>
+                                <th>Congregação</th>
                                 <th>Cargo</th>
                                 <th>Nível</th>
-                                <th>Presença Hoje</th>
                                 <th>Ações</th>
                             </tr>
                         </thead>
                         <tbody id="corpoTabela">
-                            <tr>
-                                <td colspan="6" class="loading">Carregando...</td>
-                            </tr>
+                            <tr><td colspan="6" class="loading">Carregando...</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
 
-        <!-- Aba Estatísticas -->
-        <div id="abaEstatisticas" class="tab-content">
-            <div class="card">
-                <div class="card-header"><h2>📊 Controle de Presença</h2></div>
-                <div class="stats">
-                    <div class="stat-card" onclick="filtrarPorStatus('todos')">
-                        <div class="stat-number" id="totalMembros">0</div>
-                        <div class="stat-label">Total</div>
-                    </div>
-                    <div class="stat-card" onclick="filtrarPorStatus('presentes')">
-                        <div class="stat-number" id="totalPresentes">0</div>
-                        <div class="stat-label">Presentes Hoje</div>
-                    </div>
-                    <div class="stat-card" onclick="filtrarPorStatus('ausentes')">
-                        <div class="stat-number" id="totalAusentes">0</div>
-                        <div class="stat-label">Ausentes Hoje</div>
-                    </div>
-                </div>
-                <input type="text" id="buscaEst" class="search-box" placeholder="🔍 Buscar por nome..." onkeyup="filtrarEstatisticas()">
-                <div class="table-container">
-                    <table id="tabelaEstatisticas">
-                        <thead>
-                            <tr>
-                                <th>Nome</th>
-                                <th>Instrumento</th>
-                                <th>Cargo</th>
-                                <th>Status</th>
-                                <th>Ação</th>
-                            </tr>
-                        </thead>
-                        <tbody id="corpoEstatisticas">
-                            <tr>
-                                <td colspan="5" class="loading">Carregando...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <button class="btn-danger" onclick="limparPresencas()" style="margin-top: 20px;">🗑️ Limpar Presenças de Hoje</button>
-            </div>
-        </div>
-
-        <!-- Aba Histórico -->
-        <div id="abaHistorico" class="tab-content">
-            <div class="card">
-                <div class="card-header">
-                    <h2>📅 Histórico de Presenças</h2>
-                </div>
-                <div class="filtro-data">
-                    <label>Período:</label>
-                    <input type="date" id="dataInicio">
-                    <span>até</span>
-                    <input type="date" id="dataFim">
-                    <button onclick="carregarHistorico()">🔍 Buscar</button>
-                    <button onclick="exportarHistorico()" style="background: #3498db;">📥 Exportar CSV</button>
-                </div>
-                <div class="table-container">
-                    <table id="tabelaHistorico">
-                        <thead>
-                            <tr>
-                                <th>Data</th>
-                                <th>Membro</th>
-                                <th>Instrumento</th>
-                                <th>Cargo</th>
-                                <th>Horário</th>
-                            </tr>
-                        </thead>
-                        <tbody id="corpoHistorico">
-                            <tr>
-                                <td colspan="5" class="loading">Selecione um período e clique em Buscar</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Aba Adicionar/Editar -->
+        <!-- Aba Adicionar\/Editar -->
         <div id="abaAdicionar" class="tab-content">
             <div class="card">
                 <div class="card-header"><h2 id="formTitle">➕ Adicionar Novo Membro</h2></div>
@@ -204,22 +133,30 @@
 
                     <div class="form-group">
                         <label>Instrumento *</label>
-                        <select id="instrumentoId" required></select>
+                        <select id="instrumentoId" required>
+                            <option value="">Selecione...</option>
+                        </select>
                     </div>
 
                     <div class="form-group">
                         <label>Congregação *</label>
-                        <select id="congregacaoId" required></select>
+                        <select id="congregacaoId" required>
+                            <option value="">Selecione...</option>
+                        </select>
                     </div>
 
                     <div class="form-group">
                         <label>Cargo *</label>
-                        <select id="cargoId" required></select>
+                        <select id="cargoId" required>
+                            <option value="">Selecione...</option>
+                        </select>
                     </div>
 
                     <div class="form-group">
                         <label>Nível *</label>
-                        <select id="nivelId" required></select>
+                        <select id="nivelId" required>
+                            <option value="">Selecione...</option>
+                        </select>
                     </div>
 
                     <button type="submit">💾 Salvar Membro</button>
@@ -229,20 +166,31 @@
         </div>
     </div>
 
-    <!-- Modal de confirmação -->
-    <div id="modal" class="modal">
+    <!-- Modal para adicionar novo item -->
+    <div id="modalNovoItem" class="modal">
+        <div class="modal-content">
+            <h3 id="modalNovoTitulo">Adicionar Novo</h3>
+            <input type="text" id="novoItemNome" placeholder="Digite o nome" style="width: 100%; padding: 10px; margin: 15px 0; border: 2px solid #e0e0e0; border-radius: 8px;">
+            <div class="modal-buttons">
+                <button onclick="fecharModalNovoItem()" style="background:#95a5a6;">Cancelar</button>
+                <button onclick="salvarNovoItem()">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de exclusão -->
+    <div id="modalExcluir" class="modal">
         <div class="modal-content">
             <h3>Confirmar exclusão</h3>
             <p id="modalMsg"></p>
             <div class="modal-buttons">
                 <button onclick="confirmarExclusao()">Excluir</button>
-                <button onclick="fecharModal()" style="background:#95a5a6;">Cancelar</button>
+                <button onclick="fecharModalExcluir()" style="background:#95a5a6;">Cancelar</button>
             </div>
         </div>
     </div>
 
     <script>
-        // 🔧 CONFIGURAÇÃO DO FIREBASE 🔧
         const firebaseConfig = {
             apiKey: "AIzaSyA4COgeJSENsHrQHDx39gpZvif3zVrGjYE",
             authDomain: "identidadeccb.firebaseapp.com",
@@ -252,31 +200,23 @@
             appId: "1:385467794937:web:d2eb32429586f018e2a928"
         };
 
-        // Inicializar Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // Coleções
         const membrosCollection = db.collection("membros");
         const instrumentosCollection = db.collection("instrumentos");
         const congregacoesCollection = db.collection("congregacoes");
         const cargosCollection = db.collection("cargos");
         const niveisCollection = db.collection("niveis");
-        const presencasCollection = db.collection("presencas");
 
-        // Dados carregados
         let instrumentos = [];
         let congregacoes = [];
         let cargos = [];
         let niveis = [];
         let membros = [];
-
         let membroParaExcluir = null;
-        let statusFiltro = 'todos';
+        let tipoItemAdicionando = null;
 
-        // Funções auxiliares
-        function getDataHoje() { return new Date().toISOString().split('T')[0]; }
-        
         function mostrarToast(msg) {
             const toast = document.createElement('div'); 
             toast.className = 'toast'; 
@@ -285,79 +225,152 @@
             setTimeout(() => toast.remove(), 3000);
         }
 
-        // Carregar todas as coleções auxiliares
         async function carregarColecoes() {
             const instSnapshot = await instrumentosCollection.orderBy('nome').get();
             instrumentos = [];
-            instSnapshot.forEach(doc => instrumentos.push({ id: parseInt(doc.id), ...doc.data() }));
+            instSnapshot.forEach(doc => instrumentos.push({ id: doc.id, ...doc.data() }));
 
             const congSnapshot = await congregacoesCollection.orderBy('nome').get();
             congregacoes = [];
-            congSnapshot.forEach(doc => congregacoes.push({ id: parseInt(doc.id), ...doc.data() }));
+            congSnapshot.forEach(doc => congregacoes.push({ id: doc.id, ...doc.data() }));
 
             const cargoSnapshot = await cargosCollection.orderBy('nome').get();
             cargos = [];
-            cargoSnapshot.forEach(doc => cargos.push({ id: parseInt(doc.id), ...doc.data() }));
+            cargoSnapshot.forEach(doc => cargos.push({ id: doc.id, ...doc.data() }));
 
-            const nivelSnapshot = await niveisCollection.orderBy('id').get();
+            const nivelSnapshot = await niveisCollection.orderBy('nome').get();
             niveis = [];
-            nivelSnapshot.forEach(doc => niveis.push({ id: parseInt(doc.id), ...doc.data() }));
+            nivelSnapshot.forEach(doc => niveis.push({ id: doc.id, ...doc.data() }));
         }
 
-        // Carregar membros
+        function renderizarSelects() {
+            const instSelect = document.getElementById('instrumentoId');
+            instSelect.innerHTML = '<option value="">Selecione...</option>';
+            instrumentos.forEach(i => { instSelect.innerHTML += `<option value="${i.id}">${i.nome}</option>`; });
+            instSelect.innerHTML += '<option value="__NOVO__" style="color: #27ae60; font-weight: bold;">➕ Novo Instrumento</option>';
+
+            const congSelect = document.getElementById('congregacaoId');
+            congSelect.innerHTML = '<option value="">Selecione...</option>';
+            congregacoes.forEach(c => { congSelect.innerHTML += `<option value="${c.id}">${c.nome}</option>`; });
+            congSelect.innerHTML += '<option value="__NOVO__" style="color: #27ae60; font-weight: bold;">➕ Nova Congregação</option>';
+
+            const cargoSelect = document.getElementById('cargoId');
+            cargoSelect.innerHTML = '<option value="">Selecione...</option>';
+            cargos.forEach(c => { cargoSelect.innerHTML += `<option value="${c.id}">${c.nome}</option>`; });
+            cargoSelect.innerHTML += '<option value="__NOVO__" style="color: #27ae60; font-weight: bold;">➕ Novo Cargo</option>';
+
+            const nivelSelect = document.getElementById('nivelId');
+            nivelSelect.innerHTML = '<option value="">Selecione...</option>';
+            niveis.forEach(n => { nivelSelect.innerHTML += `<option value="${n.id}">${n.nome}</option>`; });
+            nivelSelect.innerHTML += '<option value="__NOVO__" style="color: #27ae60; font-weight: bold;">➕ Novo Nível</option>';
+        }
+
+        function configurarSelectsNovo() {
+            document.getElementById('instrumentoId').addEventListener('change', function(e) {
+                if (this.value === '__NOVO__') {
+                    tipoItemAdicionando = 'instrumento';
+                    document.getElementById('modalNovoTitulo').textContent = 'Adicionar Novo Instrumento';
+                    document.getElementById('novoItemNome').value = '';
+                    document.getElementById('modalNovoItem').style.display = 'flex';
+                    this.value = '';
+                }
+            });
+
+            document.getElementById('congregacaoId').addEventListener('change', function(e) {
+                if (this.value === '__NOVO__') {
+                    tipoItemAdicionando = 'congregacao';
+                    document.getElementById('modalNovoTitulo').textContent = 'Adicionar Nova Congregação';
+                    document.getElementById('novoItemNome').value = '';
+                    document.getElementById('modalNovoItem').style.display = 'flex';
+                    this.value = '';
+                }
+            });
+
+            document.getElementById('cargoId').addEventListener('change', function(e) {
+                if (this.value === '__NOVO__') {
+                    tipoItemAdicionando = 'cargo';
+                    document.getElementById('modalNovoTitulo').textContent = 'Adicionar Novo Cargo';
+                    document.getElementById('novoItemNome').value = '';
+                    document.getElementById('modalNovoItem').style.display = 'flex';
+                    this.value = '';
+                }
+            });
+
+            document.getElementById('nivelId').addEventListener('change', function(e) {
+                if (this.value === '__NOVO__') {
+                    tipoItemAdicionando = 'nivel';
+                    document.getElementById('modalNovoTitulo').textContent = 'Adicionar Novo Nível';
+                    document.getElementById('novoItemNome').value = '';
+                    document.getElementById('modalNovoItem').style.display = 'flex';
+                    this.value = '';
+                }
+            });
+        }
+
+        function fecharModalNovoItem() {
+            document.getElementById('modalNovoItem').style.display = 'none';
+            tipoItemAdicionando = null;
+        }
+
+        async function salvarNovoItem() {
+            const novoNome = document.getElementById('novoItemNome').value.trim();
+            if (!novoNome) {
+                mostrarToast('Digite um nome válido');
+                return;
+            }
+
+            try {
+                if (tipoItemAdicionando === 'instrumento') {
+                    await instrumentosCollection.add({ nome: novoNome });
+                    mostrarToast('✅ Instrumento adicionado!');
+                } else if (tipoItemAdicionando === 'congregacao') {
+                    await congregacoesCollection.add({ nome: novoNome });
+                    mostrarToast('✅ Congregação adicionada!');
+                } else if (tipoItemAdicionando === 'cargo') {
+                    await cargosCollection.add({ nome: novoNome });
+                    mostrarToast('✅ Cargo adicionado!');
+                } else if (tipoItemAdicionando === 'nivel') {
+                    await niveisCollection.add({ nome: novoNome });
+                    mostrarToast('✅ Nível adicionado!');
+                }
+
+                await carregarColecoes();
+                renderizarSelects();
+                fecharModalNovoItem();
+            } catch(error) {
+                mostrarToast('❌ Erro: ' + error.message);
+            }
+        }
+
         async function carregarMembros() {
             const snapshot = await membrosCollection.get();
             membros = [];
             snapshot.forEach(doc => {
-                membros.push({ id: doc.id, ...doc.data() });
+                const data = doc.data();
+                membros.push({ 
+                    id: doc.id, 
+                    nome: data.nome,
+                    instrumentoId: data.instrumentoId,
+                    congregacaoId: data.congregacaoId,
+                    cargoId: data.cargoId,
+                    nivelId: data.nivelId
+                });
             });
             return membros;
         }
 
-        // Obter nome pelo ID
         function getNomePorId(lista, id) {
             const item = lista.find(i => i.id == id);
             return item ? item.nome : "Desconhecido";
         }
 
-        // Verificar presenças de todos os membros hoje
-        async function carregarPresencasHojeMap() {
-            const hoje = getDataHoje();
-            const snapshot = await presencasCollection.where('data', '==', hoje).get();
-            const map = {};
-            snapshot.forEach(doc => { map[doc.data().membroId] = true; });
-            return map;
-        }
-
-        // Renderizar selects
-        function renderizarSelects() {
-            const instSelect = document.getElementById('instrumentoId');
-            instSelect.innerHTML = '<option value="">Selecione...</option>';
-            instrumentos.forEach(i => { instSelect.innerHTML += `<option value="${i.id}">${i.nome}</option>`; });
-
-            const congSelect = document.getElementById('congregacaoId');
-            congSelect.innerHTML = '<option value="">Selecione...</option>';
-            congregacoes.forEach(c => { congSelect.innerHTML += `<option value="${c.id}">${c.nome}</option>`; });
-
-            const cargoSelect = document.getElementById('cargoId');
-            cargoSelect.innerHTML = '<option value="">Selecione...</option>';
-            cargos.forEach(c => { cargoSelect.innerHTML += `<option value="${c.id}">${c.nome}</option>`; });
-
-            const nivelSelect = document.getElementById('nivelId');
-            nivelSelect.innerHTML = '<option value="">Selecione...</option>';
-            niveis.forEach(n => { nivelSelect.innerHTML += `<option value="${n.id}">${n.nome}</option>`; });
-        }
-
-        // Renderizar tabela principal
         async function renderizarTabela() {
             await carregarMembros();
-            const presencasHoje = await carregarPresencasHojeMap();
             
             const busca = document.getElementById('busca')?.value.toLowerCase() || '';
             const filtrados = membros.filter(m => m.nome?.toLowerCase().includes(busca));
             
             const tbody = document.getElementById('corpoTabela');
-            document.getElementById('dataAtualLista').textContent = new Date().toLocaleDateString('pt-BR');
             
             if (filtrados.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" class="loading">Nenhum membro encontrado</td></tr>';
@@ -367,214 +380,41 @@
             let html = '';
             for (const m of filtrados) {
                 const instrumento = getNomePorId(instrumentos, m.instrumentoId);
+                const congregacao = getNomePorId(congregacoes, m.congregacaoId);
                 const cargo = getNomePorId(cargos, m.cargoId);
                 const nivel = getNomePorId(niveis, m.nivelId);
-                const presente = presencasHoje[m.id] ? '<span class="status-presente">✅ Presente</span>' : '<span class="status-ausente">❌ Ausente</span>';
                 
                 html += `<tr>
                     <td><strong>${m.nome || ''}</strong></td>
                     <td>${instrumento}</td>
+                    <td>${congregacao}</td>
                     <td>${cargo}</td>
                     <td>${nivel}</td>
-                    <td>${presente}</td>
                     <td>
                         <button class="btn-edit" onclick="editarMembro('${m.id}')">✏️ Editar</button>
                         <button class="btn-danger" onclick="abrirModalExcluir('${m.id}', '${m.nome}')">🗑️ Excluir</button>
-                        <button class="btn-presenca" onclick="registrarPresenca('${m.id}', '${m.nome}')">✅ Marcar Presença</button>
-                    </td>
-                </tr>`;
+                     </td>
+                 </tr>`;
             }
             tbody.innerHTML = html;
         }
 
-        // Renderizar estatísticas
-        async function renderizarEstatisticas() {
-            await carregarMembros();
-            const presencasHoje = await carregarPresencasHojeMap();
-            
-            let filtrados = [...membros];
-            
-            if (statusFiltro === 'presentes') {
-                filtrados = membros.filter(m => presencasHoje[m.id]);
-            } else if (statusFiltro === 'ausentes') {
-                filtrados = membros.filter(m => !presencasHoje[m.id]);
-            }
-            
-            const busca = document.getElementById('buscaEst')?.value.toLowerCase() || '';
-            if (busca) {
-                filtrados = filtrados.filter(m => m.nome?.toLowerCase().includes(busca));
-            }
-            
-            const total = membros.length;
-            const presentesCount = membros.filter(m => presencasHoje[m.id]).length;
-            document.getElementById('totalMembros').textContent = total;
-            document.getElementById('totalPresentes').textContent = presentesCount;
-            document.getElementById('totalAusentes').textContent = total - presentesCount;
-            
-            const tbody = document.getElementById('corpoEstatisticas');
-            if (filtrados.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="loading">Nenhum membro encontrado</td></tr>';
-                return;
-            }
-            
-            let html = '';
-            for (const m of filtrados) {
-                const instrumento = getNomePorId(instrumentos, m.instrumentoId);
-                const cargo = getNomePorId(cargos, m.cargoId);
-                const presente = presencasHoje[m.id];
-                
-                html += `<tr>
-                    <td><strong>${m.nome || ''}</strong></td>
-                    <td>${instrumento}</td>
-                    <td>${cargo}</td>
-                    <td>${presente ? '<span class="status-presente">✅ Presente</span>' : '<span class="status-ausente">❌ Ausente</span>'}</td>
-                    <td>${!presente ? `<button class="btn-presenca btn-pequeno" onclick="registrarPresenca('${m.id}', '${m.nome}')">✅ Marcar</button>` : '-'}</td>
-                </tr>`;
-            }
-            tbody.innerHTML = html;
-        }
-
-        // Registrar presença (salva a data no Firebase)
-        async function registrarPresenca(id, nome) {
-            const hoje = getDataHoje();
-            try {
-                const snapshot = await presencasCollection.where('membroId', '==', id).where('data', '==', hoje).get();
-                if (!snapshot.empty) { 
-                    mostrarToast(`⚠️ ${nome} já registrou presença hoje!`); 
-                    return; 
-                }
-                
-                await presencasCollection.add({ 
-                    membroId: id, 
-                    nome: nome, 
-                    data: hoje, 
-                    horario: new Date().toLocaleTimeString('pt-BR'),
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp() 
-                });
-                mostrarToast(`✅ Presença registrada: ${nome} - ${new Date().toLocaleDateString('pt-BR')}`);
-                renderizarTabela();
-                renderizarEstatisticas();
-            } catch(error) { mostrarToast('❌ Erro: ' + error.message); }
-        }
-
-        // Limpar presenças do dia
-        async function limparPresencas() {
-            if (!confirm('⚠️ Tem certeza? Isso vai apagar TODAS as presenças de hoje!')) return;
-            const hoje = getDataHoje();
-            const snapshot = await presencasCollection.where('data', '==', hoje).get();
-            for (const doc of snapshot.docs) {
-                await presencasCollection.doc(doc.id).delete();
-            }
-            mostrarToast('✅ Presenças de hoje foram limpas!');
-            renderizarTabela();
-            renderizarEstatisticas();
-        }
-
-        // Carregar histórico
-        async function carregarHistorico() {
-            let inicio = document.getElementById('dataInicio').value;
-            let fim = document.getElementById('dataFim').value;
-            
-            if (!inicio && !fim) {
-                inicio = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-                fim = getDataHoje();
-                document.getElementById('dataInicio').value = inicio;
-                document.getElementById('dataFim').value = fim;
-            }
-            
-            const tbody = document.getElementById('corpoHistorico');
-            tbody.innerHTML = '<tr><td colspan="5" class="loading">Carregando...</td></tr>';
-            
-            try {
-                let query = presencasCollection.orderBy('data', 'desc');
-                if (inicio) query = query.where('data', '>=', inicio);
-                if (fim) query = query.where('data', '<=', fim);
-                
-                const snapshot = await query.get();
-                const presencas = [];
-                snapshot.forEach(doc => presencas.push({ id: doc.id, ...doc.data() }));
-                
-                if (presencas.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="loading">Nenhuma presença encontrada no período</td></tr>';
-                    return;
-                }
-                
-                let html = '';
-                for (const p of presencas) {
-                    const membro = membros.find(m => m.id === p.membroId);
-                    const instrumento = membro ? getNomePorId(instrumentos, membro.instrumentoId) : '-';
-                    const cargo = membro ? getNomePorId(cargos, membro.cargoId) : '-';
-                    const dataFormatada = new Date(p.data).toLocaleDateString('pt-BR');
-                    
-                    html += `<tr>
-                        <td>${dataFormatada}</td>
-                        <td><strong>${p.nome || membro?.nome || 'Desconhecido'}</strong></td>
-                        <td>${instrumento}</td>
-                        <td>${cargo}</td>
-                        <td>${p.horario || '-'}</td>
-                    </tr>`;
-                }
-                tbody.innerHTML = html;
-            } catch(error) {
-                tbody.innerHTML = `<tr><td colspan="5" class="loading">❌ Erro: ${error.message}</td></tr>`;
-            }
-        }
-
-        // Exportar histórico para CSV
-        async function exportarHistorico() {
-            let inicio = document.getElementById('dataInicio').value;
-            let fim = document.getElementById('dataFim').value;
-            
-            if (!inicio && !fim) {
-                inicio = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-                fim = getDataHoje();
-            }
-            
-            try {
-                let query = presencasCollection.orderBy('data', 'desc');
-                if (inicio) query = query.where('data', '>=', inicio);
-                if (fim) query = query.where('data', '<=', fim);
-                
-                const snapshot = await query.get();
-                const presencas = [];
-                snapshot.forEach(doc => presencas.push({ id: doc.id, ...doc.data() }));
-                
-                let csv = "Data,Membro,Instrumento,Cargo,Horário\n";
-                for (const p of presencas) {
-                    const membro = membros.find(m => m.id === p.membroId);
-                    const instrumento = membro ? getNomePorId(instrumentos, membro.instrumentoId) : '-';
-                    const cargo = membro ? getNomePorId(cargos, membro.cargoId) : '-';
-                    const dataFormatada = new Date(p.data).toLocaleDateString('pt-BR');
-                    csv += `"${dataFormatada}","${p.nome || membro?.nome || 'Desconhecido'}","${instrumento}","${cargo}","${p.horario || '-'}"\n`;
-                }
-                
-                const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement('a');
-                const url = URL.createObjectURL(blob);
-                link.href = url;
-                link.setAttribute('download', `presencas_${inicio}_a_${fim}.csv`);
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-                mostrarToast('✅ Histórico exportado!');
-            } catch(error) {
-                mostrarToast('❌ Erro ao exportar: ' + error.message);
-            }
-        }
-
-        // Salvar membro
         document.getElementById('formMembro').addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const id = document.getElementById('membroId').value;
             const dados = {
                 nome: document.getElementById('nome').value,
-                instrumentoId: parseInt(document.getElementById('instrumentoId').value),
-                congregacaoId: parseInt(document.getElementById('congregacaoId').value),
-                cargoId: parseInt(document.getElementById('cargoId').value),
-                nivelId: parseInt(document.getElementById('nivelId').value)
+                instrumentoId: document.getElementById('instrumentoId').value,
+                congregacaoId: document.getElementById('congregacaoId').value,
+                cargoId: document.getElementById('cargoId').value,
+                nivelId: document.getElementById('nivelId').value
             };
+            
+            if (!dados.instrumentoId || !dados.congregacaoId || !dados.cargoId || !dados.nivelId) {
+                mostrarToast('Preencha todos os campos!');
+                return;
+            }
             
             try {
                 if (id) {
@@ -586,9 +426,10 @@
                 }
                 cancelarEdicao();
                 trocarAba('lista');
-                renderizarTabela();
-                renderizarEstatisticas();
-            } catch(error) { mostrarToast('❌ Erro: ' + error.message); }
+                await renderizarTabela();
+            } catch(error) { 
+                mostrarToast('❌ Erro: ' + error.message); 
+            }
         });
 
         async function editarMembro(id) {
@@ -597,11 +438,17 @@
                 document.getElementById('formTitle').textContent = '✏️ Editar Membro';
                 document.getElementById('membroId').value = id;
                 document.getElementById('nome').value = membro.nome || '';
-                document.getElementById('instrumentoId').value = membro.instrumentoId || '';
-                document.getElementById('congregacaoId').value = membro.congregacaoId || '';
-                document.getElementById('cargoId').value = membro.cargoId || '';
-                document.getElementById('nivelId').value = membro.nivelId || '';
+                
+                setTimeout(() => {
+                    document.getElementById('instrumentoId').value = membro.instrumentoId || '';
+                    document.getElementById('congregacaoId').value = membro.congregacaoId || '';
+                    document.getElementById('cargoId').value = membro.cargoId || '';
+                    document.getElementById('nivelId').value = membro.nivelId || '';
+                }, 100);
+                
                 trocarAba('adicionar');
+            } else {
+                mostrarToast('❌ Membro não encontrado!');
             }
         }
 
@@ -614,11 +461,11 @@
         function abrirModalExcluir(id, nome) { 
             membroParaExcluir = id; 
             document.getElementById('modalMsg').innerHTML = `Excluir <strong>${nome}</strong>?`; 
-            document.getElementById('modal').style.display = 'flex'; 
+            document.getElementById('modalExcluir').style.display = 'flex'; 
         }
         
-        function fecharModal() { 
-            document.getElementById('modal').style.display = 'none'; 
+        function fecharModalExcluir() { 
+            document.getElementById('modalExcluir').style.display = 'none'; 
             membroParaExcluir = null; 
         }
         
@@ -626,18 +473,12 @@
             if (membroParaExcluir) { 
                 await membrosCollection.doc(membroParaExcluir).delete(); 
                 mostrarToast('✅ Membro excluído!'); 
-                renderizarTabela(); 
-                renderizarEstatisticas(); 
-                fecharModal(); 
+                await renderizarTabela(); 
+                fecharModalExcluir(); 
             }
         }
 
         function filtrarMembros() { renderizarTabela(); }
-        function filtrarEstatisticas() { renderizarEstatisticas(); }
-        function filtrarPorStatus(status) { 
-            statusFiltro = status; 
-            renderizarEstatisticas(); 
-        }
 
         async function trocarAba(aba) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
@@ -647,33 +488,17 @@
                 document.getElementById('abaLista').classList.add('active');
                 document.querySelector('.tab-btn:first-child').classList.add('active');
                 await renderizarTabela();
-            } else if (aba === 'estatisticas') {
-                document.getElementById('abaEstatisticas').classList.add('active');
-                document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
-                await renderizarEstatisticas();
-            } else if (aba === 'historico') {
-                document.getElementById('abaHistorico').classList.add('active');
-                document.querySelector('.tab-btn:nth-child(3)').classList.add('active');
-                await carregarHistorico();
             } else if (aba === 'adicionar') {
                 document.getElementById('abaAdicionar').classList.add('active');
-                document.querySelector('.tab-btn:nth-child(4)').classList.add('active');
+                document.querySelector('.tab-btn:last-child').classList.add('active');
             }
         }
 
-        // Inicialização
         async function init() {
             await carregarColecoes();
             renderizarSelects();
+            configurarSelectsNovo();
             await renderizarTabela();
-            await renderizarEstatisticas();
-            
-            // Setar datas padrão para histórico (últimos 30 dias)
-            const hoje = new Date();
-            const trintaDiasAtras = new Date();
-            trintaDiasAtras.setDate(hoje.getDate() - 30);
-            document.getElementById('dataInicio').value = trintaDiasAtras.toISOString().split('T')[0];
-            document.getElementById('dataFim').value = hoje.toISOString().split('T')[0];
         }
         
         init();
