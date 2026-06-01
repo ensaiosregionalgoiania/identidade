@@ -45,19 +45,21 @@
         .tab-content.active { display: block; }
         
         .card { background: white; border-radius: 20px; padding: 25px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-        .card-header { border-bottom: 2px solid #e0e0e0; margin-bottom: 20px; padding-bottom: 10px; }
+        .card-header { border-bottom: 2px solid #e0e0e0; margin-bottom: 20px; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
         .card-header h2 { color: #2c3e50; }
         
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: 600; color: #555; }
         .form-group input, .form-group select { width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; }
         
-        button { background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        button { background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px; }
         button:hover { background: #219a52; }
         .btn-danger { background: #e74c3c; }
         .btn-danger:hover { background: #c0392b; }
         .btn-edit { background: #3498db; }
         .btn-edit:hover { background: #2980b9; }
+        .btn-foto { background: #9b59b6; }
+        .btn-foto:hover { background: #8e44ad; }
         
         .table-container { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; }
@@ -66,7 +68,8 @@
         tr:hover { background: #f8f9fa; }
         
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: white; border-radius: 15px; padding: 25px; width: 90%; max-width: 400px; text-align: center; }
+        .modal-content { background: white; border-radius: 15px; padding: 25px; width: 90%; max-width: 500px; text-align: center; max-height: 80vh; overflow-y: auto; }
+        .modal-content h3 { margin-bottom: 15px; color: #2c3e50; }
         .modal-buttons { margin-top: 20px; display: flex; gap: 10px; justify-content: center; }
         
         .search-box { width: 100%; padding: 10px; margin-bottom: 20px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; }
@@ -75,6 +78,14 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         
         .loading { text-align: center; padding: 20px; color: #999; }
+        
+        .foto-preview { text-align: center; margin-bottom: 15px; }
+        .foto-preview img { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid #3498db; }
+        
+        .camera-area { margin: 15px 0; }
+        #cameraVideo { width: 100%; border-radius: 10px; background: #333; }
+        
+        .btn-camera { background: #3498db; }
     </style>
 </head>
 <body>
@@ -108,11 +119,12 @@
                                 <th>Congregação</th>
                                 <th>Cargo</th>
                                 <th>Nível</th>
+                                <th>Foto</th>
                                 <th>Ações</th>
                             </tr>
                         </thead>
                         <tbody id="corpoTabela">
-                            <tr><td colspan="6" class="loading">Carregando...</td></tr>
+                            <tr><td colspan="7" class="loading">Carregando...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -159,26 +171,19 @@
                         </select>
                     </div>
 
+                    <div class="foto-preview" id="fotoPreview">
+                        <img id="previewImg" src="https://via.placeholder.com\/100?text=Sem+Foto" style="width:100px; height:100px; border-radius:50%;">
+                    </div>
+
                     <button type="submit">💾 Salvar Membro</button>
+                    <button type="button" id="btnAdicionarFoto" class="btn-foto" style="margin-top: 10px;">📷 Incluir\/Alterar Foto</button>
                     <button type="button" class="btn-danger" onclick="cancelarEdicao()" style="margin-top: 10px;">❌ Cancelar</button>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- Modal para adicionar novo item -->
-    <div id="modalNovoItem" class="modal">
-        <div class="modal-content">
-            <h3 id="modalNovoTitulo">Adicionar Novo</h3>
-            <input type="text" id="novoItemNome" placeholder="Digite o nome" style="width: 100%; padding: 10px; margin: 15px 0; border: 2px solid #e0e0e0; border-radius: 8px;">
-            <div class="modal-buttons">
-                <button onclick="fecharModalNovoItem()" style="background:#95a5a6;">Cancelar</button>
-                <button onclick="salvarNovoItem()">Salvar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de exclusão -->
+    <!-- Modal de confirmação de exclusão -->
     <div id="modalExcluir" class="modal">
         <div class="modal-content">
             <h3>Confirmar exclusão</h3>
@@ -190,19 +195,38 @@
         </div>
     </div>
 
+    <!-- Modal para capturar foto -->
+    <div id="modalFoto" class="modal">
+        <div class="modal-content">
+            <h3>📷 Capturar Foto</h3>
+            <div class="camera-area">
+                <video id="cameraVideo" autoplay playsinline style="width:100%; border-radius:10px;"></video>
+                <canvas id="cameraCanvas" style="display:none;"></canvas>
+            </div>
+            <div class="modal-buttons">
+                <button id="btnTirarFoto" class="btn-camera">📸 Tirar Foto</button>
+                <button id="btnEscolherArquivo" class="btn-camera">📁 Escolher da Galeria</button>
+                <button onclick="fecharModalFoto()" style="background:#95a5a6;">Cancelar</button>
+            </div>
+            <input type="file" id="arquivoFoto" accept="image\/\*" style="display:none;">
+        </div>
+    </div>
+
     <script>
+        // Firebase Config
         const firebaseConfig = {
-            apiKey: "AIzaSyA4COgeJSENsHrQHDx39gpZvif3zVrGjYE",
+            apiKey: "SUA_API_KEY_AQUI",
             authDomain: "identidadeccb.firebaseapp.com",
             projectId: "identidadeccb",
-            storageBucket: "identidadeccb.firebasestorage.app",
-            messagingSenderId: "385467794937",
-            appId: "1:385467794937:web:d2eb32429586f018e2a928"
+            storageBucket: "identidadeccb.appspot.com",
+            messagingSenderId: "SEU_MESSAGING_SENDER_ID",
+            appId: "SEU_APP_ID"
         };
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
+        // Coleções
         const membrosCollection = db.collection("membros");
         const instrumentosCollection = db.collection("instrumentos");
         const congregacoesCollection = db.collection("congregacoes");
@@ -215,131 +239,51 @@
         let niveis = [];
         let membros = [];
         let membroParaExcluir = null;
-        let tipoItemAdicionando = null;
+        let fotoBase64 = null;
+        let streamCamera = null;
 
         function mostrarToast(msg) {
-            const toast = document.createElement('div'); 
-            toast.className = 'toast'; 
+            const toast = document.createElement('div');
+            toast.className = 'toast';
             toast.textContent = msg;
-            document.body.appendChild(toast); 
+            document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
         }
 
         async function carregarColecoes() {
-            const instSnapshot = await instrumentosCollection.orderBy('nome').get();
+            const instSnapshot = await instrumentosCollection.orderBy('id').get();
             instrumentos = [];
-            instSnapshot.forEach(doc => instrumentos.push({ id: doc.id, ...doc.data() }));
+            instSnapshot.forEach(doc => instrumentos.push({ id: doc.data().id, nome: doc.data().nome }));
 
             const congSnapshot = await congregacoesCollection.orderBy('nome').get();
             congregacoes = [];
-            congSnapshot.forEach(doc => congregacoes.push({ id: doc.id, ...doc.data() }));
+            congSnapshot.forEach(doc => congregacoes.push({ id: doc.id, nome: doc.data().nome }));
 
-            const cargoSnapshot = await cargosCollection.orderBy('nome').get();
+            const cargoSnapshot = await cargosCollection.orderBy('id').get();
             cargos = [];
-            cargoSnapshot.forEach(doc => cargos.push({ id: doc.id, ...doc.data() }));
+            cargoSnapshot.forEach(doc => cargos.push({ id: doc.data().id, nome: doc.data().nome }));
 
-            const nivelSnapshot = await niveisCollection.orderBy('nome').get();
+            const nivelSnapshot = await niveisCollection.orderBy('id').get();
             niveis = [];
-            nivelSnapshot.forEach(doc => niveis.push({ id: doc.id, ...doc.data() }));
+            nivelSnapshot.forEach(doc => niveis.push({ id: doc.data().id, nome: doc.data().nome }));
         }
 
         function renderizarSelects() {
             const instSelect = document.getElementById('instrumentoId');
             instSelect.innerHTML = '<option value="">Selecione...</option>';
-            instrumentos.forEach(i => { instSelect.innerHTML += `<option value="${i.id}">${i.nome}</option>`; });
-            instSelect.innerHTML += '<option value="__NOVO__" style="color: #27ae60; font-weight: bold;">➕ Novo Instrumento</option>';
+            instrumentos.forEach(i => instSelect.innerHTML += `<option value="${i.id}">${i.nome}</option>`);
 
             const congSelect = document.getElementById('congregacaoId');
             congSelect.innerHTML = '<option value="">Selecione...</option>';
-            congregacoes.forEach(c => { congSelect.innerHTML += `<option value="${c.id}">${c.nome}</option>`; });
-            congSelect.innerHTML += '<option value="__NOVO__" style="color: #27ae60; font-weight: bold;">➕ Nova Congregação</option>';
+            congregacoes.forEach(c => congSelect.innerHTML += `<option value="${c.id}">${c.nome}</option>`);
 
             const cargoSelect = document.getElementById('cargoId');
             cargoSelect.innerHTML = '<option value="">Selecione...</option>';
-            cargos.forEach(c => { cargoSelect.innerHTML += `<option value="${c.id}">${c.nome}</option>`; });
-            cargoSelect.innerHTML += '<option value="__NOVO__" style="color: #27ae60; font-weight: bold;">➕ Novo Cargo</option>';
+            cargos.forEach(c => cargoSelect.innerHTML += `<option value="${c.id}">${c.nome}</option>`);
 
             const nivelSelect = document.getElementById('nivelId');
             nivelSelect.innerHTML = '<option value="">Selecione...</option>';
-            niveis.forEach(n => { nivelSelect.innerHTML += `<option value="${n.id}">${n.nome}</option>`; });
-            nivelSelect.innerHTML += '<option value="__NOVO__" style="color: #27ae60; font-weight: bold;">➕ Novo Nível</option>';
-        }
-
-        function configurarSelectsNovo() {
-            document.getElementById('instrumentoId').addEventListener('change', function(e) {
-                if (this.value === '__NOVO__') {
-                    tipoItemAdicionando = 'instrumento';
-                    document.getElementById('modalNovoTitulo').textContent = 'Adicionar Novo Instrumento';
-                    document.getElementById('novoItemNome').value = '';
-                    document.getElementById('modalNovoItem').style.display = 'flex';
-                    this.value = '';
-                }
-            });
-
-            document.getElementById('congregacaoId').addEventListener('change', function(e) {
-                if (this.value === '__NOVO__') {
-                    tipoItemAdicionando = 'congregacao';
-                    document.getElementById('modalNovoTitulo').textContent = 'Adicionar Nova Congregação';
-                    document.getElementById('novoItemNome').value = '';
-                    document.getElementById('modalNovoItem').style.display = 'flex';
-                    this.value = '';
-                }
-            });
-
-            document.getElementById('cargoId').addEventListener('change', function(e) {
-                if (this.value === '__NOVO__') {
-                    tipoItemAdicionando = 'cargo';
-                    document.getElementById('modalNovoTitulo').textContent = 'Adicionar Novo Cargo';
-                    document.getElementById('novoItemNome').value = '';
-                    document.getElementById('modalNovoItem').style.display = 'flex';
-                    this.value = '';
-                }
-            });
-
-            document.getElementById('nivelId').addEventListener('change', function(e) {
-                if (this.value === '__NOVO__') {
-                    tipoItemAdicionando = 'nivel';
-                    document.getElementById('modalNovoTitulo').textContent = 'Adicionar Novo Nível';
-                    document.getElementById('novoItemNome').value = '';
-                    document.getElementById('modalNovoItem').style.display = 'flex';
-                    this.value = '';
-                }
-            });
-        }
-
-        function fecharModalNovoItem() {
-            document.getElementById('modalNovoItem').style.display = 'none';
-            tipoItemAdicionando = null;
-        }
-
-        async function salvarNovoItem() {
-            const novoNome = document.getElementById('novoItemNome').value.trim();
-            if (!novoNome) {
-                mostrarToast('Digite um nome válido');
-                return;
-            }
-
-            try {
-                if (tipoItemAdicionando === 'instrumento') {
-                    await instrumentosCollection.add({ nome: novoNome });
-                    mostrarToast('✅ Instrumento adicionado!');
-                } else if (tipoItemAdicionando === 'congregacao') {
-                    await congregacoesCollection.add({ nome: novoNome });
-                    mostrarToast('✅ Congregação adicionada!');
-                } else if (tipoItemAdicionando === 'cargo') {
-                    await cargosCollection.add({ nome: novoNome });
-                    mostrarToast('✅ Cargo adicionado!');
-                } else if (tipoItemAdicionando === 'nivel') {
-                    await niveisCollection.add({ nome: novoNome });
-                    mostrarToast('✅ Nível adicionado!');
-                }
-
-                await carregarColecoes();
-                renderizarSelects();
-                fecharModalNovoItem();
-            } catch(error) {
-                mostrarToast('❌ Erro: ' + error.message);
-            }
+            niveis.forEach(n => nivelSelect.innerHTML += `<option value="${n.id}">${n.nome}</option>`);
         }
 
         async function carregarMembros() {
@@ -347,14 +291,7 @@
             membros = [];
             snapshot.forEach(doc => {
                 const data = doc.data();
-                membros.push({ 
-                    id: doc.id, 
-                    nome: data.nome,
-                    instrumentoId: data.instrumentoId,
-                    congregacaoId: data.congregacaoId,
-                    cargoId: data.cargoId,
-                    nivelId: data.nivelId
-                });
+                membros.push({ id: doc.id, ...data });
             });
             return membros;
         }
@@ -366,14 +303,12 @@
 
         async function renderizarTabela() {
             await carregarMembros();
-            
             const busca = document.getElementById('busca')?.value.toLowerCase() || '';
             const filtrados = membros.filter(m => m.nome?.toLowerCase().includes(busca));
             
             const tbody = document.getElementById('corpoTabela');
-            
             if (filtrados.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="loading">Nenhum membro encontrado</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="loading">Nenhum membro encontrado</td></tr>';
                 return;
             }
             
@@ -383,20 +318,35 @@
                 const congregacao = getNomePorId(congregacoes, m.congregacaoId);
                 const cargo = getNomePorId(cargos, m.cargoId);
                 const nivel = getNomePorId(niveis, m.nivelId);
+                const temFoto = m.fotoUrl && m.fotoUrl !== '';
                 
                 html += `<tr>
-                    <td><strong>${m.nome || ''}</strong></td>
+                    <td><strong>${m.nome}</strong></td>
                     <td>${instrumento}</td>
                     <td>${congregacao}</td>
                     <td>${cargo}</td>
                     <td>${nivel}</td>
+                    <td>${temFoto ? '📷 Sim' : '❌ Não'}</td>
                     <td>
                         <button class="btn-edit" onclick="editarMembro('${m.id}')">✏️ Editar</button>
+                        <button class="btn-foto" onclick="incluirFoto('${m.id}')">📷 Incluir Foto</button>
                         <button class="btn-danger" onclick="abrirModalExcluir('${m.id}', '${m.nome}')">🗑️ Excluir</button>
-                     </td>
-                 </tr>`;
+                    </td>
+                </tr>`;
             }
             tbody.innerHTML = html;
+        }
+
+        async function salvarMembro(id, dados) {
+            if (id) {
+                await membrosCollection.doc(id).update(dados);
+                mostrarToast('✅ Membro atualizado!');
+            } else {
+                const docRef = await membrosCollection.add(dados);
+                mostrarToast('✅ Membro adicionado!');
+                return docRef.id;
+            }
+            return id;
         }
 
         document.getElementById('formMembro').addEventListener('submit', async (e) => {
@@ -405,10 +355,10 @@
             const id = document.getElementById('membroId').value;
             const dados = {
                 nome: document.getElementById('nome').value,
-                instrumentoId: document.getElementById('instrumentoId').value,
+                instrumentoId: parseInt(document.getElementById('instrumentoId').value),
                 congregacaoId: document.getElementById('congregacaoId').value,
-                cargoId: document.getElementById('cargoId').value,
-                nivelId: document.getElementById('nivelId').value
+                cargoId: parseInt(document.getElementById('cargoId').value),
+                nivelId: parseInt(document.getElementById('nivelId').value)
             };
             
             if (!dados.instrumentoId || !dados.congregacaoId || !dados.cargoId || !dados.nivelId) {
@@ -416,20 +366,24 @@
                 return;
             }
             
-            try {
-                if (id) {
-                    await membrosCollection.doc(id).update(dados);
-                    mostrarToast('✅ Membro atualizado!');
-                } else {
-                    await membrosCollection.add(dados);
-                    mostrarToast('✅ Membro adicionado!');
-                }
-                cancelarEdicao();
-                trocarAba('lista');
-                await renderizarTabela();
-            } catch(error) { 
-                mostrarToast('❌ Erro: ' + error.message); 
+            // Se tiver foto capturada, adicionar aos dados
+            if (fotoBase64) {
+                dados.fotoUrl = fotoBase64;
             }
+            
+            const novoId = await salvarMembro(id, dados);
+            
+            // Perguntar se quer adicionar foto
+            if (!id && !fotoBase64) {
+                const resposta = confirm('✅ Membro salvo! Deseja adicionar uma foto agora?');
+                if (resposta && novoId) {
+                    abrirModalFotoParaId(novoId);
+                }
+            }
+            
+            cancelarEdicao();
+            trocarAba('lista');
+            await renderizarTabela();
         });
 
         async function editarMembro(id) {
@@ -438,43 +392,145 @@
                 document.getElementById('formTitle').textContent = '✏️ Editar Membro';
                 document.getElementById('membroId').value = id;
                 document.getElementById('nome').value = membro.nome || '';
-                
-                setTimeout(() => {
-                    document.getElementById('instrumentoId').value = membro.instrumentoId || '';
-                    document.getElementById('congregacaoId').value = membro.congregacaoId || '';
-                    document.getElementById('cargoId').value = membro.cargoId || '';
-                    document.getElementById('nivelId').value = membro.nivelId || '';
-                }, 100);
-                
+                document.getElementById('instrumentoId').value = membro.instrumentoId || '';
+                document.getElementById('congregacaoId').value = membro.congregacaoId || '';
+                document.getElementById('cargoId').value = membro.cargoId || '';
+                document.getElementById('nivelId').value = membro.nivelId || '';
+                fotoBase64 = membro.fotoUrl || null;
+                atualizarPreview();
                 trocarAba('adicionar');
-            } else {
-                mostrarToast('❌ Membro não encontrado!');
             }
         }
+
+        function incluirFoto(id) {
+            editarMembro(id);
+            document.getElementById('btnAdicionarFoto').click();
+        }
+
+        function atualizarPreview() {
+            const preview = document.getElementById('previewImg');
+            if (fotoBase64) {
+                preview.src = fotoBase64;
+            } else {
+                preview.src = 'https://via.placeholder.com/100?text=Sem+Foto';
+            }
+        }
+
+        function abrirModalFoto() {
+            document.getElementById('modalFoto').style.display = 'flex';
+            iniciarCamera();
+        }
+
+        function abrirModalFotoParaId(id) {
+            document.getElementById('membroId').value = id;
+            abrirModalFoto();
+        }
+
+        async function iniciarCamera() {
+            const video = document.getElementById('cameraVideo');
+            try {
+                if (streamCamera) {
+                    streamCamera.getTracks().forEach(track => track.stop());
+                }
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                streamCamera = stream;
+                video.srcObject = stream;
+            } catch (error) {
+                mostrarToast('❌ Erro ao acessar câmera: ' + error.message);
+            }
+        }
+
+        function pararCamera() {
+            if (streamCamera) {
+                streamCamera.getTracks().forEach(track => track.stop());
+                streamCamera = null;
+            }
+            const video = document.getElementById('cameraVideo');
+            video.srcObject = null;
+        }
+
+        function tirarFoto() {
+            const video = document.getElementById('cameraVideo');
+            const canvas = document.getElementById('cameraCanvas');
+            const context = canvas.getContext('2d');
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            fotoBase64 = canvas.toDataURL('image/jpeg', 0.8);
+            atualizarPreview();
+            fecharModalFoto();
+            mostrarToast('✅ Foto capturada!');
+        }
+
+        function escolherArquivo() {
+            document.getElementById('arquivoFoto').click();
+        }
+
+        document.getElementById('arquivoFoto').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    fotoBase64 = event.target.result;
+                    atualizarPreview();
+                    fecharModalFoto();
+                    mostrarToast('✅ Foto selecionada!');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        async function salvarFotoMembro() {
+            if (fotoBase64) {
+                const id = document.getElementById('membroId').value;
+                if (id) {
+                    await membrosCollection.doc(id).update({ fotoUrl: fotoBase64 });
+                    mostrarToast('✅ Foto salva com sucesso!');
+                    await renderizarTabela();
+                }
+            }
+            fecharModalFoto();
+        }
+
+        function fecharModalFoto() {
+            pararCamera();
+            document.getElementById('modalFoto').style.display = 'none';
+        }
+
+        document.getElementById('btnAdicionarFoto').addEventListener('click', () => {
+            abrirModalFoto();
+        });
+
+        document.getElementById('btnTirarFoto').addEventListener('click', tirarFoto);
+        document.getElementById('btnEscolherArquivo').addEventListener('click', escolherArquivo);
 
         function cancelarEdicao() {
             document.getElementById('formTitle').textContent = '➕ Adicionar Novo Membro';
             document.getElementById('formMembro').reset();
             document.getElementById('membroId').value = '';
+            fotoBase64 = null;
+            atualizarPreview();
         }
 
-        function abrirModalExcluir(id, nome) { 
-            membroParaExcluir = id; 
-            document.getElementById('modalMsg').innerHTML = `Excluir <strong>${nome}</strong>?`; 
-            document.getElementById('modalExcluir').style.display = 'flex'; 
+        function abrirModalExcluir(id, nome) {
+            membroParaExcluir = id;
+            document.getElementById('modalMsg').innerHTML = `Excluir <strong>${nome}</strong>?`;
+            document.getElementById('modalExcluir').style.display = 'flex';
         }
         
-        function fecharModalExcluir() { 
-            document.getElementById('modalExcluir').style.display = 'none'; 
-            membroParaExcluir = null; 
+        function fecharModalExcluir() {
+            document.getElementById('modalExcluir').style.display = 'none';
+            membroParaExcluir = null;
         }
         
         async function confirmarExclusao() {
-            if (membroParaExcluir) { 
-                await membrosCollection.doc(membroParaExcluir).delete(); 
-                mostrarToast('✅ Membro excluído!'); 
-                await renderizarTabela(); 
-                fecharModalExcluir(); 
+            if (membroParaExcluir) {
+                await membrosCollection.doc(membroParaExcluir).delete();
+                mostrarToast('✅ Membro excluído!');
+                await renderizarTabela();
+                fecharModalExcluir();
             }
         }
 
@@ -497,7 +553,6 @@
         async function init() {
             await carregarColecoes();
             renderizarSelects();
-            configurarSelectsNovo();
             await renderizarTabela();
         }
         
