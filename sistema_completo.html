@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Identidade Ministerial - Manutenção de Usuários</title>
+    <title>Identidade Ministerial - Manutenção</title>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     <style>
@@ -29,23 +29,13 @@
             box-shadow: 0 5px 20px rgba(0,0,0,0.2);
         }
         .logo h1 { color: #2c3e50; font-size: 1.3rem; }
-        .logo h1 i { color: #3498db; margin-right: 10px; }
         .top-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
         .btn-evento { background: #f39c12; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; }
         .btn-presenca { background: #9b59b6; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; }
-        
-        .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-        .tab-btn {
-            flex: 1; padding: 12px; background: rgba(255,255,255,0.2); color: white;
-            border: none; border-radius: 10px; font-size: 1rem; font-weight: bold;
-            cursor: pointer; transition: all 0.3s ease;
-        }
-        .tab-btn.active { background: white; color: #2c3e50; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
+        .btn-novo { background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
         
         .card { background: white; border-radius: 20px; padding: 25px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-        .card-header { border-bottom: 2px solid #e0e0e0; margin-bottom: 20px; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        .card-header { border-bottom: 2px solid #e0e0e0; margin-bottom: 20px; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
         .card-header h2 { color: #2c3e50; }
         
         .form-group { margin-bottom: 15px; }
@@ -55,9 +45,7 @@
         button { background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px; }
         button:hover { background: #219a52; }
         .btn-danger { background: #e74c3c; }
-        .btn-danger:hover { background: #c0392b; }
         .btn-edit { background: #3498db; }
-        .btn-edit:hover { background: #2980b9; }
         .btn-foto { background: #9b59b6; }
         .btn-foto:hover { background: #8e44ad; }
         
@@ -68,7 +56,7 @@
         tr:hover { background: #f8f9fa; }
         
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: white; border-radius: 15px; padding: 25px; width: 90%; max-width: 500px; text-align: center; max-height: 80vh; overflow-y: auto; }
+        .modal-content { background: white; border-radius: 15px; padding: 25px; width: 90%; max-width: 500px; text-align: center; }
         .modal-content h3 { margin-bottom: 15px; color: #2c3e50; }
         .modal-buttons { margin-top: 20px; display: flex; gap: 10px; justify-content: center; }
         
@@ -84,106 +72,71 @@
         
         .camera-area { margin: 15px 0; }
         #cameraVideo { width: 100%; border-radius: 10px; background: #333; }
-        
-        .btn-camera { background: #3498db; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="top-bar">
             <div class="logo">
-                <h1><i class="fas fa-church"></i> Identidade Ministerial</h1>
+                <h1>🎵 Identidade Ministerial</h1>
             </div>
             <div class="top-buttons">
-                <a href="presenca.html" class="btn-presenca">✅ Controle de Presença</a>
-                <button class="btn-evento" onclick="window.location.href='cadastro_evento.html'">🎉 Cadastrar Evento</button>
+                <a href="presenca.html" class="btn-presenca">✅ Presença</a>
+                <button class="btn-evento" onclick="window.location.href='cadastro_evento.html'">🎉 Evento</button>
+                <button class="btn-novo" onclick="abrirFormularioNovo()">➕ Novo Membro</button>
             </div>
         </div>
 
-        <div class="tabs">
-            <button class="tab-btn active" onclick="trocarAba('lista')">📋 Lista de Membros</button>
-            <button class="tab-btn" onclick="trocarAba('adicionar')">➕ Adicionar Membro</button>
+        <div class="card" id="cardLista">
+            <div class="card-header"><h2>📋 Membros Cadastrados</h2></div>
+            <input type="text" id="busca" class="search-box" placeholder="🔍 Buscar por nome..." onkeyup="filtrarMembros()">
+            <div class="table-container">
+                <table id="tabelaMembros">
+                    <thead>
+                        <tr><th>ID</th><th>Nome</th><th>Instrumento</th><th>Congregação</th><th>Cargo</th><th>Nível</th><th>Foto</th><th>Ações</th></tr>
+                    </thead>
+                    <tbody id="corpoTabela"><tr><td colspan="8" class="loading">Carregando...</td></tr></tbody>
+                </table>
+            </div>
         </div>
 
-        <!-- Aba Lista -->
-        <div id="abaLista" class="tab-content active">
-            <div class="card">
-                <div class="card-header"><h2>📋 Membros Cadastrados</h2></div>
-                <input type="text" id="busca" class="search-box" placeholder="🔍 Buscar por nome..." onkeyup="filtrarMembros()">
-                <div class="table-container">
-                    <table id="tabelaMembros">
-                        <thead>
-                            <tr>
-                                <th>Nome</th>
-                                <th>Instrumento</th>
-                                <th>Congregação</th>
-                                <th>Cargo</th>
-                                <th>Nível</th>
-                                <th>Foto</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="corpoTabela">
-                            <tr><td colspan="7" class="loading">Carregando...</td></tr>
-                        </tbody>
-                    </table>
+        <div class="card" id="cardFormulario" style="display: none;">
+            <div class="card-header"><h2 id="formTitle">➕ Adicionar Membro</h2></div>
+            <form id="formMembro">
+                <input type="hidden" id="membroDocId">
+                <div class="form-group"><label>ID do Membro *</label><input type="number" id="membroId" required></div>
+                <div class="form-group"><label>Nome Completo *</label><input type="text" id="nome" required></div>
+                <div class="form-group"><label>Instrumento *</label><select id="instrumentoId" required></select></div>
+                <div class="form-group"><label>Congregação *</label><select id="congregacaoId" required></select></div>
+                <div class="form-group"><label>Cargo *</label><select id="cargoId" required></select></div>
+                <div class="form-group"><label>Nível *</label><select id="nivelId" required></select></div>
+                
+                <div class="foto-preview" id="fotoPreview">
+                    <img id="previewImg" src="https://via.placeholder.com/100?text=Sem+Foto" style="width:100px; height:100px; border-radius:50%;">
                 </div>
-            </div>
+                <button type="button" id="btnFoto" class="btn-foto" style="margin-top: 10px;">📷 Tirar Foto</button>
+                
+                <button type="submit">💾 Salvar</button>
+                <button type="button" class="btn-danger" onclick="cancelarEdicao()">❌ Cancelar</button>
+            </form>
         </div>
+    </div>
 
-        <!-- Aba Adicionar\/Editar -->
-        <div id="abaAdicionar" class="tab-content">
-            <div class="card">
-                <div class="card-header"><h2 id="formTitle">➕ Adicionar Novo Membro</h2></div>
-                <form id="formMembro">
-                    <input type="hidden" id="membroId">
-                    
-                    <div class="form-group">
-                        <label>Nome Completo *</label>
-                        <input type="text" id="nome" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Instrumento *</label>
-                        <select id="instrumentoId" required>
-                            <option value="">Selecione...</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Congregação *</label>
-                        <select id="congregacaoId" required>
-                            <option value="">Selecione...</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Cargo *</label>
-                        <select id="cargoId" required>
-                            <option value="">Selecione...</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Nível *</label>
-                        <select id="nivelId" required>
-                            <option value="">Selecione...</option>
-                        </select>
-                    </div>
-
-                    <div class="foto-preview" id="fotoPreview">
-                        <img id="previewImg" src="https://via.placeholder.com\/100?text=Sem+Foto" style="width:100px; height:100px; border-radius:50%;">
-                    </div>
-
-                    <button type="submit">💾 Salvar Membro</button>
-                    <button type="button" id="btnAdicionarFoto" class="btn-foto" style="margin-top: 10px;">📷 Incluir\/Alterar Foto</button>
-                    <button type="button" class="btn-danger" onclick="cancelarEdicao()" style="margin-top: 10px;">❌ Cancelar</button>
-                </form>
+    <!-- Modal para foto -->
+    <div id="modalFoto" class="modal">
+        <div class="modal-content">
+            <h3>📷 Capturar Foto</h3>
+            <div class="camera-area">
+                <video id="cameraVideo" autoplay playsinline style="width:100%; border-radius:10px;"></video>
+                <canvas id="cameraCanvas" style="display:none;"></canvas>
+            </div>
+            <div class="modal-buttons">
+                <button id="btnTirarFoto" class="btn-camera">📸 Tirar Foto</button>
+                <button onclick="fecharModalFoto()" style="background:#95a5a6;">Cancelar</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal de confirmação de exclusão -->
     <div id="modalExcluir" class="modal">
         <div class="modal-content">
             <h3>Confirmar exclusão</h3>
@@ -195,38 +148,19 @@
         </div>
     </div>
 
-    <!-- Modal para capturar foto -->
-    <div id="modalFoto" class="modal">
-        <div class="modal-content">
-            <h3>📷 Capturar Foto</h3>
-            <div class="camera-area">
-                <video id="cameraVideo" autoplay playsinline style="width:100%; border-radius:10px;"></video>
-                <canvas id="cameraCanvas" style="display:none;"></canvas>
-            </div>
-            <div class="modal-buttons">
-                <button id="btnTirarFoto" class="btn-camera">📸 Tirar Foto</button>
-                <button id="btnEscolherArquivo" class="btn-camera">📁 Escolher da Galeria</button>
-                <button onclick="fecharModalFoto()" style="background:#95a5a6;">Cancelar</button>
-            </div>
-            <input type="file" id="arquivoFoto" accept="image\/\*" style="display:none;">
-        </div>
-    </div>
-
     <script>
-        // Firebase Config
         const firebaseConfig = {
-            apiKey: "SUA_API_KEY_AQUI",
+            apiKey: "AIzaSyA4COgeJSENsHrQHDx39gpZvif3zVrGjYE",
             authDomain: "identidadeccb.firebaseapp.com",
             projectId: "identidadeccb",
-            storageBucket: "identidadeccb.appspot.com",
-            messagingSenderId: "SEU_MESSAGING_SENDER_ID",
-            appId: "SEU_APP_ID"
+            storageBucket: "identidadeccb.firebasestorage.app",
+            messagingSenderId: "385467794937",
+            appId: "1:385467794937:web:d2eb32429586f018e2a928"
         };
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // Coleções
         const membrosCollection = db.collection("membros");
         const instrumentosCollection = db.collection("instrumentos");
         const congregacoesCollection = db.collection("congregacoes");
@@ -250,169 +184,184 @@
             setTimeout(() => toast.remove(), 3000);
         }
 
-        async function carregarColecoes() {
-            const instSnapshot = await instrumentosCollection.orderBy('id').get();
+        function getNomeInstrumento(id) {
+            const item = instrumentos.find(i => i.id == id);
+            return item ? item.nome : 'ID ' + id;
+        }
+
+        function getNomeCongregacao(id) {
+            const item = congregacoes.find(c => c.id == id);
+            return item ? item.nome : 'ID ' + id;
+        }
+
+        function getNomeCargo(id) {
+            const item = cargos.find(c => c.id == id);
+            return item ? item.nome : 'ID ' + id;
+        }
+
+        function getNomeNivel(id) {
+            const item = niveis.find(n => n.id == id);
+            return item ? item.nome : 'ID ' + id;
+        }
+
+        async function carregarDados() {
+            const instSnap = await instrumentosCollection.get();
             instrumentos = [];
-            instSnapshot.forEach(doc => instrumentos.push({ id: doc.data().id, nome: doc.data().nome }));
+            instSnap.forEach(doc => {
+                const data = doc.data();
+                instrumentos.push({ id: data.id, nome: data.nome });
+            });
+            instrumentos.sort((a, b) => a.id - b.id);
 
-            const congSnapshot = await congregacoesCollection.orderBy('nome').get();
+            const congSnap = await congregacoesCollection.get();
             congregacoes = [];
-            congSnapshot.forEach(doc => congregacoes.push({ id: doc.id, nome: doc.data().nome }));
+            congSnap.forEach(doc => {
+                congregacoes.push({ id: doc.id, nome: doc.data().nome });
+            });
 
-            const cargoSnapshot = await cargosCollection.orderBy('id').get();
+            const cargoSnap = await cargosCollection.get();
             cargos = [];
-            cargoSnapshot.forEach(doc => cargos.push({ id: doc.data().id, nome: doc.data().nome }));
+            cargoSnap.forEach(doc => {
+                const data = doc.data();
+                cargos.push({ id: data.id, nome: data.nome });
+            });
+            cargos.sort((a, b) => a.id - b.id);
 
-            const nivelSnapshot = await niveisCollection.orderBy('id').get();
+            const nivelSnap = await niveisCollection.get();
             niveis = [];
-            nivelSnapshot.forEach(doc => niveis.push({ id: doc.data().id, nome: doc.data().nome }));
+            nivelSnap.forEach(doc => {
+                const data = doc.data();
+                niveis.push({ id: data.id, nome: data.nome });
+            });
+            niveis.sort((a, b) => a.id - b.id);
+
+            await carregarMembros();
+        }
+
+        async function carregarMembros() {
+            const snap = await membrosCollection.get();
+            membros = [];
+            snap.forEach(doc => {
+                const data = doc.data();
+                if (data.id !== undefined) {
+                    membros.push({
+                        docId: doc.id,
+                        id: data.id,
+                        nome: data.nome || '',
+                        instrumentoId: data.instrumentoId || 0,
+                        congregacaoId: data.congregacaoId || '',
+                        cargoId: data.cargoId || 0,
+                        nivelId: data.nivelId || 0,
+                        fotoUrl: data.fotoUrl || null
+                    });
+                }
+            });
+            membros.sort((a, b) => a.id - b.id);
+            renderizarTabela();
         }
 
         function renderizarSelects() {
             const instSelect = document.getElementById('instrumentoId');
-            instSelect.innerHTML = '<option value="">Selecione...</option>';
-            instrumentos.forEach(i => instSelect.innerHTML += `<option value="${i.id}">${i.nome}</option>`);
+            if (instSelect) {
+                instSelect.innerHTML = '<option value="">Selecione...</option>';
+                instrumentos.forEach(i => {
+                    instSelect.innerHTML += '<option value="' + i.id + '">' + i.nome + '</option>';
+                });
+            }
 
             const congSelect = document.getElementById('congregacaoId');
-            congSelect.innerHTML = '<option value="">Selecione...</option>';
-            congregacoes.forEach(c => congSelect.innerHTML += `<option value="${c.id}">${c.nome}</option>`);
+            if (congSelect) {
+                congSelect.innerHTML = '<option value="">Selecione...</option>';
+                congregacoes.forEach(c => {
+                    congSelect.innerHTML += '<option value="' + c.id + '">' + c.nome + '</option>';
+                });
+            }
 
             const cargoSelect = document.getElementById('cargoId');
-            cargoSelect.innerHTML = '<option value="">Selecione...</option>';
-            cargos.forEach(c => cargoSelect.innerHTML += `<option value="${c.id}">${c.nome}</option>`);
+            if (cargoSelect) {
+                cargoSelect.innerHTML = '<option value="">Selecione...</option>';
+                cargos.forEach(c => {
+                    cargoSelect.innerHTML += '<option value="' + c.id + '">' + c.nome + '</option>';
+                });
+            }
 
             const nivelSelect = document.getElementById('nivelId');
-            nivelSelect.innerHTML = '<option value="">Selecione...</option>';
-            niveis.forEach(n => nivelSelect.innerHTML += `<option value="${n.id}">${n.nome}</option>`);
+            if (nivelSelect) {
+                nivelSelect.innerHTML = '<option value="">Selecione...</option>';
+                niveis.forEach(n => {
+                    nivelSelect.innerHTML += '<option value="' + n.id + '">' + n.nome + '</option>';
+                });
+            }
         }
 
-        async function carregarMembros() {
-            const snapshot = await membrosCollection.get();
-            membros = [];
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                membros.push({ id: doc.id, ...data });
-            });
-            return membros;
-        }
-
-        function getNomePorId(lista, id) {
-            const item = lista.find(i => i.id == id);
-            return item ? item.nome : "Desconhecido";
-        }
-
-        async function renderizarTabela() {
-            await carregarMembros();
-            const busca = document.getElementById('busca')?.value.toLowerCase() || '';
-            const filtrados = membros.filter(m => m.nome?.toLowerCase().includes(busca));
+        function renderizarTabela() {
+            const buscaElement = document.getElementById('busca');
+            const busca = buscaElement ? buscaElement.value.toLowerCase() : '';
+            
+            let filtrados = membros;
+            if (busca) {
+                filtrados = membros.filter(m => m.nome && m.nome.toLowerCase().includes(busca));
+            }
             
             const tbody = document.getElementById('corpoTabela');
+            if (!tbody) return;
+            
             if (filtrados.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="loading">Nenhum membro encontrado</td></tr>';
+                tbody.innerHTML = '<td><td colspan="8" class="loading">Nenhum membro encontrado</td></tr>';
                 return;
             }
             
             let html = '';
             for (const m of filtrados) {
-                const instrumento = getNomePorId(instrumentos, m.instrumentoId);
-                const congregacao = getNomePorId(congregacoes, m.congregacaoId);
-                const cargo = getNomePorId(cargos, m.cargoId);
-                const nivel = getNomePorId(niveis, m.nivelId);
                 const temFoto = m.fotoUrl && m.fotoUrl !== '';
-                
-                html += `<tr>
-                    <td><strong>${m.nome}</strong></td>
-                    <td>${instrumento}</td>
-                    <td>${congregacao}</td>
-                    <td>${cargo}</td>
-                    <td>${nivel}</td>
-                    <td>${temFoto ? '📷 Sim' : '❌ Não'}</td>
-                    <td>
-                        <button class="btn-edit" onclick="editarMembro('${m.id}')">✏️ Editar</button>
-                        <button class="btn-foto" onclick="incluirFoto('${m.id}')">📷 Incluir Foto</button>
-                        <button class="btn-danger" onclick="abrirModalExcluir('${m.id}', '${m.nome}')">🗑️ Excluir</button>
-                    </td>
-                </tr>`;
+                html += '<tr>';
+                html += '<td>' + m.id + '</td>';
+                html += '<td><strong>' + (m.nome || '') + '</strong></td>';
+                html += '<td>' + getNomeInstrumento(m.instrumentoId) + '</td>';
+                html += '<td>' + getNomeCongregacao(m.congregacaoId) + '</td>';
+                html += '<td>' + getNomeCargo(m.cargoId) + '</td>';
+                html += '<td>' + getNomeNivel(m.nivelId) + '</td>';
+                html += '<td>' + (temFoto ? '📷 Sim' : '❌ Não') + '</td>';
+                html += '<td>';
+                html += '<button class="btn-edit" onclick="editarMembro(' + m.id + ')">✏️ Editar</button> ';
+                html += '<button class="btn-danger" onclick="abrirModalExcluir(' + m.id + ', \'' + m.nome + '\')">🗑️ Excluir</button>';
+                html += '</td></tr>';
             }
             tbody.innerHTML = html;
         }
 
-        async function salvarMembro(id, dados) {
-            if (id) {
-                await membrosCollection.doc(id).update(dados);
-                mostrarToast('✅ Membro atualizado!');
-            } else {
-                const docRef = await membrosCollection.add(dados);
-                mostrarToast('✅ Membro adicionado!');
-                return docRef.id;
-            }
-            return id;
+        function filtrarMembros() { renderizarTabela(); }
+
+        function abrirFormularioNovo() {
+            document.getElementById('formTitle').innerHTML = '➕ Adicionar Membro';
+            document.getElementById('membroDocId').value = '';
+            document.getElementById('membroId').value = '';
+            document.getElementById('nome').value = '';
+            document.getElementById('instrumentoId').value = '';
+            document.getElementById('congregacaoId').value = '';
+            document.getElementById('cargoId').value = '';
+            document.getElementById('nivelId').value = '';
+            fotoBase64 = null;
+            atualizarPreview();
+            document.getElementById('cardLista').style.display = 'none';
+            document.getElementById('cardFormulario').style.display = 'block';
+            renderizarSelects();
         }
 
-        document.getElementById('formMembro').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const id = document.getElementById('membroId').value;
-            const dados = {
-                nome: document.getElementById('nome').value,
-                instrumentoId: parseInt(document.getElementById('instrumentoId').value),
-                congregacaoId: document.getElementById('congregacaoId').value,
-                cargoId: parseInt(document.getElementById('cargoId').value),
-                nivelId: parseInt(document.getElementById('nivelId').value)
-            };
-            
-            if (!dados.instrumentoId || !dados.congregacaoId || !dados.cargoId || !dados.nivelId) {
-                mostrarToast('Preencha todos os campos!');
-                return;
-            }
-            
-            // Se tiver foto capturada, adicionar aos dados
-            if (fotoBase64) {
-                dados.fotoUrl = fotoBase64;
-            }
-            
-            const novoId = await salvarMembro(id, dados);
-            
-            // Perguntar se quer adicionar foto
-            if (!id && !fotoBase64) {
-                const resposta = confirm('✅ Membro salvo! Deseja adicionar uma foto agora?');
-                if (resposta && novoId) {
-                    abrirModalFotoParaId(novoId);
-                }
-            }
-            
-            cancelarEdicao();
-            trocarAba('lista');
-            await renderizarTabela();
-        });
-
-        async function editarMembro(id) {
-            const membro = membros.find(m => m.id === id);
-            if (membro) {
-                document.getElementById('formTitle').textContent = '✏️ Editar Membro';
-                document.getElementById('membroId').value = id;
-                document.getElementById('nome').value = membro.nome || '';
-                document.getElementById('instrumentoId').value = membro.instrumentoId || '';
-                document.getElementById('congregacaoId').value = membro.congregacaoId || '';
-                document.getElementById('cargoId').value = membro.cargoId || '';
-                document.getElementById('nivelId').value = membro.nivelId || '';
-                fotoBase64 = membro.fotoUrl || null;
-                atualizarPreview();
-                trocarAba('adicionar');
-            }
-        }
-
-        function incluirFoto(id) {
-            editarMembro(id);
-            document.getElementById('btnAdicionarFoto').click();
+        function cancelarEdicao() {
+            document.getElementById('cardLista').style.display = 'block';
+            document.getElementById('cardFormulario').style.display = 'none';
+            carregarMembros();
         }
 
         function atualizarPreview() {
             const preview = document.getElementById('previewImg');
-            if (fotoBase64) {
-                preview.src = fotoBase64;
-            } else {
-                preview.src = 'https://via.placeholder.com/100?text=Sem+Foto';
+            if (preview) {
+                if (fotoBase64) {
+                    preview.src = fotoBase64;
+                } else {
+                    preview.src = 'https://via.placeholder.com/100?text=Sem+Foto';
+                }
             }
         }
 
@@ -421,13 +370,15 @@
             iniciarCamera();
         }
 
-        function abrirModalFotoParaId(id) {
-            document.getElementById('membroId').value = id;
-            abrirModalFoto();
+        function fecharModalFoto() {
+            pararCamera();
+            document.getElementById('modalFoto').style.display = 'none';
         }
 
         async function iniciarCamera() {
             const video = document.getElementById('cameraVideo');
+            if (!video) return;
+            
             try {
                 if (streamCamera) {
                     streamCamera.getTracks().forEach(track => track.stop());
@@ -446,14 +397,17 @@
                 streamCamera = null;
             }
             const video = document.getElementById('cameraVideo');
-            video.srcObject = null;
+            if (video) {
+                video.srcObject = null;
+            }
         }
 
         function tirarFoto() {
             const video = document.getElementById('cameraVideo');
             const canvas = document.getElementById('cameraCanvas');
-            const context = canvas.getContext('2d');
+            if (!video || !canvas) return;
             
+            const context = canvas.getContext('2d');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -464,59 +418,76 @@
             mostrarToast('✅ Foto capturada!');
         }
 
-        function escolherArquivo() {
-            document.getElementById('arquivoFoto').click();
-        }
-
-        document.getElementById('arquivoFoto').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    fotoBase64 = event.target.result;
-                    atualizarPreview();
-                    fecharModalFoto();
-                    mostrarToast('✅ Foto selecionada!');
-                };
-                reader.readAsDataURL(file);
+        function editarMembro(idNumerico) {
+            const membro = membros.find(m => m.id === idNumerico);
+            if (membro) {
+                document.getElementById('formTitle').innerHTML = '✏️ Editar Membro - ID: ' + membro.id;
+                document.getElementById('membroDocId').value = membro.docId;
+                document.getElementById('membroId').value = membro.id;
+                document.getElementById('nome').value = membro.nome || '';
+                document.getElementById('instrumentoId').value = membro.instrumentoId;
+                document.getElementById('congregacaoId').value = membro.congregacaoId;
+                document.getElementById('cargoId').value = membro.cargoId;
+                document.getElementById('nivelId').value = membro.nivelId;
+                fotoBase64 = membro.fotoUrl || null;
+                atualizarPreview();
+                document.getElementById('cardLista').style.display = 'none';
+                document.getElementById('cardFormulario').style.display = 'block';
+                renderizarSelects();
+            } else {
+                mostrarToast('❌ Membro com ID ' + idNumerico + ' não encontrado!');
             }
-        });
-
-        async function salvarFotoMembro() {
-            if (fotoBase64) {
-                const id = document.getElementById('membroId').value;
-                if (id) {
-                    await membrosCollection.doc(id).update({ fotoUrl: fotoBase64 });
-                    mostrarToast('✅ Foto salva com sucesso!');
-                    await renderizarTabela();
-                }
-            }
-            fecharModalFoto();
         }
 
-        function fecharModalFoto() {
-            pararCamera();
-            document.getElementById('modalFoto').style.display = 'none';
-        }
-
-        document.getElementById('btnAdicionarFoto').addEventListener('click', () => {
+        document.getElementById('btnFoto').addEventListener('click', () => {
             abrirModalFoto();
         });
 
         document.getElementById('btnTirarFoto').addEventListener('click', tirarFoto);
-        document.getElementById('btnEscolherArquivo').addEventListener('click', escolherArquivo);
 
-        function cancelarEdicao() {
-            document.getElementById('formTitle').textContent = '➕ Adicionar Novo Membro';
-            document.getElementById('formMembro').reset();
-            document.getElementById('membroId').value = '';
-            fotoBase64 = null;
-            atualizarPreview();
-        }
+        document.getElementById('formMembro').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const docId = document.getElementById('membroDocId').value;
+            const idNumerico = parseInt(document.getElementById('membroId').value);
+            const dados = {
+                id: idNumerico,
+                nome: document.getElementById('nome').value,
+                instrumentoId: parseInt(document.getElementById('instrumentoId').value),
+                congregacaoId: document.getElementById('congregacaoId').value,
+                cargoId: parseInt(document.getElementById('cargoId').value),
+                nivelId: parseInt(document.getElementById('nivelId').value)
+            };
+            
+            if (fotoBase64) {
+                dados.fotoUrl = fotoBase64;
+            }
+            
+            try {
+                if (docId) {
+                    await membrosCollection.doc(docId).update(dados);
+                    mostrarToast('✅ Membro atualizado!');
+                } else {
+                    const existe = membros.some(m => m.id === idNumerico);
+                    if (existe) {
+                        mostrarToast('❌ ID ' + idNumerico + ' já existe! Use outro ID.');
+                        return;
+                    }
+                    await membrosCollection.add(dados);
+                    mostrarToast('✅ Membro adicionado!');
+                    
+                    if (!fotoBase64) {
+                        alert('📷 Lembre-se de adicionar uma foto para este membro! Clique em "Tirar Foto" ao editar.');
+                    }
+                }
+                cancelarEdicao();
+            } catch(error) {
+                mostrarToast('❌ Erro: ' + error.message);
+            }
+        });
 
-        function abrirModalExcluir(id, nome) {
-            membroParaExcluir = id;
-            document.getElementById('modalMsg').innerHTML = `Excluir <strong>${nome}</strong>?`;
+        function abrirModalExcluir(idNumerico, nome) {
+            membroParaExcluir = idNumerico;
+            document.getElementById('modalMsg').innerHTML = 'Excluir <strong>' + nome + '</strong>?';
             document.getElementById('modalExcluir').style.display = 'flex';
         }
         
@@ -526,37 +497,18 @@
         }
         
         async function confirmarExclusao() {
-            if (membroParaExcluir) {
-                await membrosCollection.doc(membroParaExcluir).delete();
-                mostrarToast('✅ Membro excluído!');
-                await renderizarTabela();
-                fecharModalExcluir();
+            if (membroParaExcluir !== null) {
+                const membro = membros.find(m => m.id === membroParaExcluir);
+                if (membro) {
+                    await membrosCollection.doc(membro.docId).delete();
+                    mostrarToast('✅ Membro excluído!');
+                    fecharModalExcluir();
+                    carregarMembros();
+                }
             }
         }
 
-        function filtrarMembros() { renderizarTabela(); }
-
-        async function trocarAba(aba) {
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            
-            if (aba === 'lista') {
-                document.getElementById('abaLista').classList.add('active');
-                document.querySelector('.tab-btn:first-child').classList.add('active');
-                await renderizarTabela();
-            } else if (aba === 'adicionar') {
-                document.getElementById('abaAdicionar').classList.add('active');
-                document.querySelector('.tab-btn:last-child').classList.add('active');
-            }
-        }
-
-        async function init() {
-            await carregarColecoes();
-            renderizarSelects();
-            await renderizarTabela();
-        }
-        
-        init();
+        carregarDados();
     </script>
 </body>
 </html>
