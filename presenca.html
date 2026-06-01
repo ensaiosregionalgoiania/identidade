@@ -6,7 +6,7 @@
     <title>Controle de Presença - Identidade Ministerial</title>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/face-api.js@latest/dist/face-api.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -88,7 +88,12 @@
         .camera-area { margin: 15px 0; text-align: center; }
         #video { width: 100%; max-width: 500px; border-radius: 15px; background: #333; margin: 0 auto; display: block; }
         .btn-camera { background: #9b59b6; }
-        .reconhecimento-status { text-align: center; margin-top: 10px; font-weight: bold; }
+        .btn-camera:hover { background: #8e44ad; }
+        .reconhecimento-status { text-align: center; margin-top: 10px; padding: 10px; border-radius: 8px; font-weight: bold; }
+        .status-loading { background: #e3f2fd; color: #3498db; }
+        .status-success { background: #d5f4e6; color: #27ae60; }
+        .status-error { background: #fee; color: #e74c3c; }
+        .status-warning { background: #fff3cd; color: #856404; }
     </style>
 </head>
 <body>
@@ -154,7 +159,7 @@
                         <thead>
                             <tr><th>Nome</th><th>Instrumento</th><th>Cargo</th><th>Nível</th><th>Status</th><th>Ação</th></tr>
                         </thead>
-                        <tbody id="corpoTabela"><tr><td colspan="6" class="loading">Selecione um evento</td></tr></tbody>
+                        <tbody id="corpoTabela"><tr><td colspan="6" class="loading">Selecione um evento...</td></tr></tbody>
                     </table>
                 </div>
             </div>
@@ -177,12 +182,13 @@
                     <p id="eventoDataFace"></p>
                 </div>
                 <div class="camera-area">
-                    <video id="video" autoplay playsinline></video>
-                    <canvas id="canvas" style="display: none;"></canvas>
+                    <video id="video" autoplay playsinline style="display:none;"></video>
                 </div>
-                <button id="btnIniciarCamera" class="btn-camera">📷 Iniciar Câmera</button>
+                <button id="btnIniciarCamera" class="btn-camera">📷 Iniciar Câmera e Reconhecimento</button>
                 <button id="btnPararCamera" class="btn-camera" style="background:#e74c3c;">⏹️ Parar Câmera</button>
-                <div id="reconhecimentoStatus" class="reconhecimento-status"></div>
+                <div id="reconhecimentoStatus" class="reconhecimento-status status-loading">
+                    ⏳ Selecione um evento e clique em "Iniciar Câmera"
+                </div>
             </div>
         </div>
     </div>
@@ -211,7 +217,6 @@
         let cargos = [];
         let niveis = [];
         let congregacoes = [];
-        let membrosFotos = []; // Armazenar descritores faciais
         
         let statusFiltro = 'todos';
         let buscaFiltro = '';
@@ -221,6 +226,7 @@
         let video = null;
         let stream = null;
         let recognitionInterval = null;
+        let modelsLoaded = false;
 
         function mostrarToast(msg) {
             const toast = document.createElement('div');
@@ -228,6 +234,12 @@
             toast.textContent = msg;
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
+        }
+
+        function atualizarStatusReconhecimento(msg, tipo) {
+            const div = document.getElementById('reconhecimentoStatus');
+            div.innerHTML = msg;
+            div.className = `reconhecimento-status status-${tipo}`;
         }
 
         // Carregar dados
@@ -334,7 +346,6 @@
                 mostrarToast('⚠️ Este evento não pode ser alterado!');
                 return false;
             }
-            const hoje = new Date().toISOString().split('T')[0];
             try {
                 const snapshot = await presencasCollection.where('eventoId', '==', eventoSelecionado.id).where('membroId', '==', membroId).get();
                 if (!snapshot.empty) {
@@ -453,38 +464,26 @@
         });
 
         // Reconhecimento Facial
-        async function iniciarReconhecimento() {
-            const eventoId = document.getElementById('eventoSelectFace').value;
-            if (!eventoId) {
-                mostrarToast('⚠️ Selecione um evento primeiro!');
-                return;
-            }
-            eventoSelecionado = eventos.find(ev => ev.id === eventoId);
-            if (eventoSelecionado) {
-                await buscarPermissoes(eventoSelecionado.tipoEventoId);
-                filtrarMembrosAutorizados();
-                const hoje = new Date().toISOString().split('T')[0];
-                podeAlterar = eventoSelecionado.data === hoje;
-                document.getElementById('eventoNomeFace').innerHTML = `🎯 ${eventoSelecionado.tipoEventoNome}`;
-                document.getElementById('eventoDataFace').innerHTML = `📅 ${new Date(eventoSelecionado.data).toLocaleDateString('pt-BR')}`;
-                document.getElementById('infoEventoFace').style.display = 'block';
-                document.getElementById('reconhecimentoStatus').innerHTML = '🔄 Carregando modelos de reconhecimento facial...';
-                await carregarModelosFace();
-                iniciarCamera();
-            }
-        }
-
         async function carregarModelosFace() {
-            const modelsPath = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/models/';
-            await faceapi.nets.tinyFaceDetector.loadFromUri(modelsPath);
-            await faceapi.nets.faceLandmark68Net.loadFromUri(modelsPath);
-            await faceapi.nets.faceRecognitionNet.loadFromUri(modelsPath);
-            console.log('Modelos carregados');
-            document.getElementById('reconhecimentoStatus').innerHTML = '✅ Modelos carregados! Aguardando rosto...';
+            // Define o caminho base onde estão os modelos
+            const modelsPath = './models/';
+            
+            try {
+                await faceapi.nets.tinyFaceDetector.loadFromUri(modelsPath);
+                await faceapi.nets.faceLandmark68Net.loadFromUri(modelsPath);
+                await faceapi.nets.faceRecognitionNet.loadFromUri(modelsPath);
+                modelsLoaded = true;
+                console.log('✅ Modelos carregados com sucesso!');
+                return true;
+            } catch(error) {
+                console.error('❌ Erro ao carregar modelos:', error);
+                return false;
+            }
         }
 
         async function iniciarCamera() {
             video = document.getElementById('video');
+            video.style.display = 'block';
             try {
                 stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 video.srcObject = stream;
@@ -492,8 +491,9 @@
                     video.play();
                     startRecognition();
                 };
+                atualizarStatusReconhecimento('📷 Câmera ativada! Aguardando rosto...', 'loading');
             } catch(err) {
-                mostrarToast('❌ Erro ao acessar câmera: ' + err.message);
+                atualizarStatusReconhecimento('❌ Erro ao acessar câmera: ' + err.message, 'error');
             }
         }
 
@@ -503,26 +503,32 @@
                 stream.getTracks().forEach(track => track.stop());
                 stream = null;
             }
-            if (video) video.srcObject = null;
+            if (video) {
+                video.srcObject = null;
+                video.style.display = 'none';
+            }
+            atualizarStatusReconhecimento('⏹️ Câmera parada.', 'loading');
         }
 
         function startRecognition() {
             if (recognitionInterval) clearInterval(recognitionInterval);
-            recognitionInterval = setInterval(recognizeFace, 2000);
+            recognitionInterval = setInterval(recognizeFace, 3000);
         }
 
         async function recognizeFace() {
-            if (!video || video.paused || video.ended) return;
+            if (!video || video.paused || video.ended || !video.videoWidth) return;
+            if (!modelsLoaded) return;
+            
             try {
                 const detections = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
                     .withFaceLandmarks()
                     .withFaceDescriptor();
                 
                 if (detections) {
-                    document.getElementById('reconhecimentoStatus').innerHTML = '✅ Rosto detectado! Procurando correspondência...';
+                    atualizarStatusReconhecimento('✅ Rosto detectado! Procurando correspondência...', 'success');
                     await encontrarCorrespondencia(detections.descriptor);
                 } else {
-                    document.getElementById('reconhecimentoStatus').innerHTML = '🔍 Procurando rosto... Aponte a câmera para o membro';
+                    atualizarStatusReconhecimento('🔍 Procurando rosto... Aponte a câmera para o membro', 'loading');
                 }
             } catch(error) {
                 console.error('Erro no reconhecimento:', error);
@@ -531,7 +537,7 @@
 
         async function encontrarCorrespondencia(descriptor) {
             let melhorMatch = null;
-            let melhorDistancia = 0.6; // Limiar de confiança
+            let melhorDistancia = 0.6;
             
             for (const membro of membrosAutorizados) {
                 if (membro.fotoUrl && membro.fotoUrl.startsWith('data:image')) {
@@ -555,20 +561,50 @@
             }
             
             if (melhorMatch) {
-                document.getElementById('reconhecimentoStatus').innerHTML = `🎉 Reconhecido: ${melhorMatch.nome} (Confiança: ${Math.round((1 - melhorDistancia) * 100)}%)`;
+                const confianca = Math.round((1 - melhorDistancia) * 100);
+                atualizarStatusReconhecimento(`🎉 Reconhecido: ${melhorMatch.nome} (Confiança: ${confianca}%)`, 'success');
                 await registrarPresenca(melhorMatch.id, melhorMatch.nome);
-                pararCamera();
-                trocarAba('lista');
-                if (eventoSelecionado) await renderizarListaMembros();
+                setTimeout(() => {
+                    pararCamera();
+                    trocarAba('lista');
+                }, 2000);
             } else {
-                document.getElementById('reconhecimentoStatus').innerHTML = '❌ Nenhum membro correspondente encontrado. Tente novamente.';
+                atualizarStatusReconhecimento('❌ Nenhum membro correspondente encontrado. Tente novamente.', 'error');
+            }
+        }
+
+        async function iniciarReconhecimento() {
+            const eventoId = document.getElementById('eventoSelectFace').value;
+            if (!eventoId) {
+                mostrarToast('⚠️ Selecione um evento primeiro!');
+                return;
+            }
+            eventoSelecionado = eventos.find(ev => ev.id === eventoId);
+            if (eventoSelecionado) {
+                await buscarPermissoes(eventoSelecionado.tipoEventoId);
+                filtrarMembrosAutorizados();
+                const hoje = new Date().toISOString().split('T')[0];
+                podeAlterar = eventoSelecionado.data === hoje;
+                document.getElementById('eventoNomeFace').innerHTML = `🎯 ${eventoSelecionado.tipoEventoNome}`;
+                document.getElementById('eventoDataFace').innerHTML = `📅 ${new Date(eventoSelecionado.data).toLocaleDateString('pt-BR')}`;
+                document.getElementById('infoEventoFace').style.display = 'block';
+                
+                if (!podeAlterar) {
+                    atualizarStatusReconhecimento('⚠️ Este evento não pode ser alterado (data diferente de hoje)', 'warning');
+                    return;
+                }
+                
+                const carregado = await carregarModelosFace();
+                if (carregado) {
+                    iniciarCamera();
+                }
             }
         }
 
         document.getElementById('btnIniciarCamera').addEventListener('click', iniciarReconhecimento);
         document.getElementById('btnPararCamera').addEventListener('click', () => {
             pararCamera();
-            document.getElementById('reconhecimentoStatus').innerHTML = 'Câmera parada.';
+            atualizarStatusReconhecimento('Câmera parada.', 'loading');
         });
 
         function filtrarMembros() {
@@ -587,10 +623,10 @@
             if (aba === 'lista') {
                 document.getElementById('abaLista').classList.add('active');
                 document.querySelector('.tab-btn:first-child').classList.add('active');
+                pararCamera();
             } else if (aba === 'reconhecimento') {
                 document.getElementById('abaReconhecimento').classList.add('active');
                 document.querySelector('.tab-btn:last-child').classList.add('active');
-                pararCamera();
             }
         }
 
