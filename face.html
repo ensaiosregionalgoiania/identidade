@@ -46,31 +46,42 @@
             margin-bottom: 15px;
         }
 
-        .video-section {
+        /* Alternador de modo */
+        .mode-switch {
             display: flex;
-            flex-direction: column;
             gap: 10px;
             margin-bottom: 15px;
+            background: #f0f0f0;
+            padding: 5px;
+            border-radius: 10px;
         }
 
+        .mode-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: transparent;
+            color: #666;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .mode-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        /* Container de vídeo */
         .video-container {
             position: relative;
             background: #f0f0f0;
             border-radius: 10px;
             overflow: hidden;
             border: 2px solid #ddd;
-        }
-
-        .video-container h3 {
-            position: absolute;
-            top: 5px;
-            left: 5px;
-            background: rgba(0,0,0,0.7);
-            color: white;
-            padding: 3px 8px;
-            border-radius: 5px;
-            font-size: 10px;
-            z-index: 1;
+            margin-bottom: 15px;
         }
 
         video, canvas {
@@ -83,7 +94,7 @@
             transform: scaleX(-1);
         }
 
-        .preview-canvas {
+        #canvas {
             position: absolute;
             top: 0;
             left: 0;
@@ -92,26 +103,25 @@
             transform: scaleX(-1);
         }
 
+        /* Botões de controle */
         .controls {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            display: flex;
             gap: 8px;
             margin: 15px 0;
+            flex-wrap: wrap;
         }
 
         .controls button {
+            flex: 1;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 10px;
+            padding: 12px;
             border-radius: 8px;
-            font-size: 13px;
+            font-size: 14px;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: transform 0.2s;
             font-weight: bold;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
 
         button:active {
@@ -132,22 +142,21 @@
             background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
         }
 
+        /* Input group */
         .input-group {
             margin: 15px 0;
             display: flex;
             gap: 8px;
-            justify-content: center;
             align-items: center;
             flex-wrap: wrap;
         }
 
         .input-group input {
-            padding: 10px;
+            flex: 2;
+            padding: 12px;
             font-size: 14px;
             border: 2px solid #ddd;
             border-radius: 8px;
-            flex: 1;
-            min-width: 150px;
             outline: none;
         }
 
@@ -156,11 +165,11 @@
         }
 
         .input-group button {
-            padding: 10px 15px;
-            font-size: 13px;
-            white-space: nowrap;
+            flex: 1;
+            padding: 12px;
         }
 
+        /* Lista de usuários */
         .users-list {
             background: white;
             border-radius: 15px;
@@ -178,7 +187,7 @@
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
             gap: 10px;
-            max-height: 250px;
+            max-height: 200px;
             overflow-y: auto;
         }
 
@@ -205,11 +214,12 @@
 
         .user-card button {
             margin-top: 8px;
-            padding: 4px 8px;
+            padding: 5px 10px;
             font-size: 11px;
             background: #dc3545;
         }
 
+        /* Status */
         .status {
             background: #f0f0f0;
             padding: 10px;
@@ -223,21 +233,19 @@
         .status.success {
             background: #d4edda;
             color: #155724;
-            border: 1px solid #c3e6cb;
         }
 
         .status.error {
             background: #f8d7da;
             color: #721c24;
-            border: 1px solid #f5c6cb;
         }
 
         .status.info {
             background: #d1ecf1;
             color: #0c5460;
-            border: 1px solid #bee5eb;
         }
 
+        /* Resultado flutuante */
         .recognition-result {
             position: fixed;
             bottom: 10px;
@@ -266,7 +274,7 @@
             }
         }
 
-        /* Scrollbar personalizada */
+        /* Scrollbar */
         .user-cards::-webkit-scrollbar {
             width: 4px;
         }
@@ -282,18 +290,8 @@
         }
 
         @media (max-width: 480px) {
-            body {
-                padding: 8px;
-            }
-            
             .controls {
-                grid-template-columns: 1fr;
-                gap: 6px;
-            }
-            
-            .controls button {
-                padding: 8px;
-                font-size: 12px;
+                flex-direction: column;
             }
             
             .user-cards {
@@ -304,10 +302,7 @@
                 flex-direction: column;
             }
             
-            .input-group input {
-                width: 100%;
-            }
-            
+            .input-group input,
             .input-group button {
                 width: 100%;
             }
@@ -318,29 +313,31 @@
     <div class="container">
         <div class="main-card">
             <h1>👤 Reconhecimento Facial</h1>
-            <div class="subtitle">Cadastre e identifique usuários</div>
+            <div class="subtitle">Cadastre ou identifique usuários</div>
 
-            <div class="video-section">
-                <div class="video-container">
-                    <h3>📸 Câmera</h3>
-                    <video id="video" autoplay muted playsinline></video>
-                </div>
-                <div class="video-container">
-                    <h3>🎯 Reconhecimento</h3>
-                    <canvas id="canvas"></canvas>
-                </div>
+            <!-- Alternador de modo -->
+            <div class="mode-switch">
+                <button class="mode-btn active" id="modeCaptureBtn" onclick="setMode('capture')">📸 CADASTRAR</button>
+                <button class="mode-btn" id="modeRecognizeBtn" onclick="setMode('recognize')">🔍 RECONHECER</button>
             </div>
 
+            <!-- Container único para vídeo -->
+            <div class="video-container">
+                <video id="video" autoplay muted playsinline></video>
+                <canvas id="canvas"></canvas>
+            </div>
+
+            <!-- Botões de controle -->
             <div class="controls">
                 <button id="startCameraBtn" onclick="startCamera()">📷 Iniciar Câmera</button>
-                <button id="captureBtn" onclick="captureFace()" disabled>📸 Capturar</button>
-                <button id="recognizeBtn" onclick="startRecognition()" disabled>🔍 Reconhecer</button>
-                <button id="stopRecognizeBtn" onclick="stopRecognition()" disabled>⏹️ Parar</button>
-                <button id="clearBtn" onclick="clearAllUsers()" class="btn-danger">🗑️ Limpar Tudo</button>
+                <button id="actionBtn" onclick="actionButtonClick()" disabled>---</button>
+                <button id="stopActionBtn" onclick="stopAction()" disabled>⏹️ Parar</button>
+                <button id="clearBtn" onclick="clearAllUsers()" class="btn-danger">🗑️ Limpar</button>
             </div>
 
+            <!-- Área de cadastro -->
             <div class="input-group" id="captureGroup" style="display: none;">
-                <input type="text" id="userName" placeholder="Nome do usuário" maxlength="30">
+                <input type="text" id="userName" placeholder="Digite o nome do usuário" maxlength="30">
                 <button onclick="saveUser()" class="btn-success">💾 Salvar</button>
                 <button onclick="cancelCapture()">❌ Cancelar</button>
             </div>
@@ -350,8 +347,9 @@
             </div>
         </div>
 
+        <!-- Lista de usuários -->
         <div class="users-list">
-            <h3>📋 Usuários (<span id="userCount">0</span>)</h3>
+            <h3>📋 Usuários Cadastrados (<span id="userCount">0</span>)</h3>
             <div id="usersContainer" class="user-cards">
                 <div style="text-align: center; color: #999; font-size: 12px;">Nenhum usuário</div>
             </div>
@@ -371,12 +369,12 @@
         let stream = null;
         let recognitionInterval = null;
         let isRecognizing = false;
+        let currentMode = 'capture'; // 'capture' ou 'recognize'
         
         let users = [];
         let capturedDescriptor = null;
-        let capturedImage = null;
 
-        // Carregar usuários do localStorage
+        // Carregar usuários
         function loadUsers() {
             const saved = localStorage.getItem('facialUsers');
             if (saved) {
@@ -385,13 +383,11 @@
             }
         }
 
-        // Salvar usuários no localStorage
         function saveUsers() {
             localStorage.setItem('facialUsers', JSON.stringify(users));
             updateUsersList();
         }
 
-        // Atualizar lista de usuários
         function updateUsersList() {
             const container = document.getElementById('usersContainer');
             const countSpan = document.getElementById('userCount');
@@ -418,29 +414,32 @@
             return div.innerHTML;
         }
 
-        // Deletar usuário
         function deleteUser(index) {
             if (confirm(`Excluir ${users[index].name}?`)) {
                 const name = users[index].name;
                 users.splice(index, 1);
                 saveUsers();
                 showStatus(`${name} removido!`, 'success');
+                if (currentMode === 'recognize' && users.length === 0) {
+                    stopAction();
+                }
             }
         }
 
-        // Limpar todos os usuários
         function clearAllUsers() {
             if (confirm('⚠️ Apagar TODOS os usuários?')) {
                 users = [];
                 saveUsers();
                 capturedDescriptor = null;
-                capturedImage = null;
                 showStatus('Todos os usuários removidos!', 'success');
                 document.getElementById('captureGroup').style.display = 'none';
+                if (currentMode === 'recognize') {
+                    stopAction();
+                }
+                updateActionButton();
             }
         }
 
-        // Mostrar status
         function showStatus(message, type = 'info') {
             const statusDiv = document.getElementById('status');
             statusDiv.textContent = message;
@@ -449,14 +448,15 @@
             setTimeout(() => {
                 if (statusDiv.className.includes(type)) {
                     setTimeout(() => {
-                        statusDiv.className = 'status info';
-                        statusDiv.textContent = '✅ Sistema pronto';
+                        if (!statusDiv.className.includes('error')) {
+                            statusDiv.className = 'status info';
+                            statusDiv.textContent = '✅ Sistema pronto';
+                        }
                     }, 2000);
                 }
             }, 2000);
         }
 
-        // Mostrar resultado
         function showRecognitionResult(message, isSuccess = true) {
             const resultDiv = document.getElementById('recognitionResult');
             resultDiv.textContent = message;
@@ -469,11 +469,71 @@
             }, 2000);
         }
 
+        // Alternar modo
+        function setMode(mode) {
+            currentMode = mode;
+            
+            // Atualizar botões do alternador
+            document.getElementById('modeCaptureBtn').classList.toggle('active', mode === 'capture');
+            document.getElementById('modeRecognizeBtn').classList.toggle('active', mode === 'recognize');
+            
+            // Parar qualquer ação em andamento
+            stopAction();
+            
+            // Limpar canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Esconder grupo de captura
+            document.getElementById('captureGroup').style.display = 'none';
+            capturedDescriptor = null;
+            
+            // Atualizar botão de ação
+            updateActionButton();
+            
+            // Mostrar status
+            if (mode === 'capture') {
+                showStatus('📸 Modo Cadastro - Capture um rosto para cadastrar', 'info');
+            } else {
+                if (users.length === 0) {
+                    showStatus('🔍 Modo Reconhecimento - Cadastre usuários primeiro', 'info');
+                } else {
+                    showStatus('🔍 Modo Reconhecimento - Clique em "Reconhecer"', 'info');
+                }
+            }
+        }
+        
+        function updateActionButton() {
+            const actionBtn = document.getElementById('actionBtn');
+            if (currentMode === 'capture') {
+                actionBtn.textContent = '📸 Capturar Face';
+                actionBtn.disabled = !modelsLoaded || !stream;
+            } else {
+                actionBtn.textContent = '🔍 Iniciar Reconhecimento';
+                actionBtn.disabled = !modelsLoaded || !stream || users.length === 0;
+            }
+        }
+        
+        function actionButtonClick() {
+            if (currentMode === 'capture') {
+                captureFace();
+            } else {
+                startRecognition();
+            }
+        }
+        
+        function stopAction() {
+            if (currentMode === 'recognize') {
+                stopRecognition();
+            } else {
+                cancelCapture();
+            }
+        }
+
         // Carregar modelos
         async function loadModels() {
             const modelUrl = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
             
-            showStatus('📥 Baixando modelos...', 'info');
+            showStatus('📥 Baixando modelos de IA...', 'info');
             
             try {
                 await faceapi.nets.tinyFaceDetector.loadFromUri(modelUrl);
@@ -481,11 +541,12 @@
                 await faceapi.nets.faceRecognitionNet.loadFromUri(modelUrl);
                 
                 modelsLoaded = true;
-                showStatus('✅ Pronto! Inicie a câmera', 'success');
+                showStatus('✅ Modelos carregados! Inicie a câmera', 'success');
                 document.getElementById('startCameraBtn').disabled = false;
+                updateActionButton();
             } catch (error) {
                 console.error(error);
-                showStatus('❌ Erro ao carregar. Verifique sua internet.', 'error');
+                showStatus('❌ Erro ao carregar modelos. Verifique sua internet.', 'error');
             }
         }
 
@@ -517,19 +578,19 @@
                 
                 showStatus('✅ Câmera ativada!', 'success');
                 document.getElementById('startCameraBtn').disabled = true;
-                document.getElementById('captureBtn').disabled = false;
-                document.getElementById('recognizeBtn').disabled = false;
+                updateActionButton();
+                document.getElementById('stopActionBtn').disabled = false;
                 
             } catch (error) {
                 console.error(error);
-                showStatus('❌ Erro ao acessar câmera.', 'error');
+                showStatus('❌ Erro ao acessar câmera. Verifique as permissões.', 'error');
             }
         }
 
-        // Capturar face
+        // Capturar face (modo cadastro)
         async function captureFace() {
             if (!modelsLoaded) {
-                showStatus('⏳ Aguarde os modelos...', 'error');
+                showStatus('⏳ Aguarde os modelos carregarem...', 'error');
                 return;
             }
             
@@ -542,12 +603,20 @@
             if (detections) {
                 capturedDescriptor = detections.descriptor;
                 
-                showStatus('✅ Face capturada! Digite o nome', 'success');
+                // Desenhar a detecção no canvas
+                const dims = faceapi.matchDimensions(canvas, video, true);
+                const resizedDetection = faceapi.resizeResults(detections, dims);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                faceapi.draw.drawDetections(canvas, resizedDetection);
+                faceapi.draw.drawFaceLandmarks(canvas, resizedDetection);
+                
+                showStatus('✅ Face capturada! Digite o nome e salve', 'success');
                 document.getElementById('captureGroup').style.display = 'flex';
                 document.getElementById('userName').value = '';
                 document.getElementById('userName').focus();
+                document.getElementById('actionBtn').disabled = true;
             } else {
-                showStatus('❌ Nenhum rosto detectado.', 'error');
+                showStatus('❌ Nenhum rosto detectado. Tente com boa iluminação.', 'error');
             }
         }
 
@@ -575,25 +644,26 @@
             users.push(newUser);
             saveUsers();
             
-            showStatus(`✅ ${name} cadastrado!`, 'success');
+            showStatus(`✅ ${name} cadastrado com sucesso!`, 'success');
             
             capturedDescriptor = null;
             document.getElementById('captureGroup').style.display = 'none';
             document.getElementById('userName').value = '';
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            document.getElementById('actionBtn').disabled = false;
         }
 
         function cancelCapture() {
             capturedDescriptor = null;
             document.getElementById('captureGroup').style.display = 'none';
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            document.getElementById('actionBtn').disabled = false;
             showStatus('Captura cancelada', 'info');
         }
 
         // Reconhecer face
         async function recognizeFace() {
             if (!modelsLoaded || users.length === 0) {
-                if (users.length === 0) {
-                    showStatus('⚠️ Nenhum usuário cadastrado', 'error');
-                }
                 return null;
             }
             
@@ -621,21 +691,20 @@
             return bestMatch;
         }
 
-        // Iniciar reconhecimento
+        // Iniciar reconhecimento contínuo
         async function startRecognition() {
             if (users.length === 0) {
-                showStatus('⚠️ Cadastre alguém primeiro', 'error');
+                showStatus('⚠️ Cadastre usuários primeiro', 'error');
                 return;
             }
             
             if (isRecognizing) return;
             
             isRecognizing = true;
-            document.getElementById('recognizeBtn').disabled = true;
-            document.getElementById('stopRecognizeBtn').disabled = false;
-            document.getElementById('captureBtn').disabled = true;
+            document.getElementById('actionBtn').disabled = true;
+            document.getElementById('stopActionBtn').disabled = false;
             
-            showStatus('🔍 Reconhecendo...', 'info');
+            showStatus('🔍 Reconhecimento ativo - Olhe para a câmera', 'info');
             
             async function recognizeLoop() {
                 if (!isRecognizing) return;
@@ -670,7 +739,7 @@
                     }
                     
                 } catch (error) {
-                    console.error('Erro:', error);
+                    console.error('Erro no reconhecimento:', error);
                 }
                 
                 if (isRecognizing) {
@@ -685,18 +754,16 @@
         function stopRecognition() {
             isRecognizing = false;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            document.getElementById('recognizeBtn').disabled = false;
-            document.getElementById('stopRecognizeBtn').disabled = true;
-            document.getElementById('captureBtn').disabled = false;
-            showStatus('✅ Reconhecimento parado', 'success');
+            document.getElementById('actionBtn').disabled = false;
+            document.getElementById('stopActionBtn').disabled = true;
+            showStatus('✅ Reconhecimento finalizado', 'success');
         }
 
         // Inicializar
         async function init() {
             document.getElementById('startCameraBtn').disabled = true;
-            document.getElementById('captureBtn').disabled = true;
-            document.getElementById('recognizeBtn').disabled = true;
-            document.getElementById('stopRecognizeBtn').disabled = true;
+            document.getElementById('actionBtn').disabled = true;
+            document.getElementById('stopActionBtn').disabled = true;
             
             loadUsers();
             await loadModels();
