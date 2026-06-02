@@ -77,17 +77,21 @@
         /* Container de vídeo */
         .video-container {
             position: relative;
-            background: #f0f0f0;
+            background: #000;
             border-radius: 10px;
             overflow: hidden;
             border: 2px solid #ddd;
             margin-bottom: 15px;
+            aspect-ratio: 4/3;
         }
 
         video, canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
-            height: auto;
-            display: block;
+            height: 100%;
+            object-fit: cover;
         }
 
         #video {
@@ -95,11 +99,6 @@
         }
 
         #canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
             transform: scaleX(-1);
         }
 
@@ -369,7 +368,7 @@
         let stream = null;
         let recognitionInterval = null;
         let isRecognizing = false;
-        let currentMode = 'capture'; // 'capture' ou 'recognize'
+        let currentMode = 'capture';
         
         let users = [];
         let capturedDescriptor = null;
@@ -452,9 +451,9 @@
                             statusDiv.className = 'status info';
                             statusDiv.textContent = '✅ Sistema pronto';
                         }
-                    }, 2000);
+                    }, 3000);
                 }
-            }, 2000);
+            }, 3000);
         }
 
         function showRecognitionResult(message, isSuccess = true) {
@@ -473,24 +472,17 @@
         function setMode(mode) {
             currentMode = mode;
             
-            // Atualizar botões do alternador
             document.getElementById('modeCaptureBtn').classList.toggle('active', mode === 'capture');
             document.getElementById('modeRecognizeBtn').classList.toggle('active', mode === 'recognize');
             
-            // Parar qualquer ação em andamento
             stopAction();
             
-            // Limpar canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Esconder grupo de captura
             document.getElementById('captureGroup').style.display = 'none';
             capturedDescriptor = null;
             
-            // Atualizar botão de ação
             updateActionButton();
             
-            // Mostrar status
             if (mode === 'capture') {
                 showStatus('📸 Modo Cadastro - Capture um rosto para cadastrar', 'info');
             } else {
@@ -568,13 +560,18 @@
                 
                 await video.play();
                 
+                // Aguardar o vídeo carregar completamente
                 await new Promise((resolve) => {
-                    video.onloadedmetadata = () => {
-                        canvas.width = video.videoWidth;
-                        canvas.height = video.videoHeight;
+                    if (video.readyState >= 2) {
                         resolve();
-                    };
+                    } else {
+                        video.onloadeddata = () => resolve();
+                    }
                 });
+                
+                // Configurar canvas com as dimensões corretas
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
                 
                 showStatus('✅ Câmera ativada!', 'success');
                 document.getElementById('startCameraBtn').disabled = true;
@@ -594,29 +591,49 @@
                 return;
             }
             
-            showStatus('📸 Detectando rosto...', 'info');
+            if (!stream) {
+                showStatus('❌ Câmera não está ativa', 'error');
+                return;
+            }
             
-            const detections = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
-                .withFaceLandmarks()
-                .withFaceDescriptor();
+            showStatus('📸 Detectando rosto... Aguarde', 'info');
             
-            if (detections) {
-                capturedDescriptor = detections.descriptor;
+            try {
+                // Garantir que o canvas tem o tamanho correto
+                if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                }
                 
-                // Desenhar a detecção no canvas
-                const dims = faceapi.matchDimensions(canvas, video, true);
-                const resizedDetection = faceapi.resizeResults(detections, dims);
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                faceapi.draw.drawDetections(canvas, resizedDetection);
-                faceapi.draw.drawFaceLandmarks(canvas, resizedDetection);
+                // Detectar face
+                const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+                    .withFaceLandmarks()
+                    .withFaceDescriptor();
                 
-                showStatus('✅ Face capturada! Digite o nome e salve', 'success');
-                document.getElementById('captureGroup').style.display = 'flex';
-                document.getElementById('userName').value = '';
-                document.getElementById('userName').focus();
-                document.getElementById('actionBtn').disabled = true;
-            } else {
-                showStatus('❌ Nenhum rosto detectado. Tente com boa iluminação.', 'error');
+                if (detection) {
+                    capturedDescriptor = detection.descriptor;
+                    
+                    // Desenhar a detecção no canvas
+                    const displaySize = { width: canvas.width, height: canvas.height };
+                    const resizedDetection = faceapi.resizeResults(detection, displaySize);
+                    
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    faceapi.draw.drawDetections(canvas, resizedDetection);
+                    faceapi.draw.drawFaceLandmarks(canvas, resizedDetection);
+                    
+                    showStatus('✅ Face capturada! Digite o nome e salve', 'success');
+                    document.getElementById('captureGroup').style.display = 'flex';
+                    document.getElementById('userName').value = '';
+                    document.getElementById('userName').focus();
+                    document.getElementById('actionBtn').disabled = true;
+                } else {
+                    showStatus('❌ Nenhum rosto detectado. Tente novamente com boa iluminação.', 'error');
+                    // Limpar canvas se não detectou nada
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            } catch (error) {
+                console.error('Erro na captura:', error);
+                showStatus('❌ Erro ao capturar face. Tente novamente.', 'error');
             }
         }
 
@@ -646,6 +663,7 @@
             
             showStatus(`✅ ${name} cadastrado com sucesso!`, 'success');
             
+            // Limpar captura
             capturedDescriptor = null;
             document.getElementById('captureGroup').style.display = 'none';
             document.getElementById('userName').value = '';
@@ -667,28 +685,33 @@
                 return null;
             }
             
-            const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
-                .withFaceLandmarks()
-                .withFaceDescriptor();
-            
-            if (!detection) {
+            try {
+                const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+                    .withFaceLandmarks()
+                    .withFaceDescriptor();
+                
+                if (!detection) {
+                    return null;
+                }
+                
+                let bestMatch = null;
+                let bestDistance = 0.6; // Limiar de reconhecimento
+                
+                for (const user of users) {
+                    const userDescriptor = new Float32Array(user.descriptor);
+                    const distance = faceapi.euclideanDistance(detection.descriptor, userDescriptor);
+                    
+                    if (distance < bestDistance) {
+                        bestDistance = distance;
+                        bestMatch = user;
+                    }
+                }
+                
+                return bestMatch;
+            } catch (error) {
+                console.error('Erro no reconhecimento:', error);
                 return null;
             }
-            
-            let bestMatch = null;
-            let bestDistance = 0.6;
-            
-            for (const user of users) {
-                const userDescriptor = new Float32Array(user.descriptor);
-                const distance = faceapi.euclideanDistance(detection.descriptor, userDescriptor);
-                
-                if (distance < bestDistance) {
-                    bestDistance = distance;
-                    bestMatch = user;
-                }
-            }
-            
-            return bestMatch;
         }
 
         // Iniciar reconhecimento contínuo
@@ -710,14 +733,21 @@
                 if (!isRecognizing) return;
                 
                 try {
+                    // Garantir que o canvas tem o tamanho correto
+                    if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                    }
+                    
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
                     
                     const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
                         .withFaceLandmarks();
                     
                     if (detection) {
-                        const dims = faceapi.matchDimensions(canvas, video, true);
-                        const resizedDetection = faceapi.resizeResults(detection, dims);
+                        const displaySize = { width: canvas.width, height: canvas.height };
+                        const resizedDetection = faceapi.resizeResults(detection, displaySize);
+                        
                         faceapi.draw.drawDetections(canvas, resizedDetection);
                         faceapi.draw.drawFaceLandmarks(canvas, resizedDetection);
                         
@@ -727,6 +757,7 @@
                             const box = resizedDetection.detection.box;
                             ctx.font = "bold 16px Arial";
                             ctx.fillStyle = "#00ff00";
+                            ctx.shadowBlur = 0;
                             ctx.fillText(`✅ ${recognizedUser.name}`, box.x, box.y - 8);
                             
                             showRecognitionResult(`👋 Olá, ${recognizedUser.name}!`, true);
@@ -739,7 +770,7 @@
                     }
                     
                 } catch (error) {
-                    console.error('Erro no reconhecimento:', error);
+                    console.error('Erro no loop de reconhecimento:', error);
                 }
                 
                 if (isRecognizing) {
