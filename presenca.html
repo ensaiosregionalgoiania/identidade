@@ -104,6 +104,74 @@
         .leitor-status.success { background: #d5f4e6; color: #27ae60; }
         .leitor-status.error { background: #fee; color: #e74c3c; }
         .leitor-status.info { background: #e3f2fd; color: #3498db; }
+        
+        /* Modal de Confirmação */
+        .modal-confirm {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+        .modal-confirm-content {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            animation: fadeIn 0.3s ease;
+        }
+        .modal-confirm-content h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+        .modal-membro-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            text-align: left;
+        }
+        .modal-membro-info p {
+            margin: 8px 0;
+            font-size: 0.9rem;
+        }
+        .modal-membro-info strong {
+            color: #2c3e50;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .modal-buttons button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn-confirmar {
+            background: #27ae60;
+            color: white;
+        }
+        .btn-confirmar:hover {
+            background: #219a52;
+        }
+        .btn-cancelar {
+            background: #95a5a6;
+            color: white;
+        }
+        .btn-cancelar:hover {
+            background: #7f8c8d;
+        }
     </style>
 </head>
 <body>
@@ -182,6 +250,18 @@
         </div>
     </div>
 
+    <!-- Modal de Confirmação -->
+    <div id="modalConfirm" class="modal-confirm">
+        <div class="modal-confirm-content">
+            <h3>📋 Confirmar Presença</h3>
+            <div id="modalMembroInfo" class="modal-membro-info"></div>
+            <div class="modal-buttons">
+                <button id="btnConfirmarPresenca" class="btn-confirmar">✅ Confirmar</button>
+                <button id="btnCancelarPresenca" class="btn-cancelar">❌ Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <script src="firebase-config.js"></script>
     <script>
         // Coleções
@@ -214,6 +294,7 @@
         // Variáveis QR Code
         let html5QrCode = null;
         let leitorAtivo = false;
+        let pendingMembro = null;
 
         function mostrarToast(msg) {
             const toast = document.createElement('div');
@@ -225,6 +306,11 @@
 
         function getDataHoje() {
             return new Date().toISOString().split('T')[0];
+        }
+
+        function getNome(lista, id, tipo) {
+            const item = lista.find(i => Number(i.id) === Number(id));
+            return item ? item.nome : `${tipo} ${id}`;
         }
 
         async function carregarDados() {
@@ -263,6 +349,7 @@
                 const data = doc.data();
                 membrosCompletos.push({
                     id: doc.id,
+                    nomeId: data.id,
                     nome: data.nome,
                     instrumentoId: data.instrumentoId,
                     cargoId: data.cargoId,
@@ -365,11 +452,6 @@
                 mostrarToast('❌ Erro: ' + error.message);
                 return false;
             }
-        }
-
-        function getNome(lista, id, tipo) {
-            const item = lista.find(i => Number(i.id) === Number(id));
-            return item ? item.nome : `${tipo} ${id}`;
         }
 
         async function renderizarListaMembros() {
@@ -477,6 +559,45 @@
             statusDiv.className = `leitor-status ${tipo}`;
         }
 
+        // Função para mostrar modal de confirmação
+        function mostrarModalConfirmacao(membro) {
+            const instrumento = getNome(instrumentos, membro.instrumentoId, 'Instrumento');
+            const cargo = getNome(cargos, membro.cargoId, 'Cargo');
+            const nivel = getNome(niveis, membro.nivelId, 'Nível');
+            
+            const modalInfo = document.getElementById('modalMembroInfo');
+            modalInfo.innerHTML = `
+                <p><strong>👤 Nome:</strong> ${membro.nome}</p>
+                <p><strong>🎷 Instrumento:</strong> ${instrumento}</p>
+                <p><strong>⭐ Cargo:</strong> ${cargo}</p>
+                <p><strong>📊 Nível:</strong> ${nivel}</p>
+                <hr>
+                <p><strong>📅 Evento:</strong> ${eventoSelecionado.tipoEventoNome}</p>
+                <p><strong>📍 Local:</strong> ${eventoSelecionado.congregacaoNome}</p>
+            `;
+            
+            pendingMembro = membro;
+            document.getElementById('modalConfirm').style.display = 'flex';
+            pararLeitor();
+        }
+
+        // Confirmar presença
+        async function confirmarPresenca() {
+            if (pendingMembro) {
+                await registrarPresenca(pendingMembro.id, pendingMembro.nome);
+                pendingMembro = null;
+                document.getElementById('modalConfirm').style.display = 'none';
+            }
+        }
+
+        // Cancelar presença
+        function cancelarPresenca() {
+            pendingMembro = null;
+            document.getElementById('modalConfirm').style.display = 'none';
+            atualizarStatusLeitor('Leitura cancelada. Aponte novamente para o QR Code.', 'info');
+            iniciarLeitor();
+        }
+
         async function iniciarLeitor() {
             if (!eventoSelecionado) {
                 mostrarToast('⚠️ Selecione um evento primeiro!');
@@ -545,8 +666,8 @@
                     return;
                 }
                 
-                registrarPresenca(membro.id, membro.nome);
-                pararLeitor();
+                // Mostrar modal de confirmação
+                mostrarModalConfirmacao(membro);
                 
             } catch(error) {
                 atualizarStatusLeitor('❌ QR Code inválido: ' + error.message, 'error');
@@ -555,6 +676,8 @@
 
         document.getElementById('btnIniciarLeitor').addEventListener('click', iniciarLeitor);
         document.getElementById('btnPararLeitor').addEventListener('click', pararLeitor);
+        document.getElementById('btnConfirmarPresenca').addEventListener('click', confirmarPresenca);
+        document.getElementById('btnCancelarPresenca').addEventListener('click', cancelarPresenca);
 
         function filtrarMembros() {
             buscaFiltro = document.getElementById('buscaMembros').value.toLowerCase();
