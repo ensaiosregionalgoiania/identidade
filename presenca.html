@@ -6,7 +6,7 @@
     <title>Controle de Presença - Identidade Ministerial</title>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -30,18 +30,9 @@
             box-shadow: 0 5px 20px rgba(0,0,0,0.2);
         }
         .logo h1 { color: #2c3e50; font-size: 1.3rem; }
+        .logo h1 i { color: #9b59b6; margin-right: 10px; }
         .top-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
         .btn-voltar { background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; }
-        
-        .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-        .tab-btn {
-            flex: 1; padding: 12px; background: rgba(255,255,255,0.2); color: white;
-            border: none; border-radius: 10px; font-size: 1rem; font-weight: bold;
-            cursor: pointer; transition: all 0.3s ease;
-        }
-        .tab-btn.active { background: white; color: #2c3e50; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
         
         .card { background: white; border-radius: 20px; padding: 25px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
         .card-header { border-bottom: 2px solid #e0e0e0; margin-bottom: 20px; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
@@ -85,15 +76,34 @@
         
         .aviso-data { background: #fff3cd; color: #856404; padding: 10px; border-radius: 8px; margin-top: 10px; text-align: center; font-size: 0.85rem; }
         
-        .camera-area { margin: 15px 0; text-align: center; }
-        #video { width: 100%; max-width: 500px; border-radius: 15px; background: #333; margin: 0 auto; display: block; }
-        .btn-camera { background: #9b59b6; }
+        .camera-area {
+            text-align: center;
+            margin-top: 20px;
+        }
+        #reader {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .btn-camera {
+            background: #9b59b6;
+            margin-top: 15px;
+        }
         .btn-camera:hover { background: #8e44ad; }
-        .reconhecimento-status { text-align: center; margin-top: 10px; padding: 10px; border-radius: 8px; font-weight: bold; }
-        .status-loading { background: #e3f2fd; color: #3498db; }
-        .status-success { background: #d5f4e6; color: #27ae60; }
-        .status-error { background: #fee; color: #e74c3c; }
-        .status-warning { background: #fff3cd; color: #856404; }
+        .btn-stop {
+            background: #e74c3c;
+        }
+        .btn-stop:hover { background: #c0392b; }
+        
+        .leitor-status {
+            text-align: center;
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .leitor-status.success { background: #d5f4e6; color: #27ae60; }
+        .leitor-status.error { background: #fee; color: #e74c3c; }
+        .leitor-status.info { background: #e3f2fd; color: #3498db; }
     </style>
 </head>
 <body>
@@ -107,88 +117,67 @@
             </div>
         </div>
 
-        <div class="tabs">
-            <button class="tab-btn active" onclick="trocarAba('lista')">📋 Lista de Membros</button>
-            <button class="tab-btn" onclick="trocarAba('reconhecimento')">🤖 Reconhecimento Facial</button>
-        </div>
-
-        <!-- Aba Lista de Membros -->
-        <div id="abaLista" class="tab-content active">
-            <div class="card">
-                <div class="card-header">
-                    <h2>📅 Selecionar Evento</h2>
-                </div>
-                <div class="form-group">
-                    <label>Evento:</label>
-                    <select id="eventoSelect" required>
-                        <option value="">Selecione um evento...</option>
-                    </select>
-                </div>
+        <!-- Seleção de Evento -->
+        <div class="card">
+            <div class="card-header">
+                <h2>📅 Selecionar Evento (Hoje)</h2>
             </div>
-
-            <div id="infoEvento" class="info-evento" style="display: none;">
-                <h3 id="eventoNome"></h3>
-                <p id="eventoData"></p>
-                <p id="eventoPermissoes"></p>
-                <div id="avisoData" class="aviso-data" style="display: none;">
-                    <i>⚠️</i> Este evento não pode ser alterado porque a data é diferente de hoje
-                </div>
-            </div>
-
-            <div id="presencaCard" class="card" style="display: none;">
-                <div class="card-header">
-                    <h2>📋 Lista de Membros Autorizados</h2>
-                </div>
-                <div class="stats">
-                    <div class="stat-card" onclick="filtrarPorStatus('todos')">
-                        <div class="stat-number" id="totalMembros">0</div>
-                        <div class="stat-label">Total</div>
-                    </div>
-                    <div class="stat-card" onclick="filtrarPorStatus('presentes')">
-                        <div class="stat-number" id="totalPresentes">0</div>
-                        <div class="stat-label">Presentes</div>
-                    </div>
-                    <div class="stat-card" onclick="filtrarPorStatus('ausentes')">
-                        <div class="stat-number" id="totalAusentes">0</div>
-                        <div class="stat-label">Ausentes</div>
-                    </div>
-                </div>
-                <input type="text" id="buscaMembros" class="search-box" placeholder="🔍 Buscar por nome..." onkeyup="filtrarMembros()">
-                <div class="table-container">
-                    <table id="tabelaMembros">
-                        <thead>
-                            <tr><th>Nome</th><th>Instrumento</th><th>Cargo</th><th>Nível</th><th>Status</th><th>Ação</th></tr>
-                        </thead>
-                        <tbody id="corpoTabela"><tr><td colspan="6" class="loading">Selecione um evento...</td></tr></tbody>
-                    </table>
-                </div>
+            <div class="form-group">
+                <label>Evento:</label>
+                <select id="eventoSelect" required>
+                    <option value="">Selecione um evento...</option>
+                </select>
             </div>
         </div>
 
-        <!-- Aba Reconhecimento Facial -->
-        <div id="abaReconhecimento" class="tab-content">
-            <div class="card">
-                <div class="card-header">
-                    <h2>🤖 Reconhecimento Facial</h2>
+        <div id="infoEvento" class="info-evento" style="display: none;">
+            <h3 id="eventoNome"></h3>
+            <p id="eventoData"></p>
+            <p id="eventoPermissoes"></p>
+        </div>
+
+        <!-- Controles de Leitura QR Code -->
+        <div id="qrControlCard" class="card" style="display: none;">
+            <div class="card-header">
+                <h2>📷 Leitor QR Code</h2>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button id="btnIniciarLeitor" class="btn-camera">▶️ Iniciar Leitura</button>
+                <button id="btnPararLeitor" class="btn-camera btn-stop" style="display: none;">⏹️ Encerrar Leitura</button>
+            </div>
+            <div id="cameraContainer" style="display: none;">
+                <div id="reader"></div>
+                <div id="leitorStatus" class="leitor-status info">Aguardando início da leitura...</div>
+            </div>
+        </div>
+
+        <!-- Lista de Membros -->
+        <div id="presencaCard" class="card" style="display: none;">
+            <div class="card-header">
+                <h2>📋 Lista de Membros Autorizados</h2>
+            </div>
+            <div class="stats">
+                <div class="stat-card" onclick="filtrarPorStatus('todos')">
+                    <div class="stat-number" id="totalMembros">0</div>
+                    <div class="stat-label">Total</div>
                 </div>
-                <div class="form-group">
-                    <label>Evento:</label>
-                    <select id="eventoSelectFace" required>
-                        <option value="">Selecione um evento...</option>
-                    </select>
+                <div class="stat-card" onclick="filtrarPorStatus('presentes')">
+                    <div class="stat-number" id="totalPresentes">0</div>
+                    <div class="stat-label">Presentes</div>
                 </div>
-                <div id="infoEventoFace" class="info-evento" style="display: none;">
-                    <h3 id="eventoNomeFace"></h3>
-                    <p id="eventoDataFace"></p>
+                <div class="stat-card" onclick="filtrarPorStatus('ausentes')">
+                    <div class="stat-number" id="totalAusentes">0</div>
+                    <div class="stat-label">Ausentes</div>
                 </div>
-                <div class="camera-area">
-                    <video id="video" autoplay playsinline style="display:none;"></video>
-                </div>
-                <button id="btnIniciarCamera" class="btn-camera">📷 Iniciar Câmera e Reconhecimento</button>
-                <button id="btnPararCamera" class="btn-camera" style="background:#e74c3c;">⏹️ Parar Câmera</button>
-                <div id="reconhecimentoStatus" class="reconhecimento-status status-loading">
-                    ⏳ Selecione um evento e clique em "Iniciar Câmera"
-                </div>
+            </div>
+            <input type="text" id="buscaMembros" class="search-box" placeholder="🔍 Buscar por nome..." onkeyup="filtrarMembros()">
+            <div class="table-container">
+                <table id="tabelaMembros">
+                    <thead>
+                        <tr><th>Nome</th><th>Instrumento</th><th>Cargo</th><th>Nível</th><th>Status</th><th>Ação</th></tr>
+                    </thead>
+                    <tbody id="corpoTabela"><tr><td colspan="6" class="loading">Selecione um evento...</td></tr></tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -222,11 +211,9 @@
         let buscaFiltro = '';
         let podeAlterar = false;
         
-        // Variáveis para face-api
-        let video = null;
-        let stream = null;
-        let recognitionInterval = null;
-        let modelsLoaded = false;
+        // Variáveis QR Code
+        let html5QrCode = null;
+        let leitorAtivo = false;
 
         function mostrarToast(msg) {
             const toast = document.createElement('div');
@@ -236,25 +223,31 @@
             setTimeout(() => toast.remove(), 3000);
         }
 
-        function atualizarStatusReconhecimento(msg, tipo) {
-            const div = document.getElementById('reconhecimentoStatus');
-            div.innerHTML = msg;
-            div.className = `reconhecimento-status status-${tipo}`;
+        function getDataHoje() {
+            return new Date().toISOString().split('T')[0];
         }
 
-        // Carregar dados
         async function carregarDados() {
             const instSnapshot = await instrumentosCollection.get();
             instrumentos = [];
-            instSnapshot.forEach(doc => instrumentos.push({ id: doc.data().id, nome: doc.data().nome }));
+            instSnapshot.forEach(doc => {
+                const data = doc.data();
+                instrumentos.push({ id: data.id, nome: data.nome });
+            });
 
             const cargoSnapshot = await cargosCollection.get();
             cargos = [];
-            cargoSnapshot.forEach(doc => cargos.push({ id: doc.data().id, nome: doc.data().nome }));
+            cargoSnapshot.forEach(doc => {
+                const data = doc.data();
+                cargos.push({ id: data.id, nome: data.nome });
+            });
 
             const nivelSnapshot = await niveisCollection.get();
             niveis = [];
-            nivelSnapshot.forEach(doc => niveis.push({ id: doc.data().id, nome: doc.data().nome }));
+            nivelSnapshot.forEach(doc => {
+                const data = doc.data();
+                niveis.push({ id: data.id, nome: data.nome });
+            });
 
             const congSnapshot = await congregacoesCollection.get();
             congregacoes = [];
@@ -273,42 +266,41 @@
                     nome: data.nome,
                     instrumentoId: data.instrumentoId,
                     cargoId: data.cargoId,
-                    nivelId: data.nivelId,
-                    fotoUrl: data.fotoUrl
+                    nivelId: data.nivelId
                 });
             });
         }
 
-        // Carregar eventos
         async function carregarEventos() {
-            const snapshot = await eventosCollection.orderBy('data', 'desc').get();
+            const hoje = getDataHoje();
+            const snapshot = await eventosCollection.where('data', '==', hoje).orderBy('data', 'desc').get();
             eventos = [];
+            
             for (const doc of snapshot.docs) {
                 const data = doc.data();
                 const tipoEvento = tiposEvento.find(t => t.id === data.tipoEventoId);
                 const congregacao = congregacoes.find(c => c.id === data.congregacaoId);
+                
                 eventos.push({
                     id: doc.id,
                     data: data.data,
+                    congregacaoId: data.congregacaoId,
                     congregacaoNome: congregacao ? congregacao.nome : 'Desconhecida',
-                    tipoEventoNome: tipoEvento ? tipoEvento.nome : 'Desconhecido',
-                    tipoEventoId: data.tipoEventoId
+                    tipoEventoId: data.tipoEventoId,
+                    tipoEventoNome: tipoEvento ? tipoEvento.nome : 'Desconhecido'
                 });
             }
+            
             renderizarSelectEventos();
         }
 
         function renderizarSelectEventos() {
             const select = document.getElementById('eventoSelect');
-            const selectFace = document.getElementById('eventoSelectFace');
             select.innerHTML = '<option value="">Selecione um evento...</option>';
-            selectFace.innerHTML = '<option value="">Selecione um evento...</option>';
             
             for (const evento of eventos) {
                 const dataFormatada = new Date(evento.data).toLocaleDateString('pt-BR');
-                const texto = `${dataFormatada} - ${evento.tipoEventoNome} - ${evento.congregacaoNome}`;
-                select.innerHTML += `<option value="${evento.id}">${texto}</option>`;
-                selectFace.innerHTML += `<option value="${evento.id}">${texto}</option>`;
+                select.innerHTML += `<option value="${evento.id}">${dataFormatada} - ${evento.tipoEventoNome} - ${evento.congregacaoNome}</option>`;
             }
         }
 
@@ -317,7 +309,10 @@
             permissoesEvento = [];
             permissoesSnapshot.forEach(doc => {
                 const permissao = doc.data();
-                permissoesEvento.push({ cargoId: permissao.cargoId, nivelId: permissao.nivelId });
+                permissoesEvento.push({
+                    cargoId: permissao.cargoId,
+                    nivelId: permissao.nivelId
+                });
             });
         }
 
@@ -337,7 +332,10 @@
         async function verificarPresencasEvento(eventoId) {
             const snapshot = await presencasCollection.where('eventoId', '==', eventoId).get();
             const presentes = {};
-            snapshot.forEach(doc => presentes[doc.data().membroId] = doc.id);
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                presentes[data.membroId] = doc.id;
+            });
             return presentes;
         }
 
@@ -438,174 +436,125 @@
             }
         };
 
-        // Eventos dos selects
+        // Evento de seleção de evento
         document.getElementById('eventoSelect').addEventListener('change', async (e) => {
             const eventoId = e.target.value;
+            
             if (!eventoId) {
                 document.getElementById('presencaCard').style.display = 'none';
                 document.getElementById('infoEvento').style.display = 'none';
+                document.getElementById('qrControlCard').style.display = 'none';
                 eventoSelecionado = null;
                 return;
             }
+            
             eventoSelecionado = eventos.find(ev => ev.id === eventoId);
+            
             if (eventoSelecionado) {
                 await buscarPermissoes(eventoSelecionado.tipoEventoId);
                 filtrarMembrosAutorizados();
-                const hoje = new Date().toISOString().split('T')[0];
+                
+                const hoje = getDataHoje();
                 podeAlterar = eventoSelecionado.data === hoje;
+                
+                const dataFormatada = new Date(eventoSelecionado.data).toLocaleDateString('pt-BR');
                 document.getElementById('eventoNome').innerHTML = `🎯 ${eventoSelecionado.tipoEventoNome}`;
-                document.getElementById('eventoData').innerHTML = `📅 ${new Date(eventoSelecionado.data).toLocaleDateString('pt-BR')} - 📍 ${eventoSelecionado.congregacaoNome}`;
-                document.getElementById('eventoPermissoes').innerHTML = permissoesEvento.length > 0 ? `📋 ${permissoesEvento.length} permissões` : '📋 Sem restrições';
-                document.getElementById('avisoData').style.display = podeAlterar ? 'none' : 'block';
+                document.getElementById('eventoData').innerHTML = `📅 ${dataFormatada} - 📍 ${eventoSelecionado.congregacaoNome}`;
+                document.getElementById('eventoPermissoes').innerHTML = permissoesEvento.length > 0 ? `📋 ${permissoesEvento.length} permissões configuradas` : '📋 Sem restrições';
+                
                 document.getElementById('infoEvento').style.display = 'block';
+                document.getElementById('qrControlCard').style.display = 'block';
                 document.getElementById('presencaCard').style.display = 'block';
+                
                 await renderizarListaMembros();
             }
         });
 
-        // Reconhecimento Facial
-        async function carregarModelosFace() {
-            // Define o caminho base onde estão os modelos
-            const modelsPath = './models/';
-            
-            try {
-                await faceapi.nets.tinyFaceDetector.loadFromUri(modelsPath);
-                await faceapi.nets.faceLandmark68Net.loadFromUri(modelsPath);
-                await faceapi.nets.faceRecognitionNet.loadFromUri(modelsPath);
-                modelsLoaded = true;
-                console.log('✅ Modelos carregados com sucesso!');
-                return true;
-            } catch(error) {
-                console.error('❌ Erro ao carregar modelos:', error);
-                return false;
-            }
+        // Funções do Leitor QR Code
+        function atualizarStatusLeitor(mensagem, tipo) {
+            const statusDiv = document.getElementById('leitorStatus');
+            statusDiv.textContent = mensagem;
+            statusDiv.className = `leitor-status ${tipo}`;
         }
 
-        async function iniciarCamera() {
-            video = document.getElementById('video');
-            video.style.display = 'block';
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                video.srcObject = stream;
-                video.onloadedmetadata = () => {
-                    video.play();
-                    startRecognition();
-                };
-                atualizarStatusReconhecimento('📷 Câmera ativada! Aguardando rosto...', 'loading');
-            } catch(err) {
-                atualizarStatusReconhecimento('❌ Erro ao acessar câmera: ' + err.message, 'error');
-            }
-        }
-
-        function pararCamera() {
-            if (recognitionInterval) clearInterval(recognitionInterval);
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-                stream = null;
-            }
-            if (video) {
-                video.srcObject = null;
-                video.style.display = 'none';
-            }
-            atualizarStatusReconhecimento('⏹️ Câmera parada.', 'loading');
-        }
-
-        function startRecognition() {
-            if (recognitionInterval) clearInterval(recognitionInterval);
-            recognitionInterval = setInterval(recognizeFace, 3000);
-        }
-
-        async function recognizeFace() {
-            if (!video || video.paused || video.ended || !video.videoWidth) return;
-            if (!modelsLoaded) return;
-            
-            try {
-                const detections = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
-                    .withFaceLandmarks()
-                    .withFaceDescriptor();
-                
-                if (detections) {
-                    atualizarStatusReconhecimento('✅ Rosto detectado! Procurando correspondência...', 'success');
-                    await encontrarCorrespondencia(detections.descriptor);
-                } else {
-                    atualizarStatusReconhecimento('🔍 Procurando rosto... Aponte a câmera para o membro', 'loading');
-                }
-            } catch(error) {
-                console.error('Erro no reconhecimento:', error);
-            }
-        }
-
-        async function encontrarCorrespondencia(descriptor) {
-            let melhorMatch = null;
-            let melhorDistancia = 0.6;
-            
-            for (const membro of membrosAutorizados) {
-                if (membro.fotoUrl && membro.fotoUrl.startsWith('data:image')) {
-                    try {
-                        const img = new Image();
-                        img.src = membro.fotoUrl;
-                        await new Promise((resolve) => { img.onload = resolve; });
-                        const detections = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
-                            .withFaceLandmarks()
-                            .withFaceDescriptor();
-                        
-                        if (detections) {
-                            const distancia = faceapi.euclideanDistance(descriptor, detections.descriptor);
-                            if (distancia < melhorDistancia) {
-                                melhorDistancia = distancia;
-                                melhorMatch = membro;
-                            }
-                        }
-                    } catch(e) { console.error('Erro ao processar foto do membro:', e); }
-                }
-            }
-            
-            if (melhorMatch) {
-                const confianca = Math.round((1 - melhorDistancia) * 100);
-                atualizarStatusReconhecimento(`🎉 Reconhecido: ${melhorMatch.nome} (Confiança: ${confianca}%)`, 'success');
-                await registrarPresenca(melhorMatch.id, melhorMatch.nome);
-                setTimeout(() => {
-                    pararCamera();
-                    trocarAba('lista');
-                }, 2000);
-            } else {
-                atualizarStatusReconhecimento('❌ Nenhum membro correspondente encontrado. Tente novamente.', 'error');
-            }
-        }
-
-        async function iniciarReconhecimento() {
-            const eventoId = document.getElementById('eventoSelectFace').value;
-            if (!eventoId) {
+        async function iniciarLeitor() {
+            if (!eventoSelecionado) {
                 mostrarToast('⚠️ Selecione um evento primeiro!');
                 return;
             }
-            eventoSelecionado = eventos.find(ev => ev.id === eventoId);
-            if (eventoSelecionado) {
-                await buscarPermissoes(eventoSelecionado.tipoEventoId);
-                filtrarMembrosAutorizados();
-                const hoje = new Date().toISOString().split('T')[0];
-                podeAlterar = eventoSelecionado.data === hoje;
-                document.getElementById('eventoNomeFace').innerHTML = `🎯 ${eventoSelecionado.tipoEventoNome}`;
-                document.getElementById('eventoDataFace').innerHTML = `📅 ${new Date(eventoSelecionado.data).toLocaleDateString('pt-BR')}`;
-                document.getElementById('infoEventoFace').style.display = 'block';
-                
-                if (!podeAlterar) {
-                    atualizarStatusReconhecimento('⚠️ Este evento não pode ser alterado (data diferente de hoje)', 'warning');
-                    return;
-                }
-                
-                const carregado = await carregarModelosFace();
-                if (carregado) {
-                    iniciarCamera();
+            
+            if (!podeAlterar) {
+                mostrarToast('⚠️ Este evento não pode ser alterado (data diferente de hoje)!');
+                return;
+            }
+            
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("reader");
+            }
+            
+            try {
+                await html5QrCode.start(
+                    { facingMode: "environment" },
+                    { fps: 10, qrbox: { width: 300, height: 300 } },
+                    (decodedText) => {
+                        processarQRCode(decodedText);
+                    },
+                    (errorMessage) => {
+                        console.log("Erro de leitura:", errorMessage);
+                    }
+                );
+                leitorAtivo = true;
+                document.getElementById('btnIniciarLeitor').style.display = 'none';
+                document.getElementById('btnPararLeitor').style.display = 'inline-block';
+                document.getElementById('cameraContainer').style.display = 'block';
+                atualizarStatusLeitor('📷 Câmera ativa. Aponte para o QR Code do membro.', 'success');
+            } catch(err) {
+                console.error("Erro ao iniciar câmera:", err);
+                atualizarStatusLeitor('❌ Erro ao acessar câmera: ' + err.message, 'error');
+            }
+        }
+
+        async function pararLeitor() {
+            if (html5QrCode && leitorAtivo) {
+                try {
+                    await html5QrCode.stop();
+                    leitorAtivo = false;
+                    document.getElementById('btnIniciarLeitor').style.display = 'inline-block';
+                    document.getElementById('btnPararLeitor').style.display = 'none';
+                    atualizarStatusLeitor('⏹️ Leitor parado.', 'info');
+                } catch(err) {
+                    console.error("Erro ao parar leitor:", err);
                 }
             }
         }
 
-        document.getElementById('btnIniciarCamera').addEventListener('click', iniciarReconhecimento);
-        document.getElementById('btnPararCamera').addEventListener('click', () => {
-            pararCamera();
-            atualizarStatusReconhecimento('Câmera parada.', 'loading');
-        });
+        function processarQRCode(decodedText) {
+            try {
+                const dados = JSON.parse(decodedText);
+                const membroId = dados.id;
+                
+                if (!membroId) {
+                    atualizarStatusLeitor('❌ QR Code inválido: ID não encontrado', 'error');
+                    return;
+                }
+                
+                const membro = membrosAutorizados.find(m => m.nomeId == membroId || m.id == membroId);
+                
+                if (!membro) {
+                    atualizarStatusLeitor(`❌ Membro com ID ${membroId} não encontrado ou não autorizado`, 'error');
+                    return;
+                }
+                
+                registrarPresenca(membro.id, membro.nome);
+                pararLeitor();
+                
+            } catch(error) {
+                atualizarStatusLeitor('❌ QR Code inválido: ' + error.message, 'error');
+            }
+        }
+
+        document.getElementById('btnIniciarLeitor').addEventListener('click', iniciarLeitor);
+        document.getElementById('btnPararLeitor').addEventListener('click', pararLeitor);
 
         function filtrarMembros() {
             buscaFiltro = document.getElementById('buscaMembros').value.toLowerCase();
@@ -615,19 +564,6 @@
         function filtrarPorStatus(status) {
             statusFiltro = status;
             renderizarListaMembros();
-        }
-
-        function trocarAba(aba) {
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            if (aba === 'lista') {
-                document.getElementById('abaLista').classList.add('active');
-                document.querySelector('.tab-btn:first-child').classList.add('active');
-                pararCamera();
-            } else if (aba === 'reconhecimento') {
-                document.getElementById('abaReconhecimento').classList.add('active');
-                document.querySelector('.tab-btn:last-child').classList.add('active');
-            }
         }
 
         async function init() {
