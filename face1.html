@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Reconhecimento Facial - Corrigido</title>
+    <title>Reconhecimento Facial - Versão Corrigida</title>
     <style>
         * {
             margin: 0;
@@ -241,6 +241,7 @@
             padding: 15px;
             border-radius: 10px;
             margin-top: 15px;
+            margin-bottom: 15px;
         }
 
         .add-user-form input {
@@ -252,31 +253,63 @@
             font-size: 14px;
         }
 
-        @media (max-width: 480px) {
-            .card {
-                padding: 15px;
-            }
-            
-            button {
-                padding: 10px 16px;
-                font-size: 12px;
-            }
-            
-            .result-name {
-                font-size: 1.2rem;
-            }
-            
-            .log-area {
-                font-size: 0.75rem;
-            }
+        .btn-small {
+            padding: 8px 12px;
+            font-size: 12px;
+        }
+
+        .btn-cancel {
+            background: #95a5a6;
+        }
+
+        .btn-delete {
+            background: #e74c3c;
+            padding: 5px 10px;
+            margin-left: 10px;
+            font-size: 11px;
+        }
+
+        .user-item {
+            background: #f8f9fa;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .user-info {
+            flex: 1;
+        }
+
+        .user-name {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .user-date {
+            font-size: 0.7rem;
+            color: #666;
+        }
+
+        .user-image {
+            max-width: 50px;
+            border-radius: 8px;
+        }
+
+        .empty-message {
+            text-align: center;
+            color: #999;
+            padding: 20px;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="card">
-            <h1>🔍 Reconhecimento Facial 2</h1>
-            <div class="subtitle">Capture uma nova imagem e tente reconhecer a pessoa</div>
+            <h1>🔍 Reconhecimento Facial</h1>
+            <div class="subtitle">Capture uma imagem e reconheça a pessoa</div>
 
             <div class="video-container">
                 <video id="video" autoplay muted playsinline></video>
@@ -286,7 +319,7 @@
 
             <div class="controls">
                 <button id="startCameraBtn" onclick="startCamera()">📷 Iniciar Câmera</button>
-                <button id="captureBtn" onclick="captureImage()" disabled>📸 Capturar para Reconhecer</button>
+                <button id="captureBtn" onclick="captureImage()" disabled>🔍 Reconhecer Pessoa</button>
             </div>
 
             <div class="progress-bar" id="progressBar" style="display: none;">
@@ -298,12 +331,12 @@
             </div>
 
             <div class="log-area" id="logArea">
-                <div class="log-message info">🟢 Sistema inicializado. Aguardando comandos...</div>
+                <div class="log-message info">🟢 Sistema inicializado...</div>
             </div>
 
             <div id="resultArea" style="display: none;">
                 <div class="result-card" id="resultCard">
-                    <h3 id="resultTitle">🎯 Resultado da Identificação</h3>
+                    <h3>🎯 Resultado</h3>
                     <img id="capturedImagePreview" class="captured-image" alt="Imagem capturada">
                     <div id="resultContent"></div>
                 </div>
@@ -311,17 +344,15 @@
         </div>
 
         <div class="card">
-            <button class="btn-add" onclick="showAddUserForm()">➕ Adicionar Nova Pessoa</button>
+            <button class="btn-add" onclick="toggleAddUserForm()">➕ Cadastrar Nova Pessoa</button>
             <div id="addUserForm" style="display: none;" class="add-user-form">
-                <input type="text" id="userName" placeholder="Nome da pessoa" autocomplete="off">
-                <button onclick="addNewUser()">📸 Capturar e Salvar</button>
-                <button onclick="hideAddUserForm()" style="background: #95a5a6;">Cancelar</button>
+                <input type="text" id="userName" placeholder="Nome completo" autocomplete="off">
+                <button onclick="addNewUser()" class="btn-small">📸 Capturar e Salvar</button>
+                <button onclick="toggleAddUserForm()" class="btn-small btn-cancel">Cancelar</button>
             </div>
             
             <h3>📋 Pessoas Cadastradas (<span id="userCount">0</span>)</h3>
-            <div id="usersList" class="users-list">
-                <div class="empty-message" style="text-align: center; color: #999; padding: 20px;">Nenhuma pessoa cadastrada</div>
-            </div>
+            <div id="usersList"></div>
         </div>
     </div>
 
@@ -351,7 +382,8 @@
             logDiv.innerHTML = `[${timestamp}] ${icon} ${message}`;
             logArea.appendChild(logDiv);
             logArea.scrollTop = logArea.scrollHeight;
-            while (logArea.children.length > 20) {
+            
+            while (logArea.children.length > 30) {
                 logArea.removeChild(logArea.firstChild);
             }
         }
@@ -372,45 +404,39 @@
             const statusDiv = document.getElementById('status');
             statusDiv.textContent = message;
             statusDiv.className = `status ${type}`;
-            setTimeout(() => {
-                if (statusDiv.className === `status ${type}`) {
-                    setTimeout(() => {
-                        if (statusDiv.className === `status ${type}`) {
-                            statusDiv.className = 'status info';
-                            statusDiv.textContent = '✅ Sistema pronto';
-                        }
-                    }, 3000);
-                }
-            }, 3000);
         }
 
-        function showAddUserForm() {
-            document.getElementById('addUserForm').style.display = 'block';
-        }
-
-        function hideAddUserForm() {
-            document.getElementById('addUserForm').style.display = 'none';
-            document.getElementById('userName').value = '';
+        function toggleAddUserForm() {
+            const form = document.getElementById('addUserForm');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+            if (form.style.display === 'none') {
+                document.getElementById('userName').value = '';
+            }
         }
 
         async function addNewUser() {
             const name = document.getElementById('userName').value.trim();
             if (!name) {
-                addLogMessage('Por favor, insira um nome', 'warning');
+                addLogMessage('Digite um nome', 'warning');
                 return;
             }
 
             if (!stream) {
-                addLogMessage('Câmera não está ativa', 'error');
+                addLogMessage('Inicie a câmera primeiro', 'error');
                 return;
             }
 
-            addLogMessage(`Capturando imagem para cadastrar: ${name}`, 'info');
+            if (!modelsLoaded) {
+                addLogMessage('Aguarde os modelos carregarem', 'warning');
+                return;
+            }
+
+            addLogMessage(`Cadastrando ${name}...`, 'info');
+            showStatus('Cadastrando...', 'info');
             
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             const imageData = canvas.toDataURL('image/jpeg', 0.9);
             
-            // Detectar rosto antes de salvar
             const img = new Image();
             img.src = imageData;
             await new Promise((resolve) => { img.onload = resolve; });
@@ -420,8 +446,9 @@
                     .withFaceLandmarks()
                     .withFaceDescriptor();
                 
-                if (!detection) {
-                    addLogMessage('Nenhum rosto detectado! Tente novamente com boa iluminação', 'error');
+                if (!detection || !detection.descriptor) {
+                    addLogMessage('❌ Nenhum rosto detectado! Posicione-se bem na frente da câmera', 'error');
+                    showStatus('Erro: rosto não detectado', 'error');
                     return;
                 }
                 
@@ -429,16 +456,17 @@
                     name: name,
                     image: imageData,
                     date: new Date().toLocaleDateString('pt-BR'),
-                    descriptor: Array.from(detection.descriptor) // Salvar descritor
+                    descriptor: Array.from(detection.descriptor)
                 });
                 
                 localStorage.setItem('face_users', JSON.stringify(users));
                 updateUsersList();
                 addLogMessage(`✅ ${name} cadastrado com sucesso!`, 'success');
-                hideAddUserForm();
+                showStatus('Cadastro realizado!', 'success');
+                toggleAddUserForm();
                 
             } catch (error) {
-                addLogMessage(`Erro ao cadastrar: ${error.message}`, 'error');
+                addLogMessage(`Erro: ${error.message}`, 'error');
             }
         }
 
@@ -448,7 +476,7 @@
                 users = JSON.parse(saved);
                 addLogMessage(`${users.length} pessoa(s) carregada(s)`, 'success');
             } else {
-                addLogMessage('Nenhuma pessoa cadastrada. Adicione alguém usando o formulário!', 'warning');
+                addLogMessage('Nenhuma pessoa cadastrada. Adicione alguém!', 'warning');
             }
             updateUsersList();
         }
@@ -457,32 +485,34 @@
             const container = document.getElementById('usersList');
             const countSpan = document.getElementById('userCount');
             
-            if (users.length === 0) {
-                container.innerHTML = '<div class="empty-message" style="text-align: center; color: #999; padding: 20px;">Nenhuma pessoa cadastrada</div>';
+            if (!users || users.length === 0) {
+                container.innerHTML = '<div class="empty-message">📭 Nenhuma pessoa cadastrada</div>';
                 countSpan.textContent = '0';
                 return;
             }
             
             countSpan.textContent = users.length;
             container.innerHTML = users.map((user, index) => `
-                <div style="background: #f8f9fa; padding: 10px; margin-bottom: 8px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <div style="font-weight: bold;">👤 ${escapeHtml(user.name)}</div>
-                        <div style="font-size: 0.7rem; color: #666;">📅 ${user.date}</div>
+                <div class="user-item">
+                    <div class="user-info">
+                        <div class="user-name">👤 ${escapeHtml(user.name)}</div>
+                        <div class="user-date">📅 ${user.date}</div>
                     </div>
                     <div>
-                        <img src="${user.image}" style="max-width: 50px; border-radius: 8px;">
-                        <button onclick="deleteUser(${index})" style="background: #e74c3c; padding: 5px 10px; margin-left: 10px; font-size: 11px;">🗑️</button>
+                        <img src="${user.image}" class="user-image" alt="${user.name}">
+                        <button onclick="deleteUser(${index})" class="btn-delete">🗑️</button>
                     </div>
                 </div>
             `).join('');
         }
 
         function deleteUser(index) {
-            users.splice(index, 1);
-            localStorage.setItem('face_users', JSON.stringify(users));
-            updateUsersList();
-            addLogMessage('Usuário removido', 'info');
+            if (confirm('Remover esta pessoa?')) {
+                users.splice(index, 1);
+                localStorage.setItem('face_users', JSON.stringify(users));
+                updateUsersList();
+                addLogMessage('Pessoa removida', 'info');
+            }
         }
 
         function escapeHtml(text) {
@@ -493,31 +523,53 @@
 
         async function loadModels() {
             addLogMessage('Carregando modelos de IA...', 'info');
-            showStatus('📥 Carregando modelos...', 'info');
+            showStatus('📥 Baixando modelos...', 'info');
             updateProgress(10);
             
             try {
-                // Usar modelos do CDN oficial
-                await faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights');
-                updateProgress(50);
+                // URL CORRETA dos modelos (do repositório oficial)
+                const MODEL_URL = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
+                
+                addLogMessage('Conectando ao servidor de modelos...', 'info');
+                
+                await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+                updateProgress(40);
                 addLogMessage('✓ Detector facial carregado', 'success');
                 
-                await faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights');
-                updateProgress(75);
+                await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+                updateProgress(70);
                 addLogMessage('✓ Landmarks faciais carregados', 'success');
                 
-                await faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights');
+                await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
                 updateProgress(100);
                 addLogMessage('✓ Reconhecimento facial carregado', 'success');
                 
                 modelsLoaded = true;
-                showStatus('✅ Modelos carregados!', 'success');
+                showStatus('✅ Modelos prontos!', 'success');
+                addLogMessage('🎉 Sistema pronto para uso!', 'success');
                 document.getElementById('startCameraBtn').disabled = false;
                 updateProgress(0);
                 
             } catch (error) {
-                addLogMessage(`Erro ao carregar modelos: ${error.message}`, 'error');
-                showStatus('❌ Erro ao carregar modelos', 'error');
+                console.error('Erro detalhado:', error);
+                addLogMessage(`❌ Erro: ${error.message}`, 'error');
+                showStatus('Erro ao carregar modelos. Verifique sua internet.', 'error');
+                
+                // Tentar alternativa
+                addLogMessage('Tentando fonte alternativa...', 'warning');
+                try {
+                    const ALT_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights';
+                    await faceapi.nets.tinyFaceDetector.loadFromUri(ALT_URL);
+                    await faceapi.nets.faceLandmark68Net.loadFromUri(ALT_URL);
+                    await faceapi.nets.faceRecognitionNet.loadFromUri(ALT_URL);
+                    modelsLoaded = true;
+                    showStatus('✅ Modelos carregados (alternativa)!', 'success');
+                    addLogMessage('✓ Modelos carregados via fonte alternativa', 'success');
+                    document.getElementById('startCameraBtn').disabled = false;
+                } catch (altError) {
+                    addLogMessage('❌ Falha em ambas as fontes. Verifique sua conexão.', 'error');
+                }
+                updateProgress(0);
             }
         }
 
@@ -530,32 +582,37 @@
                 }
                 
                 stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: 'user', width: 640, height: 480 } 
+                    video: { 
+                        facingMode: 'user',
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    } 
                 });
                 video.srcObject = stream;
                 await video.play();
                 
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
+                canvas.width = video.videoWidth || 640;
+                canvas.height = video.videoHeight || 480;
                 
                 addLogMessage('✅ Câmera ativada!', 'success');
-                showStatus('✅ Câmera ativa!', 'success');
+                showStatus('✅ Câmera pronta', 'success');
                 document.getElementById('startCameraBtn').disabled = true;
                 document.getElementById('captureBtn').disabled = false;
                 
             } catch (error) {
-                addLogMessage(`Erro na câmera: ${error.message}`, 'error');
+                addLogMessage(`❌ Erro na câmera: ${error.message}`, 'error');
+                showStatus('Erro ao acessar câmera', 'error');
             }
         }
 
         async function captureImage() {
             if (isProcessing) {
-                addLogMessage('Processamento em andamento, aguarde...', 'warning');
+                addLogMessage('Aguarde o processamento atual', 'warning');
                 return;
             }
             
             if (!stream) {
-                addLogMessage('Câmera não ativa', 'error');
+                addLogMessage('Câmera não está ativa', 'error');
                 return;
             }
             
@@ -565,7 +622,8 @@
             }
             
             if (users.length === 0) {
-                addLogMessage('Nenhuma pessoa cadastrada! Adicione alguém primeiro.', 'warning');
+                addLogMessage('⚠️ Nenhuma pessoa cadastrada! Cadastre alguém primeiro.', 'warning');
+                showStatus('Cadastre uma pessoa primeiro', 'warning');
                 return;
             }
             
@@ -574,22 +632,19 @@
             updateProgress(10);
             
             try {
-                addLogMessage('Capturando imagem...', 'info');
+                addLogMessage('📸 Capturando imagem...', 'info');
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                 const capturedImage = canvas.toDataURL('image/jpeg', 0.9);
                 updateProgress(30);
                 
-                addLogMessage('Processando imagem capturada...', 'info');
+                addLogMessage('🔍 Analisando rosto...', 'info');
                 
-                // Carregar imagem capturada
                 const capturedImg = new Image();
                 capturedImg.src = capturedImage;
                 await new Promise((resolve) => { capturedImg.onload = resolve; });
                 
                 updateProgress(50);
-                addLogMessage('Detectando rosto na imagem...', 'info');
                 
-                // Detectar rosto na imagem capturada
                 const captureDetection = await faceapi.detectSingleFace(capturedImg, new faceapi.TinyFaceDetectorOptions())
                     .withFaceLandmarks()
                     .withFaceDescriptor();
@@ -605,9 +660,8 @@
                     return;
                 }
                 
-                addLogMessage('✅ Rosto detectado! Comparando com cadastros...', 'success');
+                addLogMessage('✅ Rosto detectado! Comparando...', 'success');
                 
-                // Comparar com usuários cadastrados
                 let bestMatch = null;
                 let bestDistance = 0.6;
                 
@@ -615,7 +669,7 @@
                     if (user.descriptor) {
                         const userDescriptor = new Float32Array(user.descriptor);
                         const distance = faceapi.euclideanDistance(captureDetection.descriptor, userDescriptor);
-                        addLogMessage(`Comparação com ${user.name}: distância ${distance.toFixed(4)}`, 'info');
+                        addLogMessage(`  Comparando com ${user.name}: ${distance.toFixed(4)}`, 'info');
                         
                         if (distance < bestDistance) {
                             bestDistance = distance;
@@ -631,12 +685,12 @@
                     addLogMessage(`🎉 RECONHECIDO: ${bestMatch.name} (${(confidence * 100).toFixed(1)}%)`, 'success');
                     showResult(bestMatch, confidence, capturedImage, true);
                 } else {
-                    addLogMessage(`❌ Não reconhecido. Melhor confiança: ${(confidence * 100).toFixed(1)}%`, 'error');
+                    addLogMessage(`❌ Não reconhecido. Confiança: ${(confidence * 100).toFixed(1)}%`, 'error');
                     showResult(null, confidence, capturedImage, true);
                 }
                 
             } catch (error) {
-                addLogMessage(`Erro: ${error.message}`, 'error');
+                addLogMessage(`❌ Erro: ${error.message}`, 'error');
                 console.error(error);
             } finally {
                 setTimeout(() => {
@@ -656,30 +710,30 @@
             resultArea.style.display = 'block';
             capturedImagePreview.src = capturedImage;
             
-            if (matchedUser && detected) {
+            if (matchedUser && detected && confidence > 0.5) {
                 resultCard.className = 'result-card result-success';
                 resultContent.innerHTML = `
                     <div class="result-name">✅ ${matchedUser.name}</div>
-                    <div class="result-confidence">🎯 Confiança: ${(confidence * 100).toFixed(1)}%</div>
-                    <div class="result-date">📅 Cadastrado em: ${matchedUser.date}</div>
+                    <div class="result-confidence">Confiança: ${(confidence * 100).toFixed(1)}%</div>
+                    <div class="result-date">Cadastrado: ${matchedUser.date}</div>
                     <div style="margin-top: 15px;">
-                        <img src="${matchedUser.image}" style="max-width: 80px; border-radius: 10px; margin: 5px; border: 2px solid #27ae60;">
+                        <img src="${matchedUser.image}" class="matched-image" alt="Cadastro">
                         <span> ↔️ </span>
-                        <img src="${capturedImage}" style="max-width: 80px; border-radius: 10px; margin: 5px; border: 2px solid #27ae60;">
+                        <img src="${capturedImage}" class="matched-image" alt="Capturado">
                     </div>
                 `;
             } else if (!detected) {
                 resultCard.className = 'result-card result-warning';
                 resultContent.innerHTML = `
                     <div class="result-name">⚠️ Nenhum Rosto Detectado</div>
-                    <div>Certifique-se de estar com o rosto visível e bem iluminado</div>
+                    <div>Fique de frente para a câmera com boa iluminação</div>
                 `;
             } else {
                 resultCard.className = 'result-card result-error';
                 resultContent.innerHTML = `
                     <div class="result-name">❌ Pessoa Não Reconhecida</div>
-                    <div class="result-confidence">Melhor correspondência: ${(confidence * 100).toFixed(1)}%</div>
-                    <div style="margin-top: 10px;">Tente cadastrar esta pessoa primeiro</div>
+                    <div class="result-confidence">Confiança: ${(confidence * 100).toFixed(1)}%</div>
+                    <div>Cadastre esta pessoa para reconhecimento futuro</div>
                 `;
             }
             
