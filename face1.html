@@ -345,11 +345,6 @@
             }
         }
 
-        function clearLog() {
-            const logArea = document.getElementById('logArea');
-            logArea.innerHTML = '<div class="log-message info">🟢 Sistema inicializado. Aguardando comandos...</div>';
-        }
-
         function updateProgress(percent) {
             const progressBar = document.getElementById('progressBar');
             const progressFill = document.getElementById('progressFill');
@@ -369,7 +364,8 @@
                 updateUsersList();
                 addLogMessage(`${users.length} pessoa(s) carregada(s) do banco de dados`, 'info');
             } else {
-                addLogMessage('Nenhuma pessoa cadastrada encontrada no sistema', 'warning');
+                // Criar usuários de exemplo para teste
+                addLogMessage('Nenhuma pessoa cadastrada encontrada. Cadastre alguém primeiro!', 'warning');
             }
         }
 
@@ -410,15 +406,6 @@
             const statusDiv = document.getElementById('status');
             statusDiv.textContent = message;
             statusDiv.className = `status ${type}`;
-            
-            setTimeout(() => {
-                if (statusDiv.className.includes(type)) {
-                    setTimeout(() => {
-                        statusDiv.className = 'status info';
-                        statusDiv.textContent = '✅ Sistema pronto';
-                    }, 3000);
-                }
-            }, 3000);
         }
 
         function showResult(matchedUser, confidence, capturedImage, detectionStatus) {
@@ -473,28 +460,29 @@
         }
 
         async function loadModels() {
-            const modelUrl = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
+            // Usando CDN com os modelos corretos
+            const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/';
             
             addLogMessage('Iniciando carregamento dos modelos de IA...', 'info');
             showStatus('📥 Carregando modelos de IA...', 'info');
             updateProgress(10);
             
             try {
-                await faceapi.nets.tinyFaceDetector.loadFromUri(modelUrl);
+                await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
                 updateProgress(40);
-                addLogMessage('Modelo de detecção facial carregado', 'success');
+                addLogMessage('✓ Modelo de detecção facial carregado', 'success');
                 
-                await faceapi.nets.faceLandmark68Net.loadFromUri(modelUrl);
+                await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
                 updateProgress(70);
-                addLogMessage('Modelo de landmarks faciais carregado', 'success');
+                addLogMessage('✓ Modelo de landmarks faciais carregado', 'success');
                 
-                await faceapi.nets.faceRecognitionNet.loadFromUri(modelUrl);
+                await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
                 updateProgress(100);
-                addLogMessage('Modelo de reconhecimento facial carregado', 'success');
+                addLogMessage('✓ Modelo de reconhecimento facial carregado', 'success');
                 
                 modelsLoaded = true;
                 showStatus('✅ Modelos carregados! Inicie a câmera', 'success');
-                addLogMessage('✅ Todos os modelos carregados com sucesso! Sistema pronto para reconhecimento', 'success');
+                addLogMessage('✅ Todos os modelos carregados com sucesso!', 'success');
                 document.getElementById('startCameraBtn').disabled = false;
                 updateProgress(0);
                 
@@ -551,43 +539,62 @@
             }
         }
 
-        async function extractFaceDescriptor(imageData) {
-            const img = new Image();
-            img.src = imageData;
-            
-            await new Promise((resolve) => {
-                img.onload = resolve;
-            });
-            
-            const detection = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
-                .withFaceLandmarks()
-                .withFaceDescriptor();
+        // Função corrigida para extrair descriptor facial
+        async function getFaceDescriptorFromImage(imageElement) {
+            // Detectar rosto na imagem
+            const detection = await faceapi.detectSingleFace(
+                imageElement, 
+                new faceapi.TinyFaceDetectorOptions()
+            ).withFaceLandmarks().withFaceDescriptor();
             
             return detection;
+        }
+
+        // Função corrigida para processar imagem e extrair descriptor
+        async function extractFaceDescriptorFromDataURL(dataURL) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = async () => {
+                    try {
+                        addLogMessage('Imagem carregada, processando detecção facial...', 'info');
+                        const detection = await getFaceDescriptorFromImage(img);
+                        if (detection && detection.descriptor) {
+                            addLogMessage('Rosto detectado e descritor extraído com sucesso!', 'success');
+                            resolve(detection);
+                        } else {
+                            addLogMessage('Nenhum rosto detectado na imagem', 'warning');
+                            resolve(null);
+                        }
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                img.onerror = () => reject(new Error('Erro ao carregar imagem'));
+                img.src = dataURL;
+            });
         }
 
         async function recognizePerson(capturedDescriptor) {
             if (users.length === 0) {
                 addLogMessage('Banco de dados vazio. Nenhuma pessoa cadastrada para comparar.', 'warning');
-                return { matched: null, bestDistance: 1 };
+                return { matched: null, confidence: 0, bestDistance: 1 };
             }
             
             addLogMessage(`🔍 Iniciando comparação com ${users.length} pessoa(s) cadastrada(s)...`, 'info');
             
             let bestMatch = null;
-            let bestDistance = 0.6;
+            let bestDistance = 0.6; // Limiar de distância (menor = mais similar)
             let bestDistanceValue = 1;
-            let comparisons = [];
             
             for (const user of users) {
                 try {
                     addLogMessage(`Comparando com ${user.name}...`, 'info');
                     
-                    const detection = await extractFaceDescriptor(user.image);
+                    // Extrair descriptor da imagem do usuário cadastrado
+                    const userDetection = await extractFaceDescriptorFromDataURL(user.image);
                     
-                    if (detection && detection.descriptor) {
-                        const distance = faceapi.euclideanDistance(capturedDescriptor, detection.descriptor);
-                        comparisons.push({ name: user.name, distance });
+                    if (userDetection && userDetection.descriptor) {
+                        const distance = faceapi.euclideanDistance(capturedDescriptor, userDetection.descriptor);
                         addLogMessage(`  → Distância para ${user.name}: ${distance.toFixed(4)}`, 'info');
                         
                         if (distance < bestDistance) {
@@ -605,7 +612,8 @@
                 }
             }
             
-            const confidence = bestMatch ? Math.max(0, 1 - bestDistanceValue) : 0;
+            // Converter distância para confiança (1 - distância, com limite máximo)
+            const confidence = bestMatch ? Math.min(1, Math.max(0, 1 - bestDistanceValue)) : 0;
             
             addLogMessage(`📊 Análise concluída! Melhor correspondência: ${bestMatch ? bestMatch.name : 'nenhuma'} (confiança: ${(confidence * 100).toFixed(1)}%)`, bestMatch ? 'success' : 'warning');
             
@@ -637,17 +645,19 @@
             updateProgress(10);
             
             try {
+                // Capturar imagem do vídeo
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const capturedImage = canvas.toDataURL('image/jpeg', 0.8);
+                const capturedImage = canvas.toDataURL('image/jpeg', 0.9);
                 addLogMessage('✅ Imagem capturada com sucesso!', 'success');
                 updateProgress(30);
                 
                 addLogMessage('🔍 Analisando imagem em busca de rosto...', 'info');
                 
-                const detection = await extractFaceDescriptor(capturedImage);
+                // Extrair descriptor da imagem capturada
+                const captureDetection = await extractFaceDescriptorFromDataURL(capturedImage);
                 updateProgress(60);
                 
-                if (!detection || !detection.descriptor) {
+                if (!captureDetection || !captureDetection.descriptor) {
                     addLogMessage('❌ Nenhum rosto detectado na imagem capturada!', 'warning');
                     showStatus('❌ Nenhum rosto detectado.', 'error');
                     showResult(null, null, capturedImage, false);
@@ -659,7 +669,7 @@
                 addLogMessage('✅ Rosto detectado com sucesso! Iniciando comparação...', 'success');
                 updateProgress(70);
                 
-                const { matched, confidence } = await recognizePerson(detection.descriptor);
+                const { matched, confidence } = await recognizePerson(captureDetection.descriptor);
                 updateProgress(100);
                 
                 if (matched) {
