@@ -26,7 +26,6 @@
             overflow: hidden;
         }
 
-        /* O vídeo e o canvas de desenho devem ficar sobrepostos */
         video, canvas {
             position: absolute;
             top: 0;
@@ -45,8 +44,9 @@
             z-index: 10;
         }
     </style>
-    <!-- Carregando a face-api.js via CDN público (versão mantida pela comunidade) -->
-    <script defer src="https://jsdelivr.net"></script>
+    <!-- CORRIGIDO: Carregando as bibliotecas corretamente -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.11.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 </head>
 <body>
 
@@ -59,44 +59,73 @@
     <script>
         const video = document.getElementById('webcam');
         const statusDiv = document.getElementById('status');
+        let canvas = null;
+
+        // CORRIGIDO: URL correta para os modelos (usando o repositório oficial)
+        const MODEL_URL = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
 
         // 1. Carregar as redes neurais (modelos) da face-api
         async function carregarModelos() {
-            // Usamos os modelos hospedados remotamente para facilitar o exemplo de arquivo único
-            const MODEL_URL = 'https://jsdelivr.net';
+            statusDiv.innerText = "Carregando modelos de IA... (pode levar alguns segundos)";
             
-            await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-            await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-            await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL);
-            
-            statusDiv.innerText = "Modelos carregados! Iniciando câmera...";
-            iniciarVideo();
+            try {
+                // CORRIGIDO: Carregar os modelos na ordem correta
+                await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+                statusDiv.innerText = "✓ Modelo de detecção carregado...";
+                
+                await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+                statusDiv.innerText = "✓ Modelo de landmarks carregado...";
+                
+                await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL);
+                
+                statusDiv.innerText = "✓ Todos os modelos carregados! Iniciando câmera...";
+                console.log("Modelos carregados com sucesso!");
+                iniciarVideo();
+                
+            } catch (error) {
+                console.error("Erro ao carregar modelos:", error);
+                statusDiv.innerText = "Erro ao carregar modelos. Verifique sua internet.";
+            }
         }
 
         // 2. Solicitar acesso à webcam do usuário
         function iniciarVideo() {
-            navigator.mediaDevices.getUserMedia({ video: {} })
+            navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } })
                 .then(stream => {
                     video.srcObject = stream;
-                    statusDiv.innerText = "Reconhecimento Ativo";
+                    statusDiv.innerText = "✅ Reconhecimento Ativo";
                 })
                 .catch(err => {
                     console.error("Erro ao acessar a webcam: ", err);
-                    statusDiv.innerText = "Erro ao acessar a webcam.";
+                    statusDiv.innerText = "❌ Erro ao acessar a webcam. Verifique as permissões.";
                 });
         }
 
-        // 3. Executar a detecção contínua assim que o vídeo começar a rodar
-        video.addEventListener('play', () => {
-            // Cria um canvas com as dimensões exatas do vídeo para desenhar as marcações por cima
-            const canvas = faceapi.createCanvasFromMedia(video);
-            document.querySelector('.container').append(canvas);
-            
-            const displaySize = { width: video.width, height: video.height };
-            faceapi.matchDimensions(canvas, displaySize);
+        // CORRIGIDO: Aguardar o vídeo carregar completamente
+        video.addEventListener('loadeddata', () => {
+            // Criar canvas apenas se não existir
+            if (!canvas) {
+                canvas = faceapi.createCanvasFromMedia(video);
+                document.querySelector('.container').appendChild(canvas);
+                
+                const displaySize = { width: video.width, height: video.height };
+                faceapi.matchDimensions(canvas, displaySize);
+                
+                statusDiv.innerText = "✅ Câmera ativa! Detectando rostos...";
+                
+                // Iniciar detecção contínua
+                detectarRostos();
+            }
+        });
 
-            setInterval(async () => {
-                // Detecta rostos, expressões e pontos faciais na imagem atual do vídeo
+        // Função para detecção contínua usando requestAnimationFrame (melhor que setInterval)
+        async function detectarRostos() {
+            if (!video.srcObject) return;
+            
+            try {
+                const displaySize = { width: video.width, height: video.height };
+                
+                // Detecta rostos, landmarks e expressões
                 const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
                     .withFaceLandmarks()
                     .withFaceExpressions();
@@ -105,14 +134,35 @@
                 const resizedDetections = faceapi.resizeResults(detections, displaySize);
                 
                 // Limpa o frame anterior do canvas
-                canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
-
-                // Desenha a caixa delimitadora, os pontos do rosto e as expressões na tela
-                faceapi.draw.drawDetections(canvas, resizedDetections);
-                faceapi.draw.drawFaceLandmarks(canvas, resizedDetections);
-                faceapi.draw.drawFaceExpressions(canvas, resizedDetections);
-            }, 100); // Executa a cada 100 milissegundos
-        });
+                if (canvas) {
+                    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+                    
+                    // Desenha as detecções
+                    if (resizedDetections.length > 0) {
+                        faceapi.draw.drawDetections(canvas, resizedDetections);
+                        faceapi.draw.drawFaceLandmarks(canvas, resizedDetections);
+                        faceapi.draw.drawFaceExpressions(canvas, resizedDetections);
+                        
+                        // Atualizar status com número de rostos detectados
+                        if (resizedDetections.length === 1) {
+                            statusDiv.innerText = `✅ Detectando ${resizedDetections.length} rosto`;
+                        } else if (resizedDetections.length > 1) {
+                            statusDiv.innerText = `✅ Detectando ${resizedDetections.length} rostos`;
+                        }
+                    } else {
+                        statusDiv.innerText = "🔍 Nenhum rosto detectado";
+                    }
+                }
+                
+                // Continuar o loop de detecção
+                requestAnimationFrame(detectarRostos);
+                
+            } catch (error) {
+                console.error("Erro na detecção:", error);
+                // Continuar tentando mesmo com erro
+                requestAnimationFrame(detectarRostos);
+            }
+        }
 
         // Iniciar o processo ao abrir a página
         carregarModelos();
