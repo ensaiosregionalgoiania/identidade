@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Reconhecimento Facial - Identificar Pessoa</title>
+    <title>Reconhecimento Facial - Corrigido</title>
     <style>
         * {
             margin: 0;
@@ -95,10 +95,6 @@
             transform: none;
         }
 
-        .btn-recognize {
-            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
-        }
-
         .log-area {
             background: #2c3e50;
             border-radius: 10px;
@@ -168,12 +164,6 @@
             margin: 5px 0;
         }
 
-        .result-date {
-            font-size: 0.8rem;
-            color: #999;
-            margin-top: 10px;
-        }
-
         .captured-image {
             max-width: 150px;
             border-radius: 10px;
@@ -241,6 +231,27 @@
             transition: width 0.3s ease;
         }
 
+        .btn-add {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            margin-bottom: 10px;
+        }
+
+        .add-user-form {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+
+        .add-user-form input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
         @media (max-width: 480px) {
             .card {
                 padding: 15px;
@@ -264,7 +275,7 @@
 <body>
     <div class="container">
         <div class="card">
-            <h1>🔍 Reconhecimento Facial1</h1>
+            <h1>🔍 Reconhecimento Facial 2</h1>
             <div class="subtitle">Capture uma nova imagem e tente reconhecer a pessoa</div>
 
             <div class="video-container">
@@ -300,11 +311,17 @@
         </div>
 
         <div class="card">
+            <button class="btn-add" onclick="showAddUserForm()">➕ Adicionar Nova Pessoa</button>
+            <div id="addUserForm" style="display: none;" class="add-user-form">
+                <input type="text" id="userName" placeholder="Nome da pessoa" autocomplete="off">
+                <button onclick="addNewUser()">📸 Capturar e Salvar</button>
+                <button onclick="hideAddUserForm()" style="background: #95a5a6;">Cancelar</button>
+            </div>
+            
             <h3>📋 Pessoas Cadastradas (<span id="userCount">0</span>)</h3>
             <div id="usersList" class="users-list">
                 <div class="empty-message" style="text-align: center; color: #999; padding: 20px;">Nenhuma pessoa cadastrada</div>
             </div>
-            <div class="users-count" id="usersCountInfo"></div>
         </div>
     </div>
 
@@ -317,29 +334,23 @@
         const ctx = canvas.getContext('2d');
         
         let stream = null;
-        let capturedImageData = null;
         let modelsLoaded = false;
         let users = [];
+        let isProcessing = false;
 
-        // Adicionar mensagem ao log
         function addLogMessage(message, type = 'info') {
             const logArea = document.getElementById('logArea');
             const logDiv = document.createElement('div');
             logDiv.className = `log-message ${type}`;
-            
             const timestamp = new Date().toLocaleTimeString('pt-BR');
-            
             let icon = '📌';
             if (type === 'success') icon = '✅';
             if (type === 'error') icon = '❌';
             if (type === 'warning') icon = '⚠️';
             if (type === 'info') icon = 'ℹ️';
-            
             logDiv.innerHTML = `[${timestamp}] ${icon} ${message}`;
             logArea.appendChild(logDiv);
             logArea.scrollTop = logArea.scrollHeight;
-            
-            // Limitar número de mensagens
             while (logArea.children.length > 20) {
                 logArea.removeChild(logArea.firstChild);
             }
@@ -357,16 +368,89 @@
             }
         }
 
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+            setTimeout(() => {
+                if (statusDiv.className === `status ${type}`) {
+                    setTimeout(() => {
+                        if (statusDiv.className === `status ${type}`) {
+                            statusDiv.className = 'status info';
+                            statusDiv.textContent = '✅ Sistema pronto';
+                        }
+                    }, 3000);
+                }
+            }, 3000);
+        }
+
+        function showAddUserForm() {
+            document.getElementById('addUserForm').style.display = 'block';
+        }
+
+        function hideAddUserForm() {
+            document.getElementById('addUserForm').style.display = 'none';
+            document.getElementById('userName').value = '';
+        }
+
+        async function addNewUser() {
+            const name = document.getElementById('userName').value.trim();
+            if (!name) {
+                addLogMessage('Por favor, insira um nome', 'warning');
+                return;
+            }
+
+            if (!stream) {
+                addLogMessage('Câmera não está ativa', 'error');
+                return;
+            }
+
+            addLogMessage(`Capturando imagem para cadastrar: ${name}`, 'info');
+            
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = canvas.toDataURL('image/jpeg', 0.9);
+            
+            // Detectar rosto antes de salvar
+            const img = new Image();
+            img.src = imageData;
+            await new Promise((resolve) => { img.onload = resolve; });
+            
+            try {
+                const detection = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
+                    .withFaceLandmarks()
+                    .withFaceDescriptor();
+                
+                if (!detection) {
+                    addLogMessage('Nenhum rosto detectado! Tente novamente com boa iluminação', 'error');
+                    return;
+                }
+                
+                users.push({
+                    name: name,
+                    image: imageData,
+                    date: new Date().toLocaleDateString('pt-BR'),
+                    descriptor: Array.from(detection.descriptor) // Salvar descritor
+                });
+                
+                localStorage.setItem('face_users', JSON.stringify(users));
+                updateUsersList();
+                addLogMessage(`✅ ${name} cadastrado com sucesso!`, 'success');
+                hideAddUserForm();
+                
+            } catch (error) {
+                addLogMessage(`Erro ao cadastrar: ${error.message}`, 'error');
+            }
+        }
+
         function loadUsers() {
             const saved = localStorage.getItem('face_users');
             if (saved) {
                 users = JSON.parse(saved);
-                updateUsersList();
-                addLogMessage(`${users.length} pessoa(s) carregada(s) do banco de dados`, 'info');
+                addLogMessage(`${users.length} pessoa(s) carregada(s)`, 'success');
             } else {
-                // Criar usuários de exemplo para teste
-                addLogMessage('Nenhuma pessoa cadastrada encontrada. Cadastre alguém primeiro!', 'warning');
+                addLogMessage('Nenhuma pessoa cadastrada. Adicione alguém usando o formulário!', 'warning');
             }
+            updateUsersList();
         }
 
         function updateUsersList() {
@@ -376,24 +460,29 @@
             if (users.length === 0) {
                 container.innerHTML = '<div class="empty-message" style="text-align: center; color: #999; padding: 20px;">Nenhuma pessoa cadastrada</div>';
                 countSpan.textContent = '0';
-                document.getElementById('usersCountInfo').innerHTML = '';
                 return;
             }
             
             countSpan.textContent = users.length;
-            document.getElementById('usersCountInfo').innerHTML = `📊 ${users.length} pessoa(s) cadastrada(s) no sistema`;
-            
-            container.innerHTML = users.map((user) => `
-                <div class="user-item" style="background: #f8f9fa; padding: 10px; margin-bottom: 8px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                    <div class="user-info" style="flex: 1;">
-                        <div class="user-name" style="font-weight: bold; color: #333;">👤 ${escapeHtml(user.name)}</div>
-                        <div class="user-date" style="font-size: 0.7rem; color: #666;">📅 ${user.date}</div>
+            container.innerHTML = users.map((user, index) => `
+                <div style="background: #f8f9fa; padding: 10px; margin-bottom: 8px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-weight: bold;">👤 ${escapeHtml(user.name)}</div>
+                        <div style="font-size: 0.7rem; color: #666;">📅 ${user.date}</div>
                     </div>
                     <div>
-                        <img src="${user.image}" class="preview-img" style="max-width: 50px; border-radius: 8px;" alt="${user.name}">
+                        <img src="${user.image}" style="max-width: 50px; border-radius: 8px;">
+                        <button onclick="deleteUser(${index})" style="background: #e74c3c; padding: 5px 10px; margin-left: 10px; font-size: 11px;">🗑️</button>
                     </div>
                 </div>
             `).join('');
+        }
+
+        function deleteUser(index) {
+            users.splice(index, 1);
+            localStorage.setItem('face_users', JSON.stringify(users));
+            updateUsersList();
+            addLogMessage('Usuário removido', 'info');
         }
 
         function escapeHtml(text) {
@@ -402,13 +491,163 @@
             return div.innerHTML;
         }
 
-        function showStatus(message, type = 'info') {
-            const statusDiv = document.getElementById('status');
-            statusDiv.textContent = message;
-            statusDiv.className = `status ${type}`;
+        async function loadModels() {
+            addLogMessage('Carregando modelos de IA...', 'info');
+            showStatus('📥 Carregando modelos...', 'info');
+            updateProgress(10);
+            
+            try {
+                // Usar modelos do CDN oficial
+                await faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights');
+                updateProgress(50);
+                addLogMessage('✓ Detector facial carregado', 'success');
+                
+                await faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights');
+                updateProgress(75);
+                addLogMessage('✓ Landmarks faciais carregados', 'success');
+                
+                await faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights');
+                updateProgress(100);
+                addLogMessage('✓ Reconhecimento facial carregado', 'success');
+                
+                modelsLoaded = true;
+                showStatus('✅ Modelos carregados!', 'success');
+                document.getElementById('startCameraBtn').disabled = false;
+                updateProgress(0);
+                
+            } catch (error) {
+                addLogMessage(`Erro ao carregar modelos: ${error.message}`, 'error');
+                showStatus('❌ Erro ao carregar modelos', 'error');
+            }
         }
 
-        function showResult(matchedUser, confidence, capturedImage, detectionStatus) {
+        async function startCamera() {
+            addLogMessage('Solicitando acesso à câmera...', 'info');
+            
+            try {
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                }
+                
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'user', width: 640, height: 480 } 
+                });
+                video.srcObject = stream;
+                await video.play();
+                
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                
+                addLogMessage('✅ Câmera ativada!', 'success');
+                showStatus('✅ Câmera ativa!', 'success');
+                document.getElementById('startCameraBtn').disabled = true;
+                document.getElementById('captureBtn').disabled = false;
+                
+            } catch (error) {
+                addLogMessage(`Erro na câmera: ${error.message}`, 'error');
+            }
+        }
+
+        async function captureImage() {
+            if (isProcessing) {
+                addLogMessage('Processamento em andamento, aguarde...', 'warning');
+                return;
+            }
+            
+            if (!stream) {
+                addLogMessage('Câmera não ativa', 'error');
+                return;
+            }
+            
+            if (!modelsLoaded) {
+                addLogMessage('Modelos não carregados', 'error');
+                return;
+            }
+            
+            if (users.length === 0) {
+                addLogMessage('Nenhuma pessoa cadastrada! Adicione alguém primeiro.', 'warning');
+                return;
+            }
+            
+            isProcessing = true;
+            document.getElementById('captureBtn').disabled = true;
+            updateProgress(10);
+            
+            try {
+                addLogMessage('Capturando imagem...', 'info');
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const capturedImage = canvas.toDataURL('image/jpeg', 0.9);
+                updateProgress(30);
+                
+                addLogMessage('Processando imagem capturada...', 'info');
+                
+                // Carregar imagem capturada
+                const capturedImg = new Image();
+                capturedImg.src = capturedImage;
+                await new Promise((resolve) => { capturedImg.onload = resolve; });
+                
+                updateProgress(50);
+                addLogMessage('Detectando rosto na imagem...', 'info');
+                
+                // Detectar rosto na imagem capturada
+                const captureDetection = await faceapi.detectSingleFace(capturedImg, new faceapi.TinyFaceDetectorOptions())
+                    .withFaceLandmarks()
+                    .withFaceDescriptor();
+                
+                updateProgress(70);
+                
+                if (!captureDetection || !captureDetection.descriptor) {
+                    addLogMessage('❌ Nenhum rosto detectado!', 'warning');
+                    showResult(null, 0, capturedImage, false);
+                    updateProgress(0);
+                    isProcessing = false;
+                    document.getElementById('captureBtn').disabled = false;
+                    return;
+                }
+                
+                addLogMessage('✅ Rosto detectado! Comparando com cadastros...', 'success');
+                
+                // Comparar com usuários cadastrados
+                let bestMatch = null;
+                let bestDistance = 0.6;
+                
+                for (const user of users) {
+                    if (user.descriptor) {
+                        const userDescriptor = new Float32Array(user.descriptor);
+                        const distance = faceapi.euclideanDistance(captureDetection.descriptor, userDescriptor);
+                        addLogMessage(`Comparação com ${user.name}: distância ${distance.toFixed(4)}`, 'info');
+                        
+                        if (distance < bestDistance) {
+                            bestDistance = distance;
+                            bestMatch = user;
+                        }
+                    }
+                }
+                
+                updateProgress(100);
+                const confidence = bestMatch ? Math.max(0, 1 - bestDistance) : 0;
+                
+                if (bestMatch && confidence > 0.5) {
+                    addLogMessage(`🎉 RECONHECIDO: ${bestMatch.name} (${(confidence * 100).toFixed(1)}%)`, 'success');
+                    showResult(bestMatch, confidence, capturedImage, true);
+                } else {
+                    addLogMessage(`❌ Não reconhecido. Melhor confiança: ${(confidence * 100).toFixed(1)}%`, 'error');
+                    showResult(null, confidence, capturedImage, true);
+                }
+                
+            } catch (error) {
+                addLogMessage(`Erro: ${error.message}`, 'error');
+                console.error(error);
+            } finally {
+                setTimeout(() => {
+                    updateProgress(0);
+                    isProcessing = false;
+                    document.getElementById('captureBtn').disabled = false;
+                }, 1000);
+            }
+        }
+
+        function showResult(matchedUser, confidence, capturedImage, detected) {
             const resultArea = document.getElementById('resultArea');
             const resultCard = document.getElementById('resultCard');
             const capturedImagePreview = document.getElementById('capturedImagePreview');
@@ -417,287 +656,39 @@
             resultArea.style.display = 'block';
             capturedImagePreview.src = capturedImage;
             
-            if (matchedUser) {
+            if (matchedUser && detected) {
                 resultCard.className = 'result-card result-success';
                 resultContent.innerHTML = `
                     <div class="result-name">✅ ${matchedUser.name}</div>
                     <div class="result-confidence">🎯 Confiança: ${(confidence * 100).toFixed(1)}%</div>
                     <div class="result-date">📅 Cadastrado em: ${matchedUser.date}</div>
                     <div style="margin-top: 15px;">
-                        <img src="${matchedUser.image}" class="matched-image" alt="Cadastro">
-                        <span style="font-size: 0.8rem;">↔️</span>
-                        <img src="${capturedImage}" class="matched-image" alt="Capturado">
-                    </div>
-                    <div style="margin-top: 15px; font-size: 0.85rem; color: #27ae60;">
-                        🎉 Pessoa identificada com sucesso! Encontrou o nome: ${matchedUser.name}
+                        <img src="${matchedUser.image}" style="max-width: 80px; border-radius: 10px; margin: 5px; border: 2px solid #27ae60;">
+                        <span> ↔️ </span>
+                        <img src="${capturedImage}" style="max-width: 80px; border-radius: 10px; margin: 5px; border: 2px solid #27ae60;">
                     </div>
                 `;
-                addLogMessage(`✅ Correspondência encontrada! Identificado como: ${matchedUser.name} (${(confidence * 100).toFixed(1)}% confiança)`, 'success');
-            } else if (detectionStatus === false) {
+            } else if (!detected) {
                 resultCard.className = 'result-card result-warning';
                 resultContent.innerHTML = `
                     <div class="result-name">⚠️ Nenhum Rosto Detectado</div>
-                    <div style="margin-top: 15px; font-size: 0.85rem; color: #f39c12;">
-                        Não foi possível detectar um rosto na imagem capturada.
-                        <br>Tente novamente com uma iluminação melhor e olhando diretamente para a câmera.
-                    </div>
+                    <div>Certifique-se de estar com o rosto visível e bem iluminado</div>
                 `;
-                addLogMessage('❌ Nenhum rosto detectado na imagem capturada', 'warning');
             } else {
                 resultCard.className = 'result-card result-error';
                 resultContent.innerHTML = `
                     <div class="result-name">❌ Pessoa Não Reconhecida</div>
-                    <div class="result-confidence">🎯 Melhor correspondência: ${(confidence * 100).toFixed(1)}%</div>
-                    <div style="margin-top: 15px; font-size: 0.85rem; color: #e74c3c;">
-                        ⚠️ Não foi possível identificar esta pessoa no sistema.
-                        <br>Verifique se ela está cadastrada ou tente uma imagem mais nítida.
-                    </div>
+                    <div class="result-confidence">Melhor correspondência: ${(confidence * 100).toFixed(1)}%</div>
+                    <div style="margin-top: 10px;">Tente cadastrar esta pessoa primeiro</div>
                 `;
-                addLogMessage(`❌ Análise concluída: nenhuma correspondência encontrada (confiança máxima: ${(confidence * 100).toFixed(1)}%)`, 'error');
             }
             
             resultArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
-        async function loadModels() {
-            // Usando CDN com os modelos corretos
-            const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/';
-            
-            addLogMessage('Iniciando carregamento dos modelos de IA...', 'info');
-            showStatus('📥 Carregando modelos de IA...', 'info');
-            updateProgress(10);
-            
-            try {
-                await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-                updateProgress(40);
-                addLogMessage('✓ Modelo de detecção facial carregado', 'success');
-                
-                await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-                updateProgress(70);
-                addLogMessage('✓ Modelo de landmarks faciais carregado', 'success');
-                
-                await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-                updateProgress(100);
-                addLogMessage('✓ Modelo de reconhecimento facial carregado', 'success');
-                
-                modelsLoaded = true;
-                showStatus('✅ Modelos carregados! Inicie a câmera', 'success');
-                addLogMessage('✅ Todos os modelos carregados com sucesso!', 'success');
-                document.getElementById('startCameraBtn').disabled = false;
-                updateProgress(0);
-                
-            } catch (error) {
-                console.error('Erro ao carregar modelos:', error);
-                addLogMessage(`❌ Erro ao carregar modelos: ${error.message}`, 'error');
-                showStatus('❌ Erro ao carregar modelos. Verifique sua internet.', 'error');
-                updateProgress(0);
-            }
-        }
-
-        async function startCamera() {
-            addLogMessage('Iniciando solicitação de acesso à câmera...', 'info');
-            
-            try {
-                if (stream) {
-                    stream.getTracks().forEach(track => track.stop());
-                    addLogMessage('Câmera anterior foi desligada', 'info');
-                }
-                
-                stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { 
-                        facingMode: 'user',
-                        width: { ideal: 640 },
-                        height: { ideal: 480 }
-                    } 
-                });
-                video.srcObject = stream;
-                
-                addLogMessage('✅ Acesso à câmera concedido', 'success');
-                
-                await video.play();
-                
-                await new Promise((resolve) => {
-                    if (video.readyState >= 2) {
-                        resolve();
-                    } else {
-                        video.onloadeddata = () => resolve();
-                    }
-                });
-                
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                
-                addLogMessage(`📹 Câmera ativada (resolução: ${video.videoWidth}x${video.videoHeight})`, 'success');
-                showStatus('✅ Câmera ativada! Clique em "Capturar para Reconhecer"', 'success');
-                document.getElementById('startCameraBtn').disabled = true;
-                document.getElementById('captureBtn').disabled = false;
-                
-            } catch (error) {
-                console.error('Erro ao acessar câmera:', error);
-                addLogMessage(`❌ Erro ao acessar câmera: ${error.message}`, 'error');
-                showStatus('❌ Erro ao acessar a câmera. Verifique as permissões.', 'error');
-            }
-        }
-
-        // Função corrigida para extrair descriptor facial
-        async function getFaceDescriptorFromImage(imageElement) {
-            // Detectar rosto na imagem
-            const detection = await faceapi.detectSingleFace(
-                imageElement, 
-                new faceapi.TinyFaceDetectorOptions()
-            ).withFaceLandmarks().withFaceDescriptor();
-            
-            return detection;
-        }
-
-        // Função corrigida para processar imagem e extrair descriptor
-        async function extractFaceDescriptorFromDataURL(dataURL) {
-            return new Promise((resolve, reject) => {
-                const img = new Image();
-                img.onload = async () => {
-                    try {
-                        addLogMessage('Imagem carregada, processando detecção facial...', 'info');
-                        const detection = await getFaceDescriptorFromImage(img);
-                        if (detection && detection.descriptor) {
-                            addLogMessage('Rosto detectado e descritor extraído com sucesso!', 'success');
-                            resolve(detection);
-                        } else {
-                            addLogMessage('Nenhum rosto detectado na imagem', 'warning');
-                            resolve(null);
-                        }
-                    } catch (error) {
-                        reject(error);
-                    }
-                };
-                img.onerror = () => reject(new Error('Erro ao carregar imagem'));
-                img.src = dataURL;
-            });
-        }
-
-        async function recognizePerson(capturedDescriptor) {
-            if (users.length === 0) {
-                addLogMessage('Banco de dados vazio. Nenhuma pessoa cadastrada para comparar.', 'warning');
-                return { matched: null, confidence: 0, bestDistance: 1 };
-            }
-            
-            addLogMessage(`🔍 Iniciando comparação com ${users.length} pessoa(s) cadastrada(s)...`, 'info');
-            
-            let bestMatch = null;
-            let bestDistance = 0.6; // Limiar de distância (menor = mais similar)
-            let bestDistanceValue = 1;
-            
-            for (const user of users) {
-                try {
-                    addLogMessage(`Comparando com ${user.name}...`, 'info');
-                    
-                    // Extrair descriptor da imagem do usuário cadastrado
-                    const userDetection = await extractFaceDescriptorFromDataURL(user.image);
-                    
-                    if (userDetection && userDetection.descriptor) {
-                        const distance = faceapi.euclideanDistance(capturedDescriptor, userDetection.descriptor);
-                        addLogMessage(`  → Distância para ${user.name}: ${distance.toFixed(4)}`, 'info');
-                        
-                        if (distance < bestDistance) {
-                            bestDistance = distance;
-                            bestMatch = user;
-                            bestDistanceValue = distance;
-                            addLogMessage(`  → Nova melhor correspondência: ${user.name} (distância: ${distance.toFixed(4)})`, 'success');
-                        }
-                    } else {
-                        addLogMessage(`  → Não foi possível extrair descritor facial de ${user.name}`, 'warning');
-                    }
-                } catch (error) {
-                    console.error(`Erro ao processar usuário ${user.name}:`, error);
-                    addLogMessage(`  → Erro ao processar ${user.name}: ${error.message}`, 'error');
-                }
-            }
-            
-            // Converter distância para confiança (1 - distância, com limite máximo)
-            const confidence = bestMatch ? Math.min(1, Math.max(0, 1 - bestDistanceValue)) : 0;
-            
-            addLogMessage(`📊 Análise concluída! Melhor correspondência: ${bestMatch ? bestMatch.name : 'nenhuma'} (confiança: ${(confidence * 100).toFixed(1)}%)`, bestMatch ? 'success' : 'warning');
-            
-            return { matched: bestMatch, confidence, bestDistance: bestDistanceValue };
-        }
-
-        async function captureImage() {
-            if (!stream) {
-                addLogMessage('❌ Câmera não está ativa. Inicie a câmera primeiro.', 'error');
-                showStatus('❌ Câmera não está ativa.', 'error');
-                return;
-            }
-            
-            if (!modelsLoaded) {
-                addLogMessage('⏳ Modelos de IA ainda não carregados. Aguarde...', 'warning');
-                showStatus('⏳ Aguarde os modelos carregarem...', 'warning');
-                return;
-            }
-            
-            if (users.length === 0) {
-                addLogMessage('⚠️ Nenhuma pessoa cadastrada. Cadastre alguém primeiro.', 'warning');
-                showStatus('⚠️ Nenhuma pessoa cadastrada.', 'warning');
-                return;
-            }
-            
-            addLogMessage('📸 Iniciando captura de imagem...', 'info');
-            showStatus('🔍 Capturando imagem...', 'info');
-            document.getElementById('captureBtn').disabled = true;
-            updateProgress(10);
-            
-            try {
-                // Capturar imagem do vídeo
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const capturedImage = canvas.toDataURL('image/jpeg', 0.9);
-                addLogMessage('✅ Imagem capturada com sucesso!', 'success');
-                updateProgress(30);
-                
-                addLogMessage('🔍 Analisando imagem em busca de rosto...', 'info');
-                
-                // Extrair descriptor da imagem capturada
-                const captureDetection = await extractFaceDescriptorFromDataURL(capturedImage);
-                updateProgress(60);
-                
-                if (!captureDetection || !captureDetection.descriptor) {
-                    addLogMessage('❌ Nenhum rosto detectado na imagem capturada!', 'warning');
-                    showStatus('❌ Nenhum rosto detectado.', 'error');
-                    showResult(null, null, capturedImage, false);
-                    document.getElementById('captureBtn').disabled = false;
-                    updateProgress(0);
-                    return;
-                }
-                
-                addLogMessage('✅ Rosto detectado com sucesso! Iniciando comparação...', 'success');
-                updateProgress(70);
-                
-                const { matched, confidence } = await recognizePerson(captureDetection.descriptor);
-                updateProgress(100);
-                
-                if (matched) {
-                    addLogMessage(`🎉 CORRESPONDÊNCIA ENCONTRADA! Identificado como: ${matched.name} (${(confidence * 100).toFixed(1)}% confiança)`, 'success');
-                    addLogMessage(`✅ Encontrou o nome: ${matched.name}`, 'success');
-                    showStatus(`✅ Pessoa reconhecida: ${matched.name}`, 'success');
-                    showResult(matched, confidence, capturedImage, true);
-                } else {
-                    addLogMessage(`❌ Nenhuma correspondência encontrada. Confiança máxima: ${(confidence * 100).toFixed(1)}%`, 'error');
-                    showStatus('❌ Pessoa não reconhecida.', 'error');
-                    showResult(null, confidence, capturedImage, true);
-                }
-                
-            } catch (error) {
-                console.error('Erro no reconhecimento:', error);
-                addLogMessage(`❌ Erro durante o reconhecimento: ${error.message}`, 'error');
-                showStatus('❌ Erro ao processar imagem.', 'error');
-            } finally {
-                document.getElementById('captureBtn').disabled = false;
-                setTimeout(() => updateProgress(0), 1000);
-            }
-        }
-
         async function init() {
             document.getElementById('startCameraBtn').disabled = true;
             document.getElementById('captureBtn').disabled = true;
-            
-            addLogMessage('📱 Sistema de Reconhecimento Facial iniciado', 'success');
             loadUsers();
             await loadModels();
         }
