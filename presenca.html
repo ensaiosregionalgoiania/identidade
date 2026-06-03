@@ -30,7 +30,6 @@
             box-shadow: 0 5px 20px rgba(0,0,0,0.2);
         }
         .logo h1 { color: #2c3e50; font-size: 1.3rem; }
-        .logo h1 i { color: #9b59b6; margin-right: 10px; }
         .top-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
         .btn-voltar { background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; }
         
@@ -50,6 +49,7 @@
         
         .status-presente { background: #27ae60; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; display: inline-block; }
         .status-ausente { background: #e74c3c; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; display: inline-block; }
+        .status-nao-autorizado { background: #f39c12; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; display: inline-block; }
         
         .btn-toggle-presente { background: #27ae60; padding: 6px 12px; font-size: 0.8rem; border: none; border-radius: 6px; cursor: pointer; color: white; }
         .btn-toggle-presente:hover { background: #219a52; }
@@ -66,6 +66,8 @@
         .search-box { width: 100%; padding: 10px; margin-bottom: 20px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; }
         
         .toast { position: fixed; bottom: 20px; right: 20px; background: #27ae60; color: white; padding: 12px 24px; border-radius: 8px; z-index: 1000; animation: fadeIn 0.3s ease; }
+        .toast.error { background: #e74c3c; }
+        .toast.warning { background: #f39c12; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         
         .loading { text-align: center; padding: 20px; color: #999; }
@@ -75,37 +77,23 @@
         .info-evento p { color: #7f8c8d; font-size: 0.85rem; }
         
         .aviso-data { background: #fff3cd; color: #856404; padding: 10px; border-radius: 8px; margin-top: 10px; text-align: center; font-size: 0.85rem; }
+        .aviso-data.encerrado { background: #f8d7da; color: #721c24; }
+        .aviso-data.futuro { background: #d1ecf1; color: #0c5460; }
         
-        .camera-area {
-            text-align: center;
-            margin-top: 20px;
-        }
-        #reader {
-            width: 100%;
-            max-width: 500px;
-            margin: 0 auto;
-        }
-        .btn-camera {
-            background: #9b59b6;
-            margin-top: 15px;
-        }
+        .camera-area { text-align: center; margin-top: 20px; }
+        #reader { width: 100%; max-width: 500px; margin: 0 auto; }
+        .btn-camera { background: #9b59b6; margin-top: 15px; }
         .btn-camera:hover { background: #8e44ad; }
-        .btn-stop {
-            background: #e74c3c;
-        }
+        .btn-camera:disabled { background: #95a5a6; cursor: not-allowed; }
+        .btn-stop { background: #e74c3c; }
         .btn-stop:hover { background: #c0392b; }
         
-        .leitor-status {
-            text-align: center;
-            margin-top: 10px;
-            padding: 10px;
-            border-radius: 8px;
-        }
+        .leitor-status { text-align: center; margin-top: 10px; padding: 10px; border-radius: 8px; }
         .leitor-status.success { background: #d5f4e6; color: #27ae60; }
         .leitor-status.error { background: #fee; color: #e74c3c; }
         .leitor-status.info { background: #e3f2fd; color: #3498db; }
+        .leitor-status.warning { background: #fff3cd; color: #856404; }
         
-        /* Modal de Confirmação */
         .modal-confirm {
             display: none;
             position: fixed;
@@ -158,19 +146,18 @@
             cursor: pointer;
             font-weight: bold;
         }
-        .btn-confirmar {
-            background: #27ae60;
+        .btn-confirmar { background: #27ae60; color: white; }
+        .btn-confirmar:hover { background: #219a52; }
+        .btn-cancelar { background: #95a5a6; color: white; }
+        .btn-cancelar:hover { background: #7f8c8d; }
+        
+        .badge-nao-autorizado {
+            background: #f39c12;
             color: white;
-        }
-        .btn-confirmar:hover {
-            background: #219a52;
-        }
-        .btn-cancelar {
-            background: #95a5a6;
-            color: white;
-        }
-        .btn-cancelar:hover {
-            background: #7f8c8d;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            margin-left: 8px;
         }
     </style>
 </head>
@@ -185,7 +172,6 @@
             </div>
         </div>
 
-        <!-- Seleção de Evento -->
         <div class="card">
             <div class="card-header">
                 <h2>📅 Selecionar Evento (Hoje)</h2>
@@ -202,9 +188,9 @@
             <h3 id="eventoNome"></h3>
             <p id="eventoData"></p>
             <p id="eventoPermissoes"></p>
+            <div id="avisoData" class="aviso-data" style="display: none;"></div>
         </div>
 
-        <!-- Controles de Leitura QR Code -->
         <div id="qrControlCard" class="card" style="display: none;">
             <div class="card-header">
                 <h2>📷 Leitor QR Code</h2>
@@ -219,7 +205,6 @@
             </div>
         </div>
 
-        <!-- Lista de Membros -->
         <div id="presencaCard" class="card" style="display: none;">
             <div class="card-header">
                 <h2>📋 Lista de Membros Autorizados</h2>
@@ -244,17 +229,21 @@
                     <thead>
                         <tr><th>Nome</th><th>Instrumento</th><th>Cargo</th><th>Nível</th><th>Status</th><th>Ação</th></tr>
                     </thead>
-                    <tbody id="corpoTabela"><tr><td colspan="6" class="loading">Selecione um evento...</td></tr></tbody>
+                    <tbody id="corpoTabela"><tr><td colspan="6" class="loading">Selecione um evento...</td></tr>
+                    </tbody>
                 </table>
             </div>
         </div>
     </div>
 
-    <!-- Modal de Confirmação -->
     <div id="modalConfirm" class="modal-confirm">
         <div class="modal-confirm-content">
-            <h3>📋 Confirmar Presença</h3>
+            <h3 id="modalTitulo">📋 Confirmar Presença</h3>
             <div id="modalMembroInfo" class="modal-membro-info"></div>
+            <div id="modalAviso" style="display: none; background: #fff3cd; padding: 10px; border-radius: 8px; margin: 10px 0; color: #856404;">
+                ⚠️ Este membro não está na lista de autorizados para este evento.
+                <br>Deseja registrar presença mesmo assim?
+            </div>
             <div class="modal-buttons">
                 <button id="btnConfirmarPresenca" class="btn-confirmar">✅ Confirmar</button>
                 <button id="btnCancelarPresenca" class="btn-cancelar">❌ Cancelar</button>
@@ -264,7 +253,6 @@
 
     <script src="firebase-config.js"></script>
     <script>
-        // Coleções
         const eventosCollection = db.collection("eventos");
         const tiposEventoCollection = db.collection("tipos_evento");
         const permissoesCollection = db.collection("permissoes_evento");
@@ -275,13 +263,12 @@
         const congregacoesCollection = db.collection("congregacoes");
         const presencasCollection = db.collection("presencas");
 
-        // Variáveis
         let eventos = [];
         let tiposEvento = [];
         let eventoSelecionado = null;
         let permissoesEvento = [];
         let membrosAutorizados = [];
-        let membrosCompletos = [];
+        let todosMembros = [];
         let instrumentos = [];
         let cargos = [];
         let niveis = [];
@@ -289,51 +276,52 @@
         
         let statusFiltro = 'todos';
         let buscaFiltro = '';
-        let podeAlterar = false;
         
-        // Variáveis QR Code
         let html5QrCode = null;
         let leitorAtivo = false;
         let pendingMembro = null;
+        let pendingNaoAutorizado = false;
 
-        function mostrarToast(msg) {
+        function mostrarToast(msg, tipo = 'success') {
             const toast = document.createElement('div');
-            toast.className = 'toast';
+            toast.className = `toast ${tipo}`;
             toast.textContent = msg;
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
         }
 
-        function getDataHoje() {
-            return new Date().toISOString().split('T')[0];
+        function getDataHojeLocal() {
+            const agora = new Date();
+            const ano = agora.getFullYear();
+            const mes = String(agora.getMonth() + 1).padStart(2, '0');
+            const dia = String(agora.getDate()).padStart(2, '0');
+            return `${ano}-${mes}-${dia}`;
+        }
+
+        function compararDatas(dataEvento) {
+            const hoje = getDataHojeLocal();
+            if (dataEvento === hoje) return 'hoje';
+            if (dataEvento < hoje) return 'passado';
+            return 'futuro';
         }
 
         function getNome(lista, id, tipo) {
-            const item = lista.find(i => Number(i.id) === Number(id));
+            const item = lista.find(i => String(i.id) === String(id));
             return item ? item.nome : `${tipo} ${id}`;
         }
 
         async function carregarDados() {
             const instSnapshot = await instrumentosCollection.get();
             instrumentos = [];
-            instSnapshot.forEach(doc => {
-                const data = doc.data();
-                instrumentos.push({ id: data.id, nome: data.nome });
-            });
+            instSnapshot.forEach(doc => instrumentos.push({ id: doc.data().id, nome: doc.data().nome }));
 
             const cargoSnapshot = await cargosCollection.get();
             cargos = [];
-            cargoSnapshot.forEach(doc => {
-                const data = doc.data();
-                cargos.push({ id: data.id, nome: data.nome });
-            });
+            cargoSnapshot.forEach(doc => cargos.push({ id: doc.data().id, nome: doc.data().nome }));
 
             const nivelSnapshot = await niveisCollection.get();
             niveis = [];
-            nivelSnapshot.forEach(doc => {
-                const data = doc.data();
-                niveis.push({ id: data.id, nome: data.nome });
-            });
+            nivelSnapshot.forEach(doc => niveis.push({ id: doc.data().id, nome: doc.data().nome }));
 
             const congSnapshot = await congregacoesCollection.get();
             congregacoes = [];
@@ -344,10 +332,10 @@
             tipoSnapshot.forEach(doc => tiposEvento.push({ id: doc.id, nome: doc.data().nome }));
 
             const membroSnapshot = await membrosCollection.get();
-            membrosCompletos = [];
+            todosMembros = [];
             membroSnapshot.forEach(doc => {
                 const data = doc.data();
-                membrosCompletos.push({
+                todosMembros.push({
                     id: doc.id,
                     nomeId: data.id,
                     nome: data.nome,
@@ -359,7 +347,7 @@
         }
 
         async function carregarEventos() {
-            const hoje = getDataHoje();
+            const hoje = getDataHojeLocal();
             const snapshot = await eventosCollection.where('data', '==', hoje).orderBy('data', 'desc').get();
             eventos = [];
             
@@ -406,13 +394,13 @@
         function isMembroAutorizado(membro) {
             if (permissoesEvento.length === 0) return true;
             return permissoesEvento.some(permissao => 
-                Number(permissao.cargoId) === Number(membro.cargoId) && 
-                Number(permissao.nivelId) === Number(membro.nivelId)
+                String(permissao.cargoId) === String(membro.cargoId) && 
+                String(permissao.nivelId) === String(membro.nivelId)
             );
         }
 
         function filtrarMembrosAutorizados() {
-            membrosAutorizados = membrosCompletos.filter(m => isMembroAutorizado(m));
+            membrosAutorizados = todosMembros.filter(m => isMembroAutorizado(m));
             return membrosAutorizados;
         }
 
@@ -426,30 +414,42 @@
             return presentes;
         }
 
-        async function registrarPresenca(membroId, membroNome) {
-            if (!podeAlterar) {
-                mostrarToast('⚠️ Este evento não pode ser alterado!');
+        async function registrarPresenca(membroId, membroNome, naoAutorizado = false) {
+            const statusEvento = compararDatas(eventoSelecionado.data);
+            
+            if (statusEvento !== 'hoje') {
+                const mensagem = statusEvento === 'passado' ? 'Evento encerrado! Não é possível registrar presença.' : 'Evento futuro! Operação não permitida.';
+                mostrarToast(`⚠️ ${mensagem}`, 'error');
                 return false;
             }
+            
             try {
                 const snapshot = await presencasCollection.where('eventoId', '==', eventoSelecionado.id).where('membroId', '==', membroId).get();
                 if (!snapshot.empty) {
-                    mostrarToast(`⚠️ ${membroNome} já registrou presença!`);
+                    mostrarToast(`⚠️ ${membroNome} já registrou presença!`, 'warning');
                     return false;
                 }
+                
                 await presencasCollection.add({
                     eventoId: eventoSelecionado.id,
                     membroId: membroId,
                     nome: membroNome,
+                    naoAutorizado: naoAutorizado,
                     dataEvento: eventoSelecionado.data,
-                    dataHora: new Date().toISOString(),
+                    dataHora: new Date().toLocaleString('pt-BR'),
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                mostrarToast(`✅ Presença registrada: ${membroNome}`);
+                
+                if (naoAutorizado) {
+                    mostrarToast(`⚠️ ${membroNome} registrado (não autorizado para este evento)!`, 'warning');
+                } else {
+                    mostrarToast(`✅ Presença registrada: ${membroNome}`);
+                }
+                
                 renderizarListaMembros();
                 return true;
             } catch(error) {
-                mostrarToast('❌ Erro: ' + error.message);
+                mostrarToast('❌ Erro: ' + error.message, 'error');
                 return false;
             }
         }
@@ -457,6 +457,11 @@
         async function renderizarListaMembros() {
             if (!eventoSelecionado) return;
             const presentesMap = await verificarPresencasEvento(eventoSelecionado.id);
+            const statusEvento = compararDatas(eventoSelecionado.data);
+            const podeAlterarHoje = statusEvento === 'hoje';
+            
+            // Buscar também presenças de não autorizados
+            const todosPresentes = { ...presentesMap };
             
             let filtrados = [...membrosAutorizados];
             if (statusFiltro === 'presentes') filtrados = filtrados.filter(m => presentesMap[m.id]);
@@ -468,57 +473,63 @@
             document.getElementById('totalAusentes').textContent = membrosAutorizados.length - Object.keys(presentesMap).length;
             
             const tbody = document.getElementById('corpoTabela');
-            if (filtrados.length === 0) {
+            if (filtrados.length === 0 && Object.keys(todosPresentes).length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" class="loading">Nenhum membro encontrado</td></tr>';
                 return;
             }
             
             let html = '';
+            
+            // Membros autorizados
             for (const m of filtrados) {
                 const estaPresente = !!presentesMap[m.id];
                 const presencaDocId = presentesMap[m.id] || '';
-                const botaoTexto = estaPresente ? '❌ Marcar Ausente' : '✅ Marcar Presente';
-                const botaoClasse = estaPresente ? 'btn-toggle-ausente' : 'btn-toggle-presente';
                 
-                html += `<tr>
-                    <td><strong>${m.nome}</strong></td>
-                    <td>${getNome(instrumentos, m.instrumentoId, 'Inst')}</td>
-                    <td>${getNome(cargos, m.cargoId, 'Cargo')}</td>
-                    <td>${getNome(niveis, m.nivelId, 'Nível')}</td>
-                    <td>${estaPresente ? '<span class="status-presente">✅ Presente</span>' : '<span class="status-ausente">❌ Ausente</span>'}</td>
-                    <td><button class="${botaoClasse}" onclick="alternarPresenca('${m.id}', '${m.nome}', ${estaPresente}, '${presencaDocId}')">${botaoTexto}</button></td>
-                </tr>`;
+                if (podeAlterarHoje) {
+                    const botaoTexto = estaPresente ? '❌ Marcar Ausente' : '✅ Marcar Presente';
+                    const botaoClasse = estaPresente ? 'btn-toggle-ausente' : 'btn-toggle-presente';
+                    html += `<tr>
+                        <td><strong>${m.nome}</strong></td>
+                        <td>${getNome(instrumentos, m.instrumentoId, 'Inst')}</td>
+                        <td>${getNome(cargos, m.cargoId, 'Cargo')}</td>
+                        <td>${getNome(niveis, m.nivelId, 'Nível')}</td>
+                        <td>${estaPresente ? '<span class="status-presente">✅ Presente</span>' : '<span class="status-ausente">❌ Ausente</span>'}</td>
+                        <td><button class="${botaoClasse}" onclick="alternarPresenca('${m.id}', '${m.nome}', ${estaPresente}, '${presencaDocId}')">${botaoTexto}</button></td>
+                    </tr>`;
+                } else {
+                    const mensagemTooltip = statusEvento === 'passado' ? 'Evento encerrado' : 'Evento futuro';
+                    html += `<tr>
+                        <td><strong>${m.nome}</strong></td>
+                        <td>${getNome(instrumentos, m.instrumentoId, 'Inst')}</td>
+                        <td>${getNome(cargos, m.cargoId, 'Cargo')}</td>
+                        <td>${getNome(niveis, m.nivelId, 'Nível')}</td>
+                        <td>${estaPresente ? '<span class="status-presente">✅ Presente</span>' : '<span class="status-ausente">❌ Ausente</span>'}</td>
+                        <td><button class="btn-desabilitado" disabled title="${mensagemTooltip}">🔒 ${mensagemTooltip}</button></td>
+                    </tr>`;
+                }
             }
+            
             tbody.innerHTML = html;
         }
 
         window.alternarPresenca = async function(membroId, membroNome, estaPresente, presencaDocId) {
-            if (!podeAlterar) {
-                mostrarToast('⚠️ Este evento não pode ser alterado!');
+            const statusEvento = compararDatas(eventoSelecionado.data);
+            
+            if (statusEvento !== 'hoje') {
+                const mensagem = statusEvento === 'passado' ? 'Evento encerrado! Não é possível alterar presença.' : 'Evento futuro! Operação não permitida.';
+                mostrarToast(`⚠️ ${mensagem}`, 'error');
                 return;
             }
-            try {
-                if (estaPresente) {
-                    await presencasCollection.doc(presencaDocId).delete();
-                    mostrarToast(`✅ Presença removida: ${membroNome}`);
-                } else {
-                    await presencasCollection.add({
-                        eventoId: eventoSelecionado.id,
-                        membroId: membroId,
-                        nome: membroNome,
-                        dataEvento: eventoSelecionado.data,
-                        dataHora: new Date().toISOString(),
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    mostrarToast(`✅ Presença registrada: ${membroNome}`);
-                }
-                await renderizarListaMembros();
-            } catch(error) {
-                mostrarToast('❌ Erro: ' + error.message);
+            
+            if (estaPresente) {
+                await presencasCollection.doc(presencaDocId).delete();
+                mostrarToast(`✅ Presença removida: ${membroNome}`);
+                renderizarListaMembros();
+            } else {
+                await registrarPresenca(membroId, membroNome, false);
             }
         };
 
-        // Evento de seleção de evento
         document.getElementById('eventoSelect').addEventListener('change', async (e) => {
             const eventoId = e.target.value;
             
@@ -526,6 +537,7 @@
                 document.getElementById('presencaCard').style.display = 'none';
                 document.getElementById('infoEvento').style.display = 'none';
                 document.getElementById('qrControlCard').style.display = 'none';
+                if (leitorAtivo) await pararLeitor();
                 eventoSelecionado = null;
                 return;
             }
@@ -536,31 +548,55 @@
                 await buscarPermissoes(eventoSelecionado.tipoEventoId);
                 filtrarMembrosAutorizados();
                 
-                const hoje = getDataHoje();
-                podeAlterar = eventoSelecionado.data === hoje;
-                
+                const statusEvento = compararDatas(eventoSelecionado.data);
                 const dataFormatada = new Date(eventoSelecionado.data).toLocaleDateString('pt-BR');
+                
+                let avisoHtml = '';
+                let avisoClasse = '';
+                if (statusEvento === 'passado') {
+                    avisoHtml = '🔒 EVENTO ENCERRADO - Operações não permitidas';
+                    avisoClasse = 'encerrado';
+                } else if (statusEvento === 'futuro') {
+                    avisoHtml = '🔮 EVENTO FUTURO - Operações não permitidas';
+                    avisoClasse = 'futuro';
+                } else {
+                    avisoHtml = '✅ EVENTO ATIVO - Operações permitidas';
+                    avisoClasse = '';
+                }
+                
                 document.getElementById('eventoNome').innerHTML = `🎯 ${eventoSelecionado.tipoEventoNome}`;
                 document.getElementById('eventoData').innerHTML = `📅 ${dataFormatada} - 📍 ${eventoSelecionado.congregacaoNome}`;
                 document.getElementById('eventoPermissoes').innerHTML = permissoesEvento.length > 0 ? `📋 ${permissoesEvento.length} permissões configuradas` : '📋 Sem restrições';
+                
+                const avisoDiv = document.getElementById('avisoData');
+                avisoDiv.innerHTML = avisoHtml;
+                avisoDiv.className = `aviso-data ${avisoClasse}`;
+                avisoDiv.style.display = 'block';
                 
                 document.getElementById('infoEvento').style.display = 'block';
                 document.getElementById('qrControlCard').style.display = 'block';
                 document.getElementById('presencaCard').style.display = 'block';
                 
+                const btnIniciarLeitor = document.getElementById('btnIniciarLeitor');
+                if (statusEvento !== 'hoje') {
+                    btnIniciarLeitor.disabled = true;
+                    atualizarStatusLeitor(`⛔ ${statusEvento === 'passado' ? 'Evento encerrado' : 'Evento futuro'} - Leitura não permitida`, 'warning');
+                } else {
+                    btnIniciarLeitor.disabled = false;
+                    atualizarStatusLeitor('✅ Evento ativo - Leitor disponível', 'success');
+                }
+                
                 await renderizarListaMembros();
             }
         });
 
-        // Funções do Leitor QR Code
         function atualizarStatusLeitor(mensagem, tipo) {
             const statusDiv = document.getElementById('leitorStatus');
             statusDiv.textContent = mensagem;
             statusDiv.className = `leitor-status ${tipo}`;
         }
 
-        // Função para mostrar modal de confirmação
-        function mostrarModalConfirmacao(membro) {
+        function mostrarModalConfirmacao(membro, naoAutorizado = false) {
             const instrumento = getNome(instrumentos, membro.instrumentoId, 'Instrumento');
             const cargo = getNome(cargos, membro.cargoId, 'Cargo');
             const nivel = getNome(niveis, membro.nivelId, 'Nível');
@@ -576,36 +612,52 @@
                 <p><strong>📍 Local:</strong> ${eventoSelecionado.congregacaoNome}</p>
             `;
             
+            const modalAviso = document.getElementById('modalAviso');
+            const modalTitulo = document.getElementById('modalTitulo');
+            
+            if (naoAutorizado) {
+                modalAviso.style.display = 'block';
+                modalTitulo.textContent = '⚠️ Membro Não Autorizado';
+            } else {
+                modalAviso.style.display = 'none';
+                modalTitulo.textContent = '📋 Confirmar Presença';
+            }
+            
             pendingMembro = membro;
+            pendingNaoAutorizado = naoAutorizado;
             document.getElementById('modalConfirm').style.display = 'flex';
             pararLeitor();
         }
 
-        // Confirmar presença
         async function confirmarPresenca() {
             if (pendingMembro) {
-                await registrarPresenca(pendingMembro.id, pendingMembro.nome);
+                await registrarPresenca(pendingMembro.id, pendingMembro.nome, pendingNaoAutorizado);
                 pendingMembro = null;
+                pendingNaoAutorizado = false;
                 document.getElementById('modalConfirm').style.display = 'none';
+                iniciarLeitor();
             }
         }
 
-        // Cancelar presença
         function cancelarPresenca() {
             pendingMembro = null;
+            pendingNaoAutorizado = false;
             document.getElementById('modalConfirm').style.display = 'none';
             atualizarStatusLeitor('Leitura cancelada. Aponte novamente para o QR Code.', 'info');
             iniciarLeitor();
         }
 
         async function iniciarLeitor() {
-            if (!eventoSelecionado) {
-                mostrarToast('⚠️ Selecione um evento primeiro!');
+            const statusEvento = compararDatas(eventoSelecionado.data);
+            
+            if (statusEvento !== 'hoje') {
+                const mensagem = statusEvento === 'passado' ? 'Evento encerrado! Não é possível fazer leitura.' : 'Evento futuro! Operação não permitida.';
+                mostrarToast(`⚠️ ${mensagem}`, 'error');
                 return;
             }
             
-            if (!podeAlterar) {
-                mostrarToast('⚠️ Este evento não pode ser alterado (data diferente de hoje)!');
+            if (!eventoSelecionado) {
+                mostrarToast('⚠️ Selecione um evento primeiro!', 'warning');
                 return;
             }
             
@@ -650,6 +702,15 @@
         }
 
         function processarQRCode(decodedText) {
+            const statusEvento = compararDatas(eventoSelecionado.data);
+            
+            if (statusEvento !== 'hoje') {
+                const mensagem = statusEvento === 'passado' ? 'Evento encerrado! Não é possível registrar presença.' : 'Evento futuro! Operação não permitida.';
+                atualizarStatusLeitor(`⛔ ${mensagem}`, 'warning');
+                mostrarToast(`⚠️ ${mensagem}`, 'error');
+                return;
+            }
+            
             try {
                 const dados = JSON.parse(decodedText);
                 const membroId = dados.id;
@@ -659,15 +720,24 @@
                     return;
                 }
                 
-                const membro = membrosAutorizados.find(m => m.nomeId == membroId || m.id == membroId);
+                // Buscar o membro em todos os membros (não apenas autorizados)
+                const membro = todosMembros.find(m => String(m.nomeId) === String(membroId) || String(m.id) === String(membroId));
                 
                 if (!membro) {
-                    atualizarStatusLeitor(`❌ Membro com ID ${membroId} não encontrado ou não autorizado`, 'error');
+                    atualizarStatusLeitor(`❌ Membro com ID ${membroId} não encontrado no sistema`, 'error');
                     return;
                 }
                 
-                // Mostrar modal de confirmação
-                mostrarModalConfirmacao(membro);
+                // Verificar se é autorizado
+                const isAutorizado = isMembroAutorizado(membro);
+                
+                if (!isAutorizado) {
+                    atualizarStatusLeitor(`⚠️ ${membro.nome} não está autorizado para este evento. Deseja registrar mesmo assim?`, 'warning');
+                    mostrarModalConfirmacao(membro, true);
+                } else {
+                    atualizarStatusLeitor(`✅ ${membro.nome} autorizado. Confirmar presença.`, 'success');
+                    mostrarModalConfirmacao(membro, false);
+                }
                 
             } catch(error) {
                 atualizarStatusLeitor('❌ QR Code inválido: ' + error.message, 'error');
@@ -688,6 +758,9 @@
             statusFiltro = status;
             renderizarListaMembros();
         }
+
+        window.filtrarMembros = filtrarMembros;
+        window.filtrarPorStatus = filtrarPorStatus;
 
         async function init() {
             await carregarDados();
