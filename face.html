@@ -2,120 +2,82 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Sistema de Reconhecimento Facial - Mobile</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Cadastro Facial - Simple Face Register</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
         }
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 10px;
+            padding: 20px;
         }
 
         .container {
-            max-width: 100%;
+            max-width: 600px;
             margin: 0 auto;
         }
 
-        .main-card {
+        .card {
             background: white;
-            border-radius: 15px;
-            padding: 15px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-            margin-bottom: 15px;
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
 
         h1 {
             text-align: center;
             color: #333;
+            margin-bottom: 10px;
             font-size: 1.5rem;
-            margin-bottom: 5px;
         }
 
         .subtitle {
             text-align: center;
             color: #666;
-            font-size: 0.8rem;
-            margin-bottom: 15px;
+            font-size: 0.85rem;
+            margin-bottom: 20px;
         }
 
-        /* Alternador de modo */
-        .mode-switch {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-            background: #f0f0f0;
-            padding: 5px;
-            border-radius: 10px;
-        }
-
-        .mode-btn {
-            flex: 1;
-            padding: 10px;
-            border: none;
-            background: transparent;
-            color: #666;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-            border-radius: 8px;
-            transition: all 0.3s;
-        }
-
-        .mode-btn.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        /* Container de vídeo */
         .video-container {
             position: relative;
             background: #000;
             border-radius: 10px;
             overflow: hidden;
-            border: 2px solid #ddd;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             aspect-ratio: 4/3;
         }
 
-        video, canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
+        video {
             width: 100%;
             height: 100%;
             object-fit: cover;
-        }
-
-        #video {
             transform: scaleX(-1);
         }
 
-        #canvas {
-            transform: scaleX(-1);
+        canvas {
+            display: none;
         }
 
-        /* Botões de controle */
         .controls {
             display: flex;
-            gap: 8px;
-            margin: 15px 0;
+            gap: 10px;
+            justify-content: center;
             flex-wrap: wrap;
+            margin-bottom: 20px;
         }
 
-        .controls button {
-            flex: 1;
+        button {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 12px;
+            padding: 12px 24px;
             border-radius: 8px;
             font-size: 14px;
             cursor: pointer;
@@ -137,15 +99,10 @@
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
         }
 
-        .btn-success {
-            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-        }
-
-        /* Input group */
         .input-group {
-            margin: 15px 0;
+            margin: 20px 0;
             display: flex;
-            gap: 8px;
+            gap: 10px;
             align-items: center;
             flex-wrap: wrap;
         }
@@ -165,68 +122,73 @@
 
         .input-group button {
             flex: 1;
-            padding: 12px;
+            margin-top: 0;
         }
 
-        /* Lista de usuários */
-        .users-list {
-            background: white;
-            border-radius: 15px;
+        .preview {
+            margin-top: 20px;
             padding: 15px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            background: #f8f9fa;
+            border-radius: 10px;
         }
 
-        .users-list h3 {
+        .preview h3 {
             margin-bottom: 10px;
             color: #333;
-            font-size: 1.1rem;
+            font-size: 1rem;
         }
 
-        .user-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 10px;
-            max-height: 200px;
+        .preview-img {
+            max-width: 100px;
+            border-radius: 10px;
+            margin: 5px;
+            border: 2px solid #ddd;
+        }
+
+        .users-list {
+            max-height: 300px;
             overflow-y: auto;
         }
 
-        .user-card {
+        .user-item {
             background: #f8f9fa;
-            border-radius: 8px;
             padding: 10px;
-            text-align: center;
-            border-left: 3px solid #667eea;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .user-info {
+            flex: 1;
         }
 
         .user-name {
             font-weight: bold;
             color: #333;
-            font-size: 0.9rem;
-            margin-bottom: 3px;
-            word-break: break-word;
         }
 
-        .user-id {
-            font-size: 10px;
+        .user-date {
+            font-size: 0.7rem;
             color: #666;
         }
 
-        .user-card button {
-            margin-top: 8px;
+        .user-actions button {
             padding: 5px 10px;
             font-size: 11px;
             background: #dc3545;
         }
 
-        /* Status */
         .status {
             background: #f0f0f0;
             padding: 10px;
             border-radius: 8px;
-            margin-top: 15px;
             text-align: center;
-            font-weight: bold;
             font-size: 12px;
+            margin-top: 15px;
         }
 
         .status.success {
@@ -244,57 +206,20 @@
             color: #0c5460;
         }
 
-        /* Resultado flutuante */
-        .recognition-result {
-            position: fixed;
-            bottom: 10px;
-            left: 10px;
-            right: 10px;
-            background: white;
-            padding: 12px;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            display: none;
-            animation: slideUp 0.3s ease;
+        .empty-message {
             text-align: center;
-            font-weight: bold;
-            font-size: 14px;
-            z-index: 1000;
-        }
-
-        @keyframes slideUp {
-            from {
-                transform: translateY(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
-        /* Scrollbar */
-        .user-cards::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        .user-cards::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
-        }
-
-        .user-cards::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 10px;
+            color: #999;
+            padding: 20px;
         }
 
         @media (max-width: 480px) {
-            .controls {
-                flex-direction: column;
+            .card {
+                padding: 15px;
             }
             
-            .user-cards {
-                grid-template-columns: 1fr;
+            button {
+                padding: 10px 16px;
+                font-size: 12px;
             }
             
             .input-group {
@@ -310,99 +235,92 @@
 </head>
 <body>
     <div class="container">
-        <div class="main-card">
-            <h1>👤 Reconhecimento Facial</h1>
-            <div class="subtitle">Cadastre ou identifique usuários</div>
+        <div class="card">
+            <h1>📸 Cadastro Facial</h1>
+            <div class="subtitle">Capture seu rosto e salve no sistema</div>
 
-            <!-- Alternador de modo -->
-            <div class="mode-switch">
-                <button class="mode-btn active" id="modeCaptureBtn" onclick="setMode('capture')">📸 CADASTRAR</button>
-                <button class="mode-btn" id="modeRecognizeBtn" onclick="setMode('recognize')">🔍 RECONHECER</button>
-            </div>
-
-            <!-- Container único para vídeo -->
             <div class="video-container">
                 <video id="video" autoplay muted playsinline></video>
-                <canvas id="canvas"></canvas>
             </div>
 
-            <!-- Botões de controle -->
+            <canvas id="canvas"></canvas>
+
             <div class="controls">
                 <button id="startCameraBtn" onclick="startCamera()">📷 Iniciar Câmera</button>
-                <button id="actionBtn" onclick="actionButtonClick()" disabled>---</button>
-                <button id="stopActionBtn" onclick="stopAction()" disabled>⏹️ Parar</button>
-                <button id="clearBtn" onclick="clearAllUsers()" class="btn-danger">🗑️ Limpar</button>
+                <button id="captureBtn" onclick="captureImage()" disabled>📸 Capturar</button>
+                <button id="clearAllBtn" onclick="clearAllUsers()" class="btn-danger">🗑️ Limpar Todos</button>
             </div>
 
-            <!-- Área de cadastro -->
-            <div class="input-group" id="captureGroup" style="display: none;">
-                <input type="text" id="userName" placeholder="Digite o nome do usuário" maxlength="30">
-                <button onclick="saveUser()" class="btn-success">💾 Salvar</button>
+            <div id="captureGroup" class="input-group" style="display: none;">
+                <input type="text" id="userName" placeholder="Digite o nome da pessoa" maxlength="50">
+                <button onclick="saveUser()">💾 Salvar</button>
                 <button onclick="cancelCapture()">❌ Cancelar</button>
             </div>
 
             <div id="status" class="status info">
-                ✅ Clique em "Iniciar Câmera"
+                👆 Clique em "Iniciar Câmera" para começar
             </div>
         </div>
 
-        <!-- Lista de usuários -->
-        <div class="users-list">
-            <h3>📋 Usuários Cadastrados (<span id="userCount">0</span>)</h3>
-            <div id="usersContainer" class="user-cards">
-                <div style="text-align: center; color: #999; font-size: 12px;">Nenhum usuário</div>
+        <div class="card">
+            <h3>📋 Pessoas Cadastradas (<span id="userCount">0</span>)</h3>
+            <div id="usersList" class="users-list">
+                <div class="empty-message">Nenhuma pessoa cadastrada</div>
             </div>
         </div>
     </div>
 
-    <div id="recognitionResult" class="recognition-result"></div>
-
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.11.0/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
-
     <script>
-        let video = document.getElementById('video');
-        let canvas = document.getElementById('canvas');
-        let ctx = canvas.getContext('2d');
-        let modelsLoaded = false;
-        let stream = null;
-        let recognitionInterval = null;
-        let isRecognizing = false;
-        let currentMode = 'capture';
+        // Elementos
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
         
+        // Variáveis
+        let stream = null;
+        let capturedImageData = null;
+        let currentUserImage = null;
+        
+        // Lista de usuários
         let users = [];
-        let capturedDescriptor = null;
 
-        // Carregar usuários
+        // Carregar usuários do localStorage
         function loadUsers() {
-            const saved = localStorage.getItem('facialUsers');
+            const saved = localStorage.getItem('face_users');
             if (saved) {
                 users = JSON.parse(saved);
                 updateUsersList();
             }
         }
 
+        // Salvar usuários no localStorage
         function saveUsers() {
-            localStorage.setItem('facialUsers', JSON.stringify(users));
+            localStorage.setItem('face_users', JSON.stringify(users));
             updateUsersList();
         }
 
+        // Atualizar lista de usuários na tela
         function updateUsersList() {
-            const container = document.getElementById('usersContainer');
+            const container = document.getElementById('usersList');
             const countSpan = document.getElementById('userCount');
             
             if (users.length === 0) {
-                container.innerHTML = '<div style="text-align: center; color: #999; font-size: 12px;">Nenhum usuário cadastrado</div>';
+                container.innerHTML = '<div class="empty-message">Nenhuma pessoa cadastrada</div>';
                 countSpan.textContent = '0';
                 return;
             }
             
             countSpan.textContent = users.length;
             container.innerHTML = users.map((user, index) => `
-                <div class="user-card">
-                    <div class="user-name">👤 ${escapeHtml(user.name)}</div>
-                    <div class="user-id">ID: ${user.id}</div>
-                    <button onclick="deleteUser(${index})">Excluir</button>
+                <div class="user-item">
+                    <div class="user-info">
+                        <div class="user-name">👤 ${escapeHtml(user.name)}</div>
+                        <div class="user-date">📅 ${user.date}</div>
+                    </div>
+                    <div class="user-actions">
+                        <img src="${user.image}" class="preview-img" alt="${user.name}">
+                        <button onclick="deleteUser(${index})">🗑️ Excluir</button>
+                    </div>
                 </div>
             `).join('');
         }
@@ -413,32 +331,29 @@
             return div.innerHTML;
         }
 
+        // Deletar usuário
         function deleteUser(index) {
-            if (confirm(`Excluir ${users[index].name}?`)) {
+            if (confirm(`Tem certeza que deseja excluir ${users[index].name}?`)) {
                 const name = users[index].name;
                 users.splice(index, 1);
                 saveUsers();
-                showStatus(`${name} removido!`, 'success');
-                if (currentMode === 'recognize' && users.length === 0) {
-                    stopAction();
-                }
+                showStatus(`✅ ${name} removido com sucesso!`, 'success');
             }
         }
 
+        // Limpar todos os usuários
         function clearAllUsers() {
-            if (confirm('⚠️ Apagar TODOS os usuários?')) {
+            if (confirm('⚠️ Isso irá apagar TODAS as pessoas cadastradas. Continuar?')) {
                 users = [];
                 saveUsers();
-                capturedDescriptor = null;
-                showStatus('Todos os usuários removidos!', 'success');
+                capturedImageData = null;
+                currentUserImage = null;
+                showStatus('🗑️ Todos os usuários foram removidos!', 'success');
                 document.getElementById('captureGroup').style.display = 'none';
-                if (currentMode === 'recognize') {
-                    stopAction();
-                }
-                updateActionButton();
             }
         }
 
+        // Mostrar mensagem de status
         function showStatus(message, type = 'info') {
             const statusDiv = document.getElementById('status');
             statusDiv.textContent = message;
@@ -447,99 +362,11 @@
             setTimeout(() => {
                 if (statusDiv.className.includes(type)) {
                     setTimeout(() => {
-                        if (!statusDiv.className.includes('error')) {
-                            statusDiv.className = 'status info';
-                            statusDiv.textContent = '✅ Sistema pronto';
-                        }
+                        statusDiv.className = 'status info';
+                        statusDiv.textContent = '✅ Sistema pronto';
                     }, 3000);
                 }
             }, 3000);
-        }
-
-        function showRecognitionResult(message, isSuccess = true) {
-            const resultDiv = document.getElementById('recognitionResult');
-            resultDiv.textContent = message;
-            resultDiv.style.display = 'block';
-            resultDiv.style.background = isSuccess ? '#d4edda' : '#f8d7da';
-            resultDiv.style.color = isSuccess ? '#155724' : '#721c24';
-            
-            setTimeout(() => {
-                resultDiv.style.display = 'none';
-            }, 2000);
-        }
-
-        // Alternar modo
-        function setMode(mode) {
-            currentMode = mode;
-            
-            document.getElementById('modeCaptureBtn').classList.toggle('active', mode === 'capture');
-            document.getElementById('modeRecognizeBtn').classList.toggle('active', mode === 'recognize');
-            
-            stopAction();
-            
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            document.getElementById('captureGroup').style.display = 'none';
-            capturedDescriptor = null;
-            
-            updateActionButton();
-            
-            if (mode === 'capture') {
-                showStatus('📸 Modo Cadastro - Capture um rosto para cadastrar', 'info');
-            } else {
-                if (users.length === 0) {
-                    showStatus('🔍 Modo Reconhecimento - Cadastre usuários primeiro', 'info');
-                } else {
-                    showStatus('🔍 Modo Reconhecimento - Clique em "Reconhecer"', 'info');
-                }
-            }
-        }
-        
-        function updateActionButton() {
-            const actionBtn = document.getElementById('actionBtn');
-            if (currentMode === 'capture') {
-                actionBtn.textContent = '📸 Capturar Face';
-                actionBtn.disabled = !modelsLoaded || !stream;
-            } else {
-                actionBtn.textContent = '🔍 Iniciar Reconhecimento';
-                actionBtn.disabled = !modelsLoaded || !stream || users.length === 0;
-            }
-        }
-        
-        function actionButtonClick() {
-            if (currentMode === 'capture') {
-                captureFace();
-            } else {
-                startRecognition();
-            }
-        }
-        
-        function stopAction() {
-            if (currentMode === 'recognize') {
-                stopRecognition();
-            } else {
-                cancelCapture();
-            }
-        }
-
-        // Carregar modelos
-        async function loadModels() {
-            const modelUrl = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
-            
-            showStatus('📥 Baixando modelos de IA...', 'info');
-            
-            try {
-                await faceapi.nets.tinyFaceDetector.loadFromUri(modelUrl);
-                await faceapi.nets.faceLandmark68Net.loadFromUri(modelUrl);
-                await faceapi.nets.faceRecognitionNet.loadFromUri(modelUrl);
-                
-                modelsLoaded = true;
-                showStatus('✅ Modelos carregados! Inicie a câmera', 'success');
-                document.getElementById('startCameraBtn').disabled = false;
-                updateActionButton();
-            } catch (error) {
-                console.error(error);
-                showStatus('❌ Erro ao carregar modelos. Verifique sua internet.', 'error');
-            }
         }
 
         // Iniciar câmera
@@ -560,7 +387,7 @@
                 
                 await video.play();
                 
-                // Aguardar o vídeo carregar completamente
+                // Aguardar vídeo carregar
                 await new Promise((resolve) => {
                     if (video.readyState >= 2) {
                         resolve();
@@ -569,71 +396,44 @@
                     }
                 });
                 
-                // Configurar canvas com as dimensões corretas
+                // Configurar canvas com as dimensões do vídeo
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
                 
-                showStatus('✅ Câmera ativada!', 'success');
+                showStatus('✅ Câmera ativada! Clique em "Capturar" para tirar uma foto', 'success');
                 document.getElementById('startCameraBtn').disabled = true;
-                updateActionButton();
-                document.getElementById('stopActionBtn').disabled = false;
+                document.getElementById('captureBtn').disabled = false;
                 
             } catch (error) {
-                console.error(error);
-                showStatus('❌ Erro ao acessar câmera. Verifique as permissões.', 'error');
+                console.error('Erro ao acessar câmera:', error);
+                showStatus('❌ Erro ao acessar a câmera. Verifique as permissões.', 'error');
             }
         }
 
-        // Capturar face (modo cadastro)
-        async function captureFace() {
-            if (!modelsLoaded) {
-                showStatus('⏳ Aguarde os modelos carregarem...', 'error');
-                return;
-            }
-            
+        // Capturar imagem da câmera
+        function captureImage() {
             if (!stream) {
-                showStatus('❌ Câmera não está ativa', 'error');
+                showStatus('❌ Câmera não está ativa. Inicie a câmera primeiro.', 'error');
                 return;
             }
-            
-            showStatus('📸 Detectando rosto... Aguarde', 'info');
             
             try {
-                // Garantir que o canvas tem o tamanho correto
-                if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                }
+                // Desenhar o frame atual do vídeo no canvas
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                 
-                // Detectar face
-                const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
-                    .withFaceLandmarks()
-                    .withFaceDescriptor();
+                // Converter para base64 (JPEG com qualidade 0.8)
+                capturedImageData = canvas.toDataURL('image/jpeg', 0.8);
+                currentUserImage = capturedImageData;
                 
-                if (detection) {
-                    capturedDescriptor = detection.descriptor;
-                    
-                    // Desenhar a detecção no canvas
-                    const displaySize = { width: canvas.width, height: canvas.height };
-                    const resizedDetection = faceapi.resizeResults(detection, displaySize);
-                    
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    faceapi.draw.drawDetections(canvas, resizedDetection);
-                    faceapi.draw.drawFaceLandmarks(canvas, resizedDetection);
-                    
-                    showStatus('✅ Face capturada! Digite o nome e salve', 'success');
-                    document.getElementById('captureGroup').style.display = 'flex';
-                    document.getElementById('userName').value = '';
-                    document.getElementById('userName').focus();
-                    document.getElementById('actionBtn').disabled = true;
-                } else {
-                    showStatus('❌ Nenhum rosto detectado. Tente novamente com boa iluminação.', 'error');
-                    // Limpar canvas se não detectou nada
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                }
+                showStatus('✅ Foto capturada! Digite o nome e clique em Salvar', 'success');
+                document.getElementById('captureGroup').style.display = 'flex';
+                document.getElementById('userName').value = '';
+                document.getElementById('userName').focus();
+                document.getElementById('captureBtn').disabled = true;
+                
             } catch (error) {
-                console.error('Erro na captura:', error);
-                showStatus('❌ Erro ao capturar face. Tente novamente.', 'error');
+                console.error('Erro ao capturar imagem:', error);
+                showStatus('❌ Erro ao capturar imagem. Tente novamente.', 'error');
             }
         }
 
@@ -642,20 +442,28 @@
             const name = document.getElementById('userName').value.trim();
             
             if (!name) {
-                showStatus('❌ Digite um nome', 'error');
+                showStatus('❌ Por favor, digite o nome da pessoa', 'error');
                 return;
             }
             
-            if (!capturedDescriptor) {
-                showStatus('❌ Capture uma face primeiro', 'error');
+            if (!capturedImageData) {
+                showStatus('❌ Nenhuma foto capturada. Capture uma imagem primeiro.', 'error');
                 return;
             }
             
+            // Verificar se já existe um usuário com este nome
+            const existingUser = users.find(u => u.name.toLowerCase() === name.toLowerCase());
+            if (existingUser) {
+                showStatus(`⚠️ Já existe uma pessoa com o nome "${name}". Use outro nome.`, 'error');
+                return;
+            }
+            
+            // Criar novo usuário
             const newUser = {
                 id: Date.now(),
                 name: name,
-                descriptor: Array.from(capturedDescriptor),
-                date: new Date().toLocaleString()
+                image: capturedImageData,
+                date: new Date().toLocaleString('pt-BR')
             };
             
             users.push(newUser);
@@ -664,140 +472,25 @@
             showStatus(`✅ ${name} cadastrado com sucesso!`, 'success');
             
             // Limpar captura
-            capturedDescriptor = null;
+            capturedImageData = null;
+            currentUserImage = null;
             document.getElementById('captureGroup').style.display = 'none';
+            document.getElementById('captureBtn').disabled = false;
             document.getElementById('userName').value = '';
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            document.getElementById('actionBtn').disabled = false;
         }
 
         function cancelCapture() {
-            capturedDescriptor = null;
+            capturedImageData = null;
+            currentUserImage = null;
             document.getElementById('captureGroup').style.display = 'none';
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            document.getElementById('actionBtn').disabled = false;
+            document.getElementById('captureBtn').disabled = false;
             showStatus('Captura cancelada', 'info');
         }
 
-        // Reconhecer face
-        async function recognizeFace() {
-            if (!modelsLoaded || users.length === 0) {
-                return null;
-            }
-            
-            try {
-                const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
-                    .withFaceLandmarks()
-                    .withFaceDescriptor();
-                
-                if (!detection) {
-                    return null;
-                }
-                
-                let bestMatch = null;
-                let bestDistance = 0.6; // Limiar de reconhecimento
-                
-                for (const user of users) {
-                    const userDescriptor = new Float32Array(user.descriptor);
-                    const distance = faceapi.euclideanDistance(detection.descriptor, userDescriptor);
-                    
-                    if (distance < bestDistance) {
-                        bestDistance = distance;
-                        bestMatch = user;
-                    }
-                }
-                
-                return bestMatch;
-            } catch (error) {
-                console.error('Erro no reconhecimento:', error);
-                return null;
-            }
-        }
-
-        // Iniciar reconhecimento contínuo
-        async function startRecognition() {
-            if (users.length === 0) {
-                showStatus('⚠️ Cadastre usuários primeiro', 'error');
-                return;
-            }
-            
-            if (isRecognizing) return;
-            
-            isRecognizing = true;
-            document.getElementById('actionBtn').disabled = true;
-            document.getElementById('stopActionBtn').disabled = false;
-            
-            showStatus('🔍 Reconhecimento ativo - Olhe para a câmera', 'info');
-            
-            async function recognizeLoop() {
-                if (!isRecognizing) return;
-                
-                try {
-                    // Garantir que o canvas tem o tamanho correto
-                    if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
-                        canvas.width = video.videoWidth;
-                        canvas.height = video.videoHeight;
-                    }
-                    
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    
-                    const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
-                        .withFaceLandmarks();
-                    
-                    if (detection) {
-                        const displaySize = { width: canvas.width, height: canvas.height };
-                        const resizedDetection = faceapi.resizeResults(detection, displaySize);
-                        
-                        faceapi.draw.drawDetections(canvas, resizedDetection);
-                        faceapi.draw.drawFaceLandmarks(canvas, resizedDetection);
-                        
-                        const recognizedUser = await recognizeFace();
-                        
-                        if (recognizedUser) {
-                            const box = resizedDetection.detection.box;
-                            ctx.font = "bold 16px Arial";
-                            ctx.fillStyle = "#00ff00";
-                            ctx.shadowBlur = 0;
-                            ctx.fillText(`✅ ${recognizedUser.name}`, box.x, box.y - 8);
-                            
-                            showRecognitionResult(`👋 Olá, ${recognizedUser.name}!`, true);
-                        } else {
-                            const box = resizedDetection.detection.box;
-                            ctx.font = "14px Arial";
-                            ctx.fillStyle = "#ff6600";
-                            ctx.fillText("❓ Desconhecido", box.x, box.y - 8);
-                        }
-                    }
-                    
-                } catch (error) {
-                    console.error('Erro no loop de reconhecimento:', error);
-                }
-                
-                if (isRecognizing) {
-                    requestAnimationFrame(recognizeLoop);
-                }
-            }
-            
-            recognizeLoop();
-        }
-
-        // Parar reconhecimento
-        function stopRecognition() {
-            isRecognizing = false;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            document.getElementById('actionBtn').disabled = false;
-            document.getElementById('stopActionBtn').disabled = true;
-            showStatus('✅ Reconhecimento finalizado', 'success');
-        }
-
         // Inicializar
-        async function init() {
-            document.getElementById('startCameraBtn').disabled = true;
-            document.getElementById('actionBtn').disabled = true;
-            document.getElementById('stopActionBtn').disabled = true;
-            
+        function init() {
             loadUsers();
-            await loadModels();
+            showStatus('👆 Clique em "Iniciar Câmera" para começar', 'info');
         }
         
         init();
