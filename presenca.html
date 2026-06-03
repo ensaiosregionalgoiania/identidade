@@ -46,10 +46,22 @@
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e0e0e0; }
         thead { background: #2c3e50; color: white; }
         tr:hover { background: #f8f9fa; }
+        tr.lido-sem-permissao { background: #ffe0b3; }
+        tr.lido-sem-permissao:hover { background: #ffd699; }
         
         .status-presente { background: #27ae60; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; display: inline-block; }
         .status-ausente { background: #e74c3c; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; display: inline-block; }
-        .status-nao-autorizado { background: #f39c12; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; display: inline-block; }
+        .status-lido-sem-permissao { background: #f39c12; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; display: inline-block; }
+        
+        .badge-lido {
+            background: #f39c12;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.65rem;
+            margin-left: 8px;
+            display: inline-block;
+        }
         
         .btn-toggle-presente { background: #27ae60; padding: 6px 12px; font-size: 0.8rem; border: none; border-radius: 6px; cursor: pointer; color: white; }
         .btn-toggle-presente:hover { background: #219a52; }
@@ -62,6 +74,7 @@
         .stat-card:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
         .stat-number { font-size: 2rem; font-weight: bold; }
         .stat-label { font-size: 0.8rem; color: #7f8c8d; }
+        .stat-card.active { background: #e3f2fd; border: 2px solid #3498db; }
         
         .search-box { width: 100%; padding: 10px; margin-bottom: 20px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; }
         
@@ -151,13 +164,20 @@
         .btn-cancelar { background: #95a5a6; color: white; }
         .btn-cancelar:hover { background: #7f8c8d; }
         
-        .badge-nao-autorizado {
-            background: #f39c12;
-            color: white;
+        .evento-status-badge {
+            display: inline-block;
             padding: 2px 8px;
             border-radius: 12px;
             font-size: 0.7rem;
             margin-left: 8px;
+            font-weight: normal;
+        }
+        .evento-hoje { background: #27ae60; color: white; }
+        .evento-passado { background: #e74c3c; color: white; }
+        .evento-futuro { background: #3498db; color: white; }
+        
+        option {
+            padding: 8px;
         }
     </style>
 </head>
@@ -174,7 +194,7 @@
 
         <div class="card">
             <div class="card-header">
-                <h2>📅 Selecionar Evento (Hoje)</h2>
+                <h2>📅 Selecionar Evento</h2>
             </div>
             <div class="form-group">
                 <label>Evento:</label>
@@ -207,20 +227,24 @@
 
         <div id="presencaCard" class="card" style="display: none;">
             <div class="card-header">
-                <h2>📋 Lista de Membros Autorizados</h2>
+                <h2>📋 Lista de Membros</h2>
             </div>
             <div class="stats">
-                <div class="stat-card" onclick="filtrarPorStatus('todos')">
+                <div class="stat-card" data-status="todos" onclick="filtrarPorStatus('todos')">
                     <div class="stat-number" id="totalMembros">0</div>
-                    <div class="stat-label">Total</div>
+                    <div class="stat-label">Total na Lista</div>
                 </div>
-                <div class="stat-card" onclick="filtrarPorStatus('presentes')">
+                <div class="stat-card" data-status="presentes" onclick="filtrarPorStatus('presentes')">
                     <div class="stat-number" id="totalPresentes">0</div>
                     <div class="stat-label">Presentes</div>
                 </div>
-                <div class="stat-card" onclick="filtrarPorStatus('ausentes')">
+                <div class="stat-card" data-status="ausentes" onclick="filtrarPorStatus('ausentes')">
                     <div class="stat-number" id="totalAusentes">0</div>
                     <div class="stat-label">Ausentes</div>
+                </div>
+                <div class="stat-card" data-status="lidos_sem_permissao" onclick="filtrarPorStatus('lidos_sem_permissao')">
+                    <div class="stat-number" id="totalLidosSemPermissao">0</div>
+                    <div class="stat-label">📷 Lidos sem Permissão</div>
                 </div>
             </div>
             <input type="text" id="buscaMembros" class="search-box" placeholder="🔍 Buscar por nome..." onkeyup="filtrarMembros()">
@@ -305,6 +329,12 @@
             return 'futuro';
         }
 
+        function getStatusEventoTexto(status) {
+            if (status === 'hoje') return '🟢 HOJE';
+            if (status === 'passado') return '🔒 ENCERRADO';
+            return '🔮 FUTURO';
+        }
+
         function getNome(lista, id, tipo) {
             const item = lista.find(i => String(i.id) === String(id));
             return item ? item.nome : `${tipo} ${id}`;
@@ -347,14 +377,13 @@
         }
 
         async function carregarEventos() {
-            const hoje = getDataHojeLocal();
-            const snapshot = await eventosCollection.where('data', '==', hoje).orderBy('data', 'desc').get();
+            const snapshot = await eventosCollection.orderBy('data', 'desc').get();
             eventos = [];
             
             for (const doc of snapshot.docs) {
                 const data = doc.data();
-                const tipoEvento = tiposEvento.find(t => t.id === data.tipoEventoId);
-                const congregacao = congregacoes.find(c => c.id === data.congregacaoId);
+                const tipoEvento = tiposEvento.find(t => String(t.id) === String(data.tipoEventoId));
+                const congregacao = congregacoes.find(c => String(c.id) === String(data.congregacaoId));
                 
                 eventos.push({
                     id: doc.id,
@@ -367,6 +396,7 @@
             }
             
             renderizarSelectEventos();
+            console.log(`📋 ${eventos.length} eventos carregados`);
         }
 
         function renderizarSelectEventos() {
@@ -375,7 +405,16 @@
             
             for (const evento of eventos) {
                 const dataFormatada = new Date(evento.data).toLocaleDateString('pt-BR');
-                select.innerHTML += `<option value="${evento.id}">${dataFormatada} - ${evento.tipoEventoNome} - ${evento.congregacaoNome}</option>`;
+                const status = compararDatas(evento.data);
+                const statusTexto = getStatusEventoTexto(status);
+                
+                const option = document.createElement('option');
+                option.value = evento.id;
+                option.innerHTML = `${statusTexto} ${dataFormatada} - ${evento.tipoEventoNome} - ${evento.congregacaoNome}`;
+                option.style.padding = '8px';
+                option.style.borderLeft = `4px solid ${status === 'hoje' ? '#27ae60' : (status === 'passado' ? '#e74c3c' : '#3498db')}`;
+                
+                select.appendChild(option);
             }
         }
 
@@ -399,17 +438,12 @@
             );
         }
 
-        function filtrarMembrosAutorizados() {
-            membrosAutorizados = todosMembros.filter(m => isMembroAutorizado(m));
-            return membrosAutorizados;
-        }
-
         async function verificarPresencasEvento(eventoId) {
             const snapshot = await presencasCollection.where('eventoId', '==', eventoId).get();
             const presentes = {};
             snapshot.forEach(doc => {
                 const data = doc.data();
-                presentes[data.membroId] = doc.id;
+                presentes[data.membroId] = { docId: doc.id, naoAutorizado: data.naoAutorizado || false };
             });
             return presentes;
         }
@@ -460,73 +494,136 @@
             const statusEvento = compararDatas(eventoSelecionado.data);
             const podeAlterarHoje = statusEvento === 'hoje';
             
-            // Buscar também presenças de não autorizados
-            const todosPresentes = { ...presentesMap };
+            // Filtrar membros que devem aparecer na lista:
+            // 1. Membros autorizados (todos)
+            // 2. Membros NÃO autorizados que foram lidos (presentesMap tem eles)
+            const membrosParaExibir = [];
+            const membrosLidosSemPermissao = [];
             
-            let filtrados = [...membrosAutorizados];
-            if (statusFiltro === 'presentes') filtrados = filtrados.filter(m => presentesMap[m.id]);
-            if (statusFiltro === 'ausentes') filtrados = filtrados.filter(m => !presentesMap[m.id]);
-            if (buscaFiltro) filtrados = filtrados.filter(m => m.nome.toLowerCase().includes(buscaFiltro));
+            for (const membro of todosMembros) {
+                const isAutorizado = isMembroAutorizado(membro);
+                const foiLido = !!presentesMap[membro.id];
+                
+                if (isAutorizado) {
+                    membrosParaExibir.push(membro);
+                } else if (foiLido) {
+                    membrosParaExibir.push(membro);
+                    membrosLidosSemPermissao.push(membro);
+                }
+            }
             
-            document.getElementById('totalMembros').textContent = membrosAutorizados.length;
-            document.getElementById('totalPresentes').textContent = Object.keys(presentesMap).length;
-            document.getElementById('totalAusentes').textContent = membrosAutorizados.length - Object.keys(presentesMap).length;
+            // Totais
+            const totalNaLista = membrosParaExibir.length;
+            let totalPresentes = 0;
+            let totalAusentes = 0;
+            
+            for (const m of membrosParaExibir) {
+                if (presentesMap[m.id]) totalPresentes++;
+                else totalAusentes++;
+            }
+            
+            document.getElementById('totalMembros').textContent = totalNaLista;
+            document.getElementById('totalPresentes').textContent = totalPresentes;
+            document.getElementById('totalAusentes').textContent = totalAusentes;
+            document.getElementById('totalLidosSemPermissao').textContent = membrosLidosSemPermissao.length;
+            
+            // Destacar card ativo
+            document.querySelectorAll('.stat-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            const activeCard = document.querySelector(`.stat-card[data-status="${statusFiltro}"]`);
+            if (activeCard) activeCard.classList.add('active');
+            
+            // Filtrar por status selecionado
+            let listaFinal = [...membrosParaExibir];
+            
+            if (statusFiltro === 'presentes') {
+                listaFinal = listaFinal.filter(m => presentesMap[m.id]);
+            } else if (statusFiltro === 'ausentes') {
+                listaFinal = listaFinal.filter(m => !presentesMap[m.id]);
+            } else if (statusFiltro === 'lidos_sem_permissao') {
+                listaFinal = [...membrosLidosSemPermissao];
+            }
+            
+            if (buscaFiltro) {
+                listaFinal = listaFinal.filter(m => m.nome.toLowerCase().includes(buscaFiltro));
+            }
             
             const tbody = document.getElementById('corpoTabela');
-            if (filtrados.length === 0 && Object.keys(todosPresentes).length === 0) {
+            if (listaFinal.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" class="loading">Nenhum membro encontrado</td></tr>';
                 return;
             }
             
             let html = '';
-            
-            // Membros autorizados
-            for (const m of filtrados) {
+            for (const m of listaFinal) {
                 const estaPresente = !!presentesMap[m.id];
-                const presencaDocId = presentesMap[m.id] || '';
+                const presencaInfo = presentesMap[m.id];
+                const isAutorizado = isMembroAutorizado(m);
+                const foiLidoSemPermissao = !isAutorizado && estaPresente;
                 
+                const linhaClasse = foiLidoSemPermissao ? 'lido-sem-permissao' : '';
+                
+                const instrumentoNome = getNome(instrumentos, m.instrumentoId, 'Inst');
+                const cargoNome = getNome(cargos, m.cargoId, 'Cargo');
+                const nivelNome = getNome(niveis, m.nivelId, 'Nível');
+                
+                let statusHtml = '';
+                if (estaPresente) {
+                    if (foiLidoSemPermissao) {
+                        statusHtml = '<span class="status-lido-sem-permissao">⚠️ Presente (Lido sem Permissão)</span>';
+                    } else {
+                        statusHtml = '<span class="status-presente">✅ Presente</span>';
+                    }
+                } else {
+                    statusHtml = '<span class="status-ausente">❌ Ausente</span>';
+                }
+                
+                let botoesHtml = '';
                 if (podeAlterarHoje) {
-                    const botaoTexto = estaPresente ? '❌ Marcar Ausente' : '✅ Marcar Presente';
-                    const botaoClasse = estaPresente ? 'btn-toggle-ausente' : 'btn-toggle-presente';
-                    html += `<tr>
-                        <td><strong>${m.nome}</strong></td>
-                        <td>${getNome(instrumentos, m.instrumentoId, 'Inst')}</td>
-                        <td>${getNome(cargos, m.cargoId, 'Cargo')}</td>
-                        <td>${getNome(niveis, m.nivelId, 'Nível')}</td>
-                        <td>${estaPresente ? '<span class="status-presente">✅ Presente</span>' : '<span class="status-ausente">❌ Ausente</span>'}</td>
-                        <td><button class="${botaoClasse}" onclick="alternarPresenca('${m.id}', '${m.nome}', ${estaPresente}, '${presencaDocId}')">${botaoTexto}</button></td>
-                    </tr>`;
+                    if (estaPresente) {
+                        botoesHtml = `<button class="btn-toggle-ausente" onclick="removerPresenca('${m.id}', '${m.nome}', '${presencaInfo.docId}')">❌ Remover</button>`;
+                    } else {
+                        botoesHtml = `<button class="btn-toggle-presente" onclick="registrarPresenca('${m.id}', '${m.nome}', false)">✅ Marcar</button>`;
+                    }
                 } else {
                     const mensagemTooltip = statusEvento === 'passado' ? 'Evento encerrado' : 'Evento futuro';
-                    html += `<tr>
-                        <td><strong>${m.nome}</strong></td>
-                        <td>${getNome(instrumentos, m.instrumentoId, 'Inst')}</td>
-                        <td>${getNome(cargos, m.cargoId, 'Cargo')}</td>
-                        <td>${getNome(niveis, m.nivelId, 'Nível')}</td>
-                        <td>${estaPresente ? '<span class="status-presente">✅ Presente</span>' : '<span class="status-ausente">❌ Ausente</span>'}</td>
-                        <td><button class="btn-desabilitado" disabled title="${mensagemTooltip}">🔒 ${mensagemTooltip}</button></td>
-                    </tr>`;
+                    botoesHtml = `<button class="btn-desabilitado" disabled title="${mensagemTooltip}">🔒 ${mensagemTooltip}</button>`;
                 }
+                
+                const badgeLido = foiLidoSemPermissao ? '<span class="badge-lido">📷 Lido sem permissão</span>' : '';
+                
+                html += `<tr class="${linhaClasse}">
+                    <td><strong>${m.nome}</strong> ${badgeLido}</td>
+                    <td>${instrumentoNome}</td>
+                    <td>${cargoNome}</td>
+                    <td>${nivelNome}</td>
+                    <td>${statusHtml}</td>
+                    <td>${botoesHtml}</td>
+                </tr>`;
             }
-            
             tbody.innerHTML = html;
         }
 
-        window.alternarPresenca = async function(membroId, membroNome, estaPresente, presencaDocId) {
+        window.registrarPresenca = async function(membroId, membroNome, naoAutorizado) {
+            await registrarPresenca(membroId, membroNome, naoAutorizado);
+        };
+        
+        window.removerPresenca = async function(membroId, membroNome, presencaDocId) {
             const statusEvento = compararDatas(eventoSelecionado.data);
             
             if (statusEvento !== 'hoje') {
-                const mensagem = statusEvento === 'passado' ? 'Evento encerrado! Não é possível alterar presença.' : 'Evento futuro! Operação não permitida.';
+                const mensagem = statusEvento === 'passado' ? 'Evento encerrado! Não é possível remover presença.' : 'Evento futuro! Operação não permitida.';
                 mostrarToast(`⚠️ ${mensagem}`, 'error');
                 return;
             }
             
-            if (estaPresente) {
+            try {
                 await presencasCollection.doc(presencaDocId).delete();
                 mostrarToast(`✅ Presença removida: ${membroNome}`);
                 renderizarListaMembros();
-            } else {
-                await registrarPresenca(membroId, membroNome, false);
+            } catch(error) {
+                mostrarToast('❌ Erro: ' + error.message, 'error');
             }
         };
 
@@ -546,7 +643,6 @@
             
             if (eventoSelecionado) {
                 await buscarPermissoes(eventoSelecionado.tipoEventoId);
-                filtrarMembrosAutorizados();
                 
                 const statusEvento = compararDatas(eventoSelecionado.data);
                 const dataFormatada = new Date(eventoSelecionado.data).toLocaleDateString('pt-BR');
@@ -580,9 +676,11 @@
                 const btnIniciarLeitor = document.getElementById('btnIniciarLeitor');
                 if (statusEvento !== 'hoje') {
                     btnIniciarLeitor.disabled = true;
+                    btnIniciarLeitor.title = statusEvento === 'passado' ? 'Evento encerrado' : 'Evento futuro';
                     atualizarStatusLeitor(`⛔ ${statusEvento === 'passado' ? 'Evento encerrado' : 'Evento futuro'} - Leitura não permitida`, 'warning');
                 } else {
                     btnIniciarLeitor.disabled = false;
+                    btnIniciarLeitor.title = '';
                     atualizarStatusLeitor('✅ Evento ativo - Leitor disponível', 'success');
                 }
                 
@@ -648,16 +746,17 @@
         }
 
         async function iniciarLeitor() {
+            if (!eventoSelecionado) {
+                mostrarToast('⚠️ Selecione um evento primeiro!', 'warning');
+                return;
+            }
+            
             const statusEvento = compararDatas(eventoSelecionado.data);
             
             if (statusEvento !== 'hoje') {
                 const mensagem = statusEvento === 'passado' ? 'Evento encerrado! Não é possível fazer leitura.' : 'Evento futuro! Operação não permitida.';
                 mostrarToast(`⚠️ ${mensagem}`, 'error');
-                return;
-            }
-            
-            if (!eventoSelecionado) {
-                mostrarToast('⚠️ Selecione um evento primeiro!', 'warning');
+                atualizarStatusLeitor(`⛔ ${mensagem}`, 'warning');
                 return;
             }
             
@@ -702,6 +801,11 @@
         }
 
         function processarQRCode(decodedText) {
+            if (!eventoSelecionado) {
+                atualizarStatusLeitor('❌ Nenhum evento selecionado', 'error');
+                return;
+            }
+            
             const statusEvento = compararDatas(eventoSelecionado.data);
             
             if (statusEvento !== 'hoje') {
@@ -720,7 +824,6 @@
                     return;
                 }
                 
-                // Buscar o membro em todos os membros (não apenas autorizados)
                 const membro = todosMembros.find(m => String(m.nomeId) === String(membroId) || String(m.id) === String(membroId));
                 
                 if (!membro) {
@@ -728,7 +831,6 @@
                     return;
                 }
                 
-                // Verificar se é autorizado
                 const isAutorizado = isMembroAutorizado(membro);
                 
                 if (!isAutorizado) {

@@ -35,7 +35,7 @@
         .btn-presenca { background: #9b59b6; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; }
         
         .card { background: white; border-radius: 20px; padding: 25px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-        .card-header { border-bottom: 2px solid #e0e0e0; margin-bottom: 20px; padding-bottom: 10px; }
+        .card-header { border-bottom: 2px solid #e0e0e0; margin-bottom: 20px; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
         .card-header h2 { color: #2c3e50; }
         
         .form-group { margin-bottom: 15px; }
@@ -46,6 +46,8 @@
         button:hover { background: #219a52; }
         .btn-danger { background: #e74c3c; }
         .btn-danger:hover { background: #c0392b; }
+        .btn-editar { background: #3498db; }
+        .btn-editar:hover { background: #2980b9; }
         
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
         .modal-content { background: white; border-radius: 15px; padding: 25px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
@@ -55,6 +57,7 @@
         .select-multiplo { width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; min-height: 100px; }
         
         .toast { position: fixed; bottom: 20px; right: 20px; background: #27ae60; color: white; padding: 12px 24px; border-radius: 8px; z-index: 1000; animation: fadeIn 0.3s ease; }
+        .toast.error { background: #e74c3c; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         
         .evento-item { background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 10px; transition: all 0.3s ease; }
@@ -75,6 +78,11 @@
         .lista-eventos { max-height: 500px; overflow-y: auto; }
         
         .loading { text-align: center; padding: 20px; color: #999; }
+        
+        .tipo-botoes { display: flex; gap: 10px; margin-top: 10px; }
+        .tipo-botoes button { margin-top: 0; padding: 5px 10px; font-size: 0.85rem; }
+        
+        .permissao-item { margin: 5px 0; padding: 5px; background: #f0f0f0; border-radius: 5px; display: inline-block; margin-right: 5px; font-size: 0.85rem; }
     </style>
 </head>
 <body>
@@ -146,10 +154,10 @@
         </div>
     </div>
 
-    <!-- Modal para adicionar novo tipo de evento (COM CHECKBOXES) -->
+    <!-- Modal para adicionar/editar tipo de evento -->
     <div id="modalNovoTipo" class="modal">
         <div class="modal-content" style="max-width: 500px;">
-            <h3>➕ Novo Tipo de Evento</h3>
+            <h3 id="modalTitulo">➕ Novo Tipo de Evento</h3>
             
             <div class="form-group">
                 <label>Nome do Tipo de Evento *</label>
@@ -174,13 +182,26 @@
             
             <div class="modal-buttons">
                 <button onclick="fecharModalNovoTipo()" style="background:#95a5a6;">Cancelar</button>
-                <button onclick="salvarNovoTipo()">Salvar</button>
+                <button id="btnSalvarTipo" onclick="salvarNovoTipo()">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de confirmação de exclusão -->
+    <div id="modalExcluir" class="modal">
+        <div class="modal-content">
+            <h3>⚠️ Confirmar Exclusão</h3>
+            <p>Tem certeza que deseja excluir este tipo de evento?</p>
+            <p><strong id="excluirNome"></strong></p>
+            <p style="color: #e74c3c; font-size: 0.9rem;">Esta ação não poderá ser desfeita!</p>
+            <div class="modal-buttons">
+                <button onclick="fecharModalExcluir()" style="background:#95a5a6;">Cancelar</button>
+                <button onclick="confirmarExcluir()" style="background:#e74c3c;">Excluir</button>
             </div>
         </div>
     </div>
 
     <script>
-        // Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyA4COgeJSENsHrQHDx39gpZvif3zVrGjYE",
             authDomain: "identidadeccb.firebaseapp.com",
@@ -193,7 +214,6 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // Coleções
         const eventosCollection = db.collection("eventos");
         const tiposEventoCollection = db.collection("tipos_evento");
         const permissoesCollection = db.collection("permissoes_evento");
@@ -201,53 +221,46 @@
         const cargosCollection = db.collection("cargos");
         const niveisCollection = db.collection("niveis");
 
-        // Variáveis globais
         let congregacoes = [];
         let tiposEvento = [];
         let cargos = [];
         let niveis = [];
+        let tipoEditandoId = null;
+        let excluirId = null;
 
-        function mostrarToast(msg) {
+        function mostrarToast(msg, tipo = 'success') {
             const toast = document.createElement('div');
-            toast.className = 'toast';
+            toast.className = `toast ${tipo === 'error' ? 'error' : ''}`;
             toast.textContent = msg;
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
         }
 
-        // Carregar dados
         async function carregarDados() {
-            // Congregações
             const congSnapshot = await congregacoesCollection.orderBy('nome').get();
             congregacoes = [];
             congSnapshot.forEach(doc => congregacoes.push({ id: doc.id, nome: doc.data().nome }));
 
-            // Tipos de Evento
             const tipoSnapshot = await tiposEventoCollection.orderBy('nome').get();
             tiposEvento = [];
             tipoSnapshot.forEach(doc => tiposEvento.push({ id: doc.id, nome: doc.data().nome }));
 
-            // Cargos
             const cargoSnapshot = await cargosCollection.orderBy('nome').get();
             cargos = [];
             cargoSnapshot.forEach(doc => cargos.push({ id: doc.id, nome: doc.data().nome }));
 
-            // Níveis
             const nivelSnapshot = await niveisCollection.orderBy('nome').get();
             niveis = [];
             nivelSnapshot.forEach(doc => niveis.push({ id: doc.id, nome: doc.data().nome }));
         }
 
-        // Renderizar selects
         function renderizarSelects() {
-            // Congregações
             const congSelect = document.getElementById('congregacaoSelect');
             congSelect.innerHTML = '<option value="">Selecione...</option>';
             congregacoes.forEach(c => {
                 congSelect.innerHTML += `<option value="${c.id}">${c.nome}</option>`;
             });
 
-            // Tipos de Evento
             const tipoSelect = document.getElementById('tipoEventoSelect');
             tipoSelect.innerHTML = '<option value="">Selecione...</option>';
             tiposEvento.forEach(t => {
@@ -256,7 +269,6 @@
             tipoSelect.innerHTML += '<option value="__NOVO__" style="color: #27ae60; font-weight: bold;">➕ Novo Tipo de Evento</option>';
         }
 
-        // Configurar select para novo tipo
         function configurarSelectNovoTipo() {
             document.getElementById('tipoEventoSelect').addEventListener('change', function(e) {
                 if (this.value === '__NOVO__') {
@@ -266,8 +278,7 @@
             });
         }
 
-        function carregarSelectsModal() {
-            // Carregar checkboxes de cargos
+        function carregarSelectsModal(cargosSelecionados = [], niveisSelecionados = []) {
             const cargosContainer = document.getElementById('cargosCheckboxContainer');
             cargosContainer.innerHTML = '';
             cargos.forEach(c => {
@@ -281,6 +292,7 @@
                 checkbox.type = 'checkbox';
                 checkbox.id = `cargo_${c.id}`;
                 checkbox.value = c.id;
+                checkbox.checked = cargosSelecionados.includes(c.id);
                 checkbox.style.width = '18px';
                 checkbox.style.height = '18px';
                 checkbox.style.cursor = 'pointer';
@@ -296,7 +308,6 @@
                 cargosContainer.appendChild(checkboxDiv);
             });
 
-            // Carregar checkboxes de níveis
             const niveisContainer = document.getElementById('niveisCheckboxContainer');
             niveisContainer.innerHTML = '';
             niveis.forEach(n => {
@@ -310,6 +321,7 @@
                 checkbox.type = 'checkbox';
                 checkbox.id = `nivel_${n.id}`;
                 checkbox.value = n.id;
+                checkbox.checked = niveisSelecionados.includes(n.id);
                 checkbox.style.width = '18px';
                 checkbox.style.height = '18px';
                 checkbox.style.cursor = 'pointer';
@@ -327,23 +339,49 @@
         }
 
         function abrirModalNovoTipo() {
+            tipoEditandoId = null;
+            document.getElementById('modalTitulo').textContent = '➕ Novo Tipo de Evento';
             document.getElementById('novoTipoNome').value = '';
             carregarSelectsModal();
             document.getElementById('modalNovoTipo').style.display = 'flex';
         }
 
+        async function abrirModalEditarTipo(id, nome) {
+            tipoEditandoId = id;
+            document.getElementById('modalTitulo').textContent = '✏️ Editar Tipo de Evento';
+            document.getElementById('novoTipoNome').value = nome;
+            
+            // Buscar permissões existentes
+            const permissoesSnapshot = await permissoesCollection.where('tipoEventoId', '==', id).get();
+            const cargosSelecionados = [];
+            const niveisSelecionados = [];
+            
+            permissoesSnapshot.forEach(doc => {
+                const permissao = doc.data();
+                if (!cargosSelecionados.includes(permissao.cargoId)) {
+                    cargosSelecionados.push(permissao.cargoId);
+                }
+                if (!niveisSelecionados.includes(permissao.nivelId)) {
+                    niveisSelecionados.push(permissao.nivelId);
+                }
+            });
+            
+            carregarSelectsModal(cargosSelecionados, niveisSelecionados);
+            document.getElementById('modalNovoTipo').style.display = 'flex';
+        }
+
         function fecharModalNovoTipo() {
             document.getElementById('modalNovoTipo').style.display = 'none';
+            tipoEditandoId = null;
         }
 
         async function salvarNovoTipo() {
             const nome = document.getElementById('novoTipoNome').value.trim();
             if (!nome) {
-                mostrarToast('Digite o nome do tipo de evento');
+                mostrarToast('Digite o nome do tipo de evento', 'error');
                 return;
             }
 
-            // Pegar cargos selecionados
             const cargosSelecionados = [];
             const cargosCheckboxes = document.querySelectorAll('#cargosCheckboxContainer input[type="checkbox"]');
             cargosCheckboxes.forEach(cb => {
@@ -352,7 +390,6 @@
                 }
             });
 
-            // Pegar níveis selecionados
             const niveisSelecionados = [];
             const niveisCheckboxes = document.querySelectorAll('#niveisCheckboxContainer input[type="checkbox"]');
             niveisCheckboxes.forEach(cb => {
@@ -362,41 +399,65 @@
             });
 
             if (cargosSelecionados.length === 0 || niveisSelecionados.length === 0) {
-                mostrarToast('Selecione pelo menos um cargo e um nível');
+                mostrarToast('Selecione pelo menos um cargo e um nível', 'error');
                 return;
             }
 
             try {
-                // 1. Salvar na coleção tipos_evento
-                const tipoRef = await tiposEventoCollection.add({
-                    nome: nome,
-                    criadoEm: new Date().toISOString()
-                });
-
-                // 2. Salvar permissões para cada combinação cargo + nivel
-                for (const cargoId of cargosSelecionados) {
-                    for (const nivelId of niveisSelecionados) {
-                        await permissoesCollection.add({
-                            tipoEventoId: tipoRef.id,
-                            cargoId: cargoId,
-                            nivelId: nivelId
-                        });
+                if (tipoEditandoId) {
+                    // Atualizar nome
+                    await tiposEventoCollection.doc(tipoEditandoId).update({
+                        nome: nome,
+                        atualizadoEm: new Date().toISOString()
+                    });
+                    
+                    // Remover permissões antigas
+                    const permissoesAntigas = await permissoesCollection.where('tipoEventoId', '==', tipoEditandoId).get();
+                    for (const doc of permissoesAntigas.docs) {
+                        await doc.ref.delete();
                     }
-                }
+                    
+                    // Adicionar novas permissões
+                    for (const cargoId of cargosSelecionados) {
+                        for (const nivelId of niveisSelecionados) {
+                            await permissoesCollection.add({
+                                tipoEventoId: tipoEditandoId,
+                                cargoId: cargoId,
+                                nivelId: nivelId
+                            });
+                        }
+                    }
+                    
+                    mostrarToast(`✅ Tipo "${nome}" atualizado com sucesso!`);
+                } else {
+                    const tipoRef = await tiposEventoCollection.add({
+                        nome: nome,
+                        criadoEm: new Date().toISOString()
+                    });
 
-                mostrarToast(`✅ Tipo "${nome}" adicionado com sucesso!`);
-                fecharModalNovoTipo();
+                    for (const cargoId of cargosSelecionados) {
+                        for (const nivelId of niveisSelecionados) {
+                            await permissoesCollection.add({
+                                tipoEventoId: tipoRef.id,
+                                cargoId: cargoId,
+                                nivelId: nivelId
+                            });
+                        }
+                    }
+                    
+                    mostrarToast(`✅ Tipo "${nome}" adicionado com sucesso!`);
+                }
                 
-                // Recarregar dados
+                fecharModalNovoTipo();
                 await carregarDados();
                 renderizarSelects();
                 carregarListaTiposEvento();
                 
             } catch(error) {
-                mostrarToast('❌ Erro: ' + error.message);
+                mostrarToast('❌ Erro: ' + error.message, 'error');
             }
         }
-        // Salvar evento
+
         document.getElementById('formEvento').addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -405,12 +466,11 @@
             const tipoEventoId = document.getElementById('tipoEventoSelect').value;
             
             if (!data || !congregacaoId || !tipoEventoId) {
-                mostrarToast('Preencha todos os campos!');
+                mostrarToast('Preencha todos os campos!', 'error');
                 return;
             }
             
             try {
-                // Salvar evento APENAS com os IDs (sem campos de nome duplicados)
                 await eventosCollection.add({
                     data: data,
                     congregacaoId: congregacaoId,
@@ -421,16 +481,13 @@
                 mostrarToast('✅ Evento cadastrado com sucesso!');
                 document.getElementById('formEvento').reset();
                 document.getElementById('dataEvento').valueAsDate = new Date();
-                
-                // Recarregar lista de eventos
                 carregarListaEventos();
                 
             } catch(error) {
-                mostrarToast('❌ Erro: ' + error.message);
+                mostrarToast('❌ Erro: ' + error.message, 'error');
             }
         });
 
-        // Carregar lista de eventos (buscando os nomes pelas referências)
         async function carregarListaEventos() {
             const container = document.getElementById('listaEventos');
             container.innerHTML = '<div class="loading">Carregando eventos...</div>';
@@ -448,11 +505,9 @@
                     const evento = { id: doc.id, ...doc.data() };
                     const dataFormatada = new Date(evento.data).toLocaleDateString('pt-BR');
                     
-                    // Buscar nome da congregação pelo ID
                     const congregacao = congregacoes.find(c => c.id === evento.congregacaoId);
                     const congregacaoNome = congregacao ? congregacao.nome : 'Desconhecida';
                     
-                    // Buscar nome do tipo de evento
                     const tipoEvento = tiposEvento.find(t => t.id === evento.tipoEventoId);
                     const tipoEventoNome = tipoEvento ? tipoEvento.nome : 'Desconhecido';
                     
@@ -470,7 +525,6 @@
             }
         }
 
-        // Carregar lista de tipos de evento com suas permissões
         async function carregarListaTiposEvento() {
             const container = document.getElementById('listaTiposEvento');
             container.innerHTML = '<div class="loading">Carregando tipos de evento...</div>';
@@ -487,10 +541,8 @@
                 for (const doc of snapshot.docs) {
                     const tipo = { id: doc.id, ...doc.data() };
                     
-                    // Buscar permissões para este tipo de evento
                     const permissoesSnapshot = await permissoesCollection.where('tipoEventoId', '==', tipo.id).get();
                     
-                    // Buscar nomes dos cargos e níveis
                     let cargosPermitidos = [];
                     let niveisPermitidos = [];
                     
@@ -510,14 +562,67 @@
                     html += `
                         <div class="evento-item">
                             <div class="evento-data">🎯 ${tipo.nome}</div>
-                            <div class="evento-nome">📋 Cargos: ${cargosPermitidos.join(', ') || 'Todos'}</div>
-                            <div class="evento-nome">📊 Níveis: ${niveisPermitidos.join(', ') || 'Todos'}</div>
+                            <div class="evento-nome">
+                                📋 Cargos: ${cargosPermitidos.map(c => `<span class="permissao-item">${c}</span>`).join('') || 'Todos'}
+                            </div>
+                            <div class="evento-nome">
+                                📊 Níveis: ${niveisPermitidos.map(n => `<span class="permissao-item">${n}</span>`).join('') || 'Todos'}
+                            </div>
+                            <div class="tipo-botoes">
+                                <button class="btn-editar" onclick="abrirModalEditarTipo('${tipo.id}', '${tipo.nome.replace(/'/g, "\\'")}')">✏️ Editar</button>
+                                <button class="btn-danger" onclick="abrirModalExcluirTipo('${tipo.id}', '${tipo.nome.replace(/'/g, "\\'")}')">🗑️ Excluir</button>
+                            </div>
                         </div>
                     `;
                 }
                 container.innerHTML = html;
             } catch(error) {
                 container.innerHTML = `<div class="loading">❌ Erro: ${error.message}</div>`;
+            }
+        }
+
+        function abrirModalExcluirTipo(id, nome) {
+            excluirId = id;
+            document.getElementById('excluirNome').textContent = nome;
+            document.getElementById('modalExcluir').style.display = 'flex';
+        }
+
+        function fecharModalExcluir() {
+            excluirId = null;
+            document.getElementById('modalExcluir').style.display = 'none';
+        }
+
+        async function confirmarExcluir() {
+            if (!excluirId) return;
+            
+            try {
+                // Verificar se existem eventos usando este tipo
+                const eventosComTipo = await eventosCollection.where('tipoEventoId', '==', excluirId).get();
+                
+                if (!eventosComTipo.empty) {
+                    mostrarToast(`❌ Não é possível excluir: existem ${eventosComTipo.size} eventos usando este tipo!`, 'error');
+                    fecharModalExcluir();
+                    return;
+                }
+                
+                // Remover permissões
+                const permissoes = await permissoesCollection.where('tipoEventoId', '==', excluirId).get();
+                for (const doc of permissoes.docs) {
+                    await doc.ref.delete();
+                }
+                
+                // Remover o tipo
+                await tiposEventoCollection.doc(excluirId).delete();
+                
+                mostrarToast('✅ Tipo de evento excluído com sucesso!');
+                fecharModalExcluir();
+                
+                await carregarDados();
+                renderizarSelects();
+                carregarListaTiposEvento();
+                
+            } catch(error) {
+                mostrarToast('❌ Erro ao excluir: ' + error.message, 'error');
             }
         }
 
@@ -540,7 +645,6 @@
             }
         }
 
-        // Inicialização
         async function init() {
             await carregarDados();
             renderizarSelects();

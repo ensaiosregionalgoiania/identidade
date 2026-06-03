@@ -1,4 +1,4 @@
-// firebase-config.js
+// Configuração do Firebase
 const firebaseConfig = {
     apiKey: "AIzaSyA4COgeJSENsHrQHDx39gpZvif3zVrGjYE",
     authDomain: "identidadeccb.firebaseapp.com",
@@ -10,4 +10,11 @@ const firebaseConfig = {
 
 // Inicializar Firebase
 firebase.initializeApp(firebaseConfig);
+
+// Referências do Firestore
 const db = firebase.firestore();
+
+// Configurar para usar timestamps
+db.settings({
+    timestampsInSnapshots: true
+});
