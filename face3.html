@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Controle de Acesso Facial - Sistema Completo</title>
+    <title>Controle de Acesso Facial - Versão Corrigida</title>
     <!-- Carrega a biblioteca face-api.js via CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
@@ -331,7 +331,7 @@
 <body>
 
 <div class="container">
-    <h2>🚪 Sistema de Controle de Acesso Facial 1</h2>
+    <h2>🚪 Sistema de Controle de Acesso Facial 2</h2>
     
     <div class="main-grid">
         <!-- LADO ESQUERDO: CÂMERA E VERIFICAÇÃO -->
@@ -400,11 +400,13 @@
     let currentFaceDescriptor = null;
     let currentCapturedImage = null;
     let isProcessing = false;
+    let modelsLoaded = false;
 
     // Atualizar feedback visual
     function updateFeedback(message, type = 'info') {
         feedback.textContent = message;
         feedback.className = `feedback-status ${type}`;
+        console.log(`[${type.toUpperCase()}] ${message}`);
     }
 
     // Mostrar resultado do reconhecimento
@@ -432,24 +434,73 @@
         }, 5000);
     }
 
-    // Carregar modelos da face-api.js
+    // Carregar modelos da face-api.js com múltiplas fontes
     async function loadModels() {
+        // Lista de URLs alternativas para os modelos
+        const modelUrls = [
+            'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights',
+            'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights',
+            'https://unpkg.com/face-api.js@0.22.2/weights'
+        ];
+        
+        for (let i = 0; i < modelUrls.length; i++) {
+            try {
+                updateFeedback(`📥 Tentando carregar modelos (tentativa ${i + 1}/${modelUrls.length})...`, 'info');
+                console.log(`Tentando carregar de: ${modelUrls[i]}`);
+                
+                await faceapi.nets.tinyFaceDetector.loadFromUri(modelUrls[i]);
+                await faceapi.nets.faceLandmark68Net.loadFromUri(modelUrls[i]);
+                await faceapi.nets.faceRecognitionNet.loadFromUri(modelUrls[i]);
+                
+                updateFeedback('✅ Modelos carregados com sucesso!', 'success');
+                modelsLoaded = true;
+                return true;
+            } catch (err) {
+                console.warn(`Falha na tentativa ${i + 1}:`, err);
+                updateFeedback(`⚠️ Tentativa ${i + 1} falhou, tentando próximo...`, 'warning');
+            }
+        }
+        
+        // Se todas as tentativas falharem, tentar usar CDN do jsDelivr com caminho específico
         try {
-            updateFeedback('📥 Carregando modelos de IA...', 'info');
-            
-            const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights';
-            
-            await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-            await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-            await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-            
-            updateFeedback('✅ Modelos carregados! Iniciando câmera...', 'success');
+            updateFeedback('📥 Última tentativa com CDN alternativa...', 'info');
+            await faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights');
+            await faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights');
+            await faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights');
+            updateFeedback('✅ Modelos carregados com sucesso!', 'success');
+            modelsLoaded = true;
             return true;
         } catch (err) {
             console.error('Erro ao carregar modelos:', err);
-            updateFeedback('❌ Erro ao carregar modelos. Verifique sua internet.', 'error');
+            updateFeedback('❌ Erro ao carregar modelos. Clique no botão abaixo para tentar novamente.', 'error');
+            modelsLoaded = false;
             return false;
         }
+    }
+
+    // Botão de tentar novamente
+    function addRetryButton() {
+        const existingBtn = document.getElementById('retryBtn');
+        if (existingBtn) existingBtn.remove();
+        
+        const retryBtn = document.createElement('button');
+        retryBtn.id = 'retryBtn';
+        retryBtn.textContent = '🔄 Tentar Carregar Modelos Novamente';
+        retryBtn.style.marginTop = '10px';
+        retryBtn.style.background = '#f39c12';
+        retryBtn.onclick = async () => {
+            retryBtn.disabled = true;
+            retryBtn.textContent = '⏳ Carregando...';
+            await loadModels();
+            if (modelsLoaded) {
+                await iniciarCamera();
+                retryBtn.remove();
+            } else {
+                retryBtn.disabled = false;
+                retryBtn.textContent = '🔄 Tentar Carregar Modelos Novamente';
+            }
+        };
+        feedback.parentNode.appendChild(retryBtn);
     }
 
     // Iniciar câmera
@@ -466,8 +517,8 @@
             
             await video.play();
             
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
             
             updateFeedback('✅ Câmera ativa! Clique em "Capturar Rosto"', 'success');
             btnCapturar.disabled = false;
@@ -483,7 +534,7 @@
 
     // Desenhar frame contínuo para feedback visual
     async function desenharFrame() {
-        if (!video.videoWidth) {
+        if (!video.videoWidth || !modelsLoaded) {
             requestAnimationFrame(desenharFrame);
             return;
         }
@@ -515,6 +566,8 @@
 
     // Extrair descritor facial da imagem atual
     async function extractFaceDescriptor() {
+        if (!modelsLoaded) return null;
+        
         const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
             .withFaceLandmarks()
             .withFaceDescriptor();
@@ -583,14 +636,14 @@
             logItem = document.createElement('div');
             logItem.className = 'log-item';
             logItem.innerHTML = `
-                <span>🚪 <span class="log-name">${nome}</span> ${acao}</span>
+                <span>🚪 <span class="log-name">${escapeHtml(nome)}</span> ${escapeHtml(acao)}</span>
                 <span class="log-time">${horaAtual} - ${dataAtual}</span>
             `;
         } else {
             logItem = document.createElement('div');
             logItem.className = 'log-item';
             logItem.innerHTML = `
-                <span>📝 ${acao}</span>
+                <span>📝 ${escapeHtml(acao)}</span>
                 <span class="log-time">${horaAtual} - ${dataAtual}</span>
             `;
         }
@@ -612,6 +665,11 @@
     async function capturarEVerificar() {
         if (isProcessing) {
             updateFeedback('⏳ Processando... Aguarde!', 'warning');
+            return;
+        }
+        
+        if (!modelsLoaded) {
+            updateFeedback('❌ Modelos não carregados. Aguarde ou clique em "Tentar Carregar Modelos"', 'error');
             return;
         }
         
@@ -742,10 +800,14 @@
 
     // Inicialização
     async function init() {
-        const modelsLoaded = await loadModels();
-        if (modelsLoaded) {
+        const modelsLoadedSuccess = await loadModels();
+        
+        if (modelsLoadedSuccess) {
             await iniciarCamera();
             atualizarBancoDados();
+        } else {
+            addRetryButton();
+            btnCapturar.disabled = true;
         }
         
         // Event listeners
