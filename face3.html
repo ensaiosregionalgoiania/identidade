@@ -77,17 +77,19 @@
             transform: scale(0.98);
         }
 
-        /* TELA DE CÂMERA */
+        /* TELA DE CÂMERA - AGORA COM TAMANHO REDUZIDO */
         .tela-camera {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: #000;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
             z-index: 1000;
             display: flex;
-            flex-direction: column;
+            justify-content: center;
+            align-items: center;
             opacity: 0;
             visibility: hidden;
             transition: opacity 0.3s ease;
@@ -96,6 +98,28 @@
         .tela-camera.ativa {
             opacity: 1;
             visibility: visible;
+        }
+
+        /* CONTAINER PRINCIPAL DA CÂMERA - TAMANHO REDUZIDO */
+        .camera-container {
+            width: 90%;
+            max-width: 450px;
+            background: #000;
+            border-radius: 32px;
+            overflow: hidden;
+            box-shadow: 0 30px 50px rgba(0, 0, 0, 0.5);
+            animation: zoomIn 0.3s ease;
+        }
+
+        @keyframes zoomIn {
+            from {
+                transform: scale(0.9);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
         }
 
         .cabecalho-camera {
@@ -109,6 +133,7 @@
 
         .cabecalho-camera h3 {
             font-size: 18px;
+            font-weight: 500;
         }
 
         .btn-fechar {
@@ -120,15 +145,20 @@
             height: 40px;
             border-radius: 50%;
             cursor: pointer;
+            transition: background 0.2s;
         }
 
+        .btn-fechar:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        /* CONTAINER DO VÍDEO - TAMANHO CONTROLADO */
         .video-container {
-            flex: 1;
             position: relative;
+            width: 100%;
+            aspect-ratio: 4 / 3;
             background: #1a1a1a;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            overflow: hidden;
         }
 
         video {
@@ -137,11 +167,10 @@
             object-fit: cover;
         }
 
+        /* PAINEL DE CONTROLE */
         .painel-controles {
             background: rgba(0, 0, 0, 0.9);
             padding: 20px;
-            border-top-left-radius: 24px;
-            border-top-right-radius: 24px;
         }
 
         .feedback-area {
@@ -151,7 +180,7 @@
             margin-bottom: 15px;
             text-align: center;
             color: #ffd966;
-            font-size: 14px;
+            font-size: 13px;
         }
 
         .input-nome {
@@ -165,6 +194,11 @@
             outline: none;
         }
 
+        .input-nome:focus {
+            background: white;
+            box-shadow: 0 0 0 2px #28a745;
+        }
+
         .btn-acao {
             width: 100%;
             padding: 14px;
@@ -174,6 +208,11 @@
             border-radius: 40px;
             cursor: pointer;
             margin-top: 10px;
+            transition: transform 0.1s;
+        }
+
+        .btn-acao:active {
+            transform: scale(0.98);
         }
 
         .btn-acao-cadastrar {
@@ -189,6 +228,7 @@
         .btn-acao-voltar {
             background: #6c757d;
             color: white;
+            margin-top: 15px;
         }
 
         .resultado-consulta {
@@ -197,7 +237,19 @@
             border-radius: 16px;
             text-align: center;
             font-weight: bold;
-            font-size: 16px;
+            font-size: 15px;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-10px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
 
         .resultado-sucesso {
@@ -210,10 +262,30 @@
             color: white;
         }
 
-        /* Mensagem de erro da câmera */
         .erro-camera {
             background: #dc3545 !important;
             color: white !important;
+        }
+
+        /* Lista de usuários cadastrados (opcional) */
+        .lista-usuarios {
+            margin-top: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 8px;
+        }
+
+        .lista-usuarios.hidden {
+            display: none;
+        }
+
+        .usuario-item {
+            color: white;
+            font-size: 12px;
+            padding: 6px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
         }
     </style>
 </head>
@@ -227,26 +299,28 @@
         <button id="btnAbrirConsulta" class="btn-principal btn-consultar">🔍 CONSULTAR</button>
     </div>
 
-    <!-- TELA DE CÂMERA -->
+    <!-- TELA DE CÂMERA - TAMANHO REDUZIDO -->
     <div id="telaCamera" class="tela-camera">
-        <div class="cabecalho-camera">
-            <h3 id="tituloCamera">Modo</h3>
-            <button id="btnFecharCamera" class="btn-fechar">✕</button>
-        </div>
-        <div class="video-container">
-            <video id="video" autoplay muted playsinline></video>
-        </div>
-        <div class="painel-controles">
-            <div id="feedbackCamera" class="feedback-area">🔄 Iniciando câmera...</div>
-            <div id="zonaCadastro" style="display: none;">
-                <input type="text" id="nomeCadastro" class="input-nome" placeholder="Digite o nome completo" autocomplete="off">
-                <button id="btnConfirmarCadastro" class="btn-acao btn-acao-cadastrar">✅ CADASTRAR</button>
+        <div class="camera-container">
+            <div class="cabecalho-camera">
+                <h3 id="tituloCamera">Modo</h3>
+                <button id="btnFecharCamera" class="btn-fechar">✕</button>
             </div>
-            <div id="zonaConsulta" style="display: none;">
-                <button id="btnBuscarFace" class="btn-acao btn-acao-consultar">🔍 VERIFICAR ACESSO</button>
-                <div id="resultadoConsulta" class="resultado-consulta" style="display: none;"></div>
+            <div class="video-container">
+                <video id="video" autoplay muted playsinline></video>
             </div>
-            <button id="btnVoltarMenu" class="btn-acao btn-acao-voltar">◀ VOLTAR</button>
+            <div class="painel-controles">
+                <div id="feedbackCamera" class="feedback-area">🔄 Iniciando câmera...</div>
+                <div id="zonaCadastro" style="display: none;">
+                    <input type="text" id="nomeCadastro" class="input-nome" placeholder="Digite o nome completo" autocomplete="off">
+                    <button id="btnConfirmarCadastro" class="btn-acao btn-acao-cadastrar">✅ CADASTRAR</button>
+                </div>
+                <div id="zonaConsulta" style="display: none;">
+                    <button id="btnBuscarFace" class="btn-acao btn-acao-consultar">🔍 VERIFICAR ACESSO</button>
+                    <div id="resultadoConsulta" class="resultado-consulta" style="display: none;"></div>
+                </div>
+                <button id="btnVoltarMenu" class="btn-acao btn-acao-voltar">◀ VOLTAR</button>
+            </div>
         </div>
     </div>
 
@@ -268,18 +342,10 @@
         const btnAbrirCadastro = document.getElementById('btnAbrirCadastro');
         const btnAbrirConsulta = document.getElementById('btnAbrirConsulta');
 
-        // Banco de dados (sem face-api, vamos usar armazenamento simples)
-        // Como o face-api pode falhar por falta dos modelos, vou criar um sistema SIMPLES
-        // que funciona sem IA, apenas para demonstração visual da câmera funcionando.
-        // O usuário pode cadastrar nome e associar a um "ID", e na consulta apenas simula o reconhecimento.
-        
-        // Para um sistema real com face-api, os modelos precisam estar na pasta 'models'
-        // Mas como o objetivo é mostrar a câmera funcionando, vamos fazer assim:
-        
+        // Banco de dados
         let bancoUsuarios = JSON.parse(localStorage.getItem('meuBancoFacial')) || [];
         let streamAtual = null;
         let modoAtual = null;
-        let fotoAtualBase64 = null; // para simular captura de rosto
         
         // Função para parar a câmera
         function pararCamera() {
@@ -290,7 +356,7 @@
             video.srcObject = null;
         }
         
-        // Função para iniciar a câmera (funciona SEMPRE, independente dos modelos)
+        // Função para iniciar a câmera
         async function iniciarCamera() {
             pararCamera();
             
@@ -298,15 +364,14 @@
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: {
                         facingMode: "user",
-                        width: { ideal: 640 },
-                        height: { ideal: 480 }
+                        width: { ideal: 480 },
+                        height: { ideal: 360 }
                     }
                 });
                 
                 video.srcObject = stream;
                 streamAtual = stream;
                 
-                // Aguarda o vídeo carregar
                 await new Promise((resolve) => {
                     video.onloadedmetadata = () => {
                         video.play();
@@ -326,7 +391,7 @@
             }
         }
         
-        // Função para "capturar" o rosto atual (tira um print do vídeo)
+        // Capturar foto atual
         function capturarFotoAtual() {
             if (!video.videoWidth || !video.videoHeight) {
                 return null;
@@ -338,69 +403,10 @@
             const ctx = canvas.getContext('2d');
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             
-            // Reduz a qualidade para economizar espaço
             return canvas.toDataURL('image/jpeg', 0.7);
         }
         
-        // CADASTRAR: tira foto e salva com o nome
-        function cadastrarUsuario() {
-            const nome = nomeCadastroInput.value.trim();
-            
-            if (!nome) {
-                feedbackCamera.innerText = "⚠️ Digite um nome antes de cadastrar!";
-                return;
-            }
-            
-            // Verifica se já existe
-            const existe = bancoUsuarios.some(u => u.nome.toLowerCase() === nome.toLowerCase());
-            if (existe) {
-                feedbackCamera.innerText = "❌ Este nome já está cadastrado! Use outro.";
-                return;
-            }
-            
-            // Captura a foto atual
-            const foto = capturarFotoAtual();
-            if (!foto) {
-                feedbackCamera.innerText = "❌ Aguarde a câmera estabilizar. Tente novamente.";
-                return;
-            }
-            
-            // Salva no banco
-            bancoUsuarios.push({
-                nome: nome,
-                foto: foto,
-                dataCadastro: new Date().toISOString()
-            });
-            
-            localStorage.setItem('meuBancoFacial', JSON.stringify(bancoUsuarios));
-            
-            feedbackCamera.innerHTML = `✅ "${nome}" cadastrado com sucesso!`;
-            nomeCadastroInput.value = "";
-            
-            // Fecha a tela após 1.5 segundos
-            setTimeout(() => {
-                fecharCameraEVoltar();
-            }, 1500);
-        }
-        
-        // Função de comparação simples entre fotos (usando similaridade básica)
-        // Para uma demonstração funcional, vamos comparar o hash simples ou apenas
-        // simular que encontrou se o nome estiver no banco. Mas vou fazer uma
-        // verificação mais realista: o usuário clica em VERIFICAR e escolhemos
-        // o rosto mais "parecido" baseado em um match aleatório? Não, melhor:
-        // Como não temos face-api, vou fazer o seguinte: na consulta, o sistema
-        // tira uma foto e pergunta: "Este rosto corresponde a qual cadastro?"
-        // Para simplificar e funcionar, vou permitir que o usuário selecione
-        // manualmente na lista, ou farei um reconhecimento por nome digitado?
-        // Mas o requisito é: "se encontrar correspondência entre a imagem gravada e a atual, mostra div com nome"
-        // Como não temos IA, vou usar um método de "confirmar identidade": o usuário digita o nome
-        // e o sistema verifica se existe. Mas isso não é facial. 
-        // Vou melhorar: Na consulta, vou listar os rostos cadastrados e o usuário clica em qual é,
-        // ou uso um algoritmo de similaridade de imagens (pixel差值) - muito simples.
-        
-        // Vou implementar uma comparação básica de cor média (apenas para demonstração)
-        // Não é precisa, mas mostra o fluxo. O importante é que a câmera funciona.
-        
+        // Calcular cor média da imagem
         function calcularCorMedia(fotoBase64) {
             return new Promise((resolve) => {
                 const img = new Image();
@@ -431,6 +437,44 @@
             return Math.sqrt(dr*dr + dg*dg + db*db);
         }
         
+        // Cadastrar usuário
+        function cadastrarUsuario() {
+            const nome = nomeCadastroInput.value.trim();
+            
+            if (!nome) {
+                feedbackCamera.innerText = "⚠️ Digite um nome antes de cadastrar!";
+                return;
+            }
+            
+            const existe = bancoUsuarios.some(u => u.nome.toLowerCase() === nome.toLowerCase());
+            if (existe) {
+                feedbackCamera.innerText = "❌ Este nome já está cadastrado! Use outro.";
+                return;
+            }
+            
+            const foto = capturarFotoAtual();
+            if (!foto) {
+                feedbackCamera.innerText = "❌ Aguarde a câmera estabilizar. Tente novamente.";
+                return;
+            }
+            
+            bancoUsuarios.push({
+                nome: nome,
+                foto: foto,
+                dataCadastro: new Date().toISOString()
+            });
+            
+            localStorage.setItem('meuBancoFacial', JSON.stringify(bancoUsuarios));
+            
+            feedbackCamera.innerHTML = `✅ "${nome}" cadastrado com sucesso!`;
+            nomeCadastroInput.value = "";
+            
+            setTimeout(() => {
+                fecharCameraEVoltar();
+            }, 1500);
+        }
+        
+        // Consulta facial
         async function realizarConsultaFacial() {
             if (bancoUsuarios.length === 0) {
                 resultadoConsultaDiv.style.display = "block";
@@ -448,11 +492,10 @@
                 return;
             }
             
-            // Calcula a cor média da foto atual
             const corAtual = await calcularCorMedia(fotoAtual);
             
             let melhorMatch = null;
-            let menorDiferenca = 60; // Limiar de diferença (quanto menor, mais parecido)
+            let menorDiferenca = 60;
             
             for (const usuario of bancoUsuarios) {
                 const corCadastrada = await calcularCorMedia(usuario.foto);
@@ -477,11 +520,10 @@
             }
         }
         
-        // Função para abrir a tela de câmera
+        // Abrir modo
         async function abrirModo(modo) {
             modoAtual = modo;
             
-            // Resetar UI
             zonaCadastroDiv.style.display = "none";
             zonaConsultaDiv.style.display = "none";
             resultadoConsultaDiv.style.display = "none";
@@ -498,18 +540,15 @@
                 feedbackCamera.innerText = "📷 Olhe para a câmera e clique em VERIFICAR.";
             }
             
-            // Inicia a câmera
             const cameraOk = await iniciarCamera();
             if (!cameraOk) {
-                // Se a câmera falhar, mostra erro mas permite tentar de novo
                 setTimeout(() => {
                     if (modoAtual === modo) {
-                        feedbackCamera.innerText = "❌ Sem acesso à câmera. Verifique as permissões no navegador.";
+                        feedbackCamera.innerText = "❌ Sem acesso à câmera. Verifique as permissões.";
                     }
                 }, 100);
             }
             
-            // Mostra a tela
             telaCamera.classList.add('ativa');
         }
         
@@ -542,22 +581,19 @@
         btnConfirmarCadastro.addEventListener('click', cadastrarUsuario);
         btnBuscarFace.addEventListener('click', realizarConsultaFacial);
         
-        // Enter no campo nome
         nomeCadastroInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 cadastrarUsuario();
             }
         });
         
-        // Pré-carregar dados e garantir que a tela inicial apareça
+        // Inicialização
         telaInicial.style.display = 'flex';
         
-        // Verificar se o navegador suporta câmera
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            alert("Seu navegador não suporta acesso à câmera. Use Chrome, Edge ou Safari atualizado.");
+            alert("Seu navegador não suporta acesso à câmera.");
         }
         
-        // Mostrar quantos cadastros existem no console (debug)
         console.log(`Banco de dados: ${bancoUsuarios.length} usuários cadastrados.`);
     </script>
 </body>
