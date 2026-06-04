@@ -1,9 +1,14 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Controle Facial - Cadastro e Consulta</title>
+    <title>Sistema de Acesso Facial - CCB</title>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    
     <style>
         * {
             margin: 0;
@@ -12,24 +17,22 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
             padding: 20px;
         }
 
-        /* TELA INICIAL - DOIS BOTÕES */
+        /* TELA INICIAL */
         .tela-inicial {
             display: flex;
             flex-direction: column;
-            gap: 25px;
+            gap: 20px;
             width: 100%;
-            max-width: 320px;
+            max-width: 400px;
+            margin: 0 auto;
             background: rgba(255, 255, 255, 0.95);
-            padding: 40px 25px;
+            padding: 40px 30px;
             border-radius: 32px;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
             text-align: center;
@@ -37,55 +40,53 @@
 
         .tela-inicial h1 {
             font-size: 28px;
+            color: #2c3e50;
             margin-bottom: 10px;
-            color: #333;
         }
 
-        .tela-inicial p {
-            color: #666;
+        .tela-inicial .subtitle {
+            color: #7f8c8d;
             margin-bottom: 30px;
             font-size: 14px;
         }
 
         .btn-principal {
-            padding: 18px 20px;
+            padding: 16px 20px;
             font-size: 18px;
             font-weight: bold;
             border: none;
             border-radius: 60px;
             cursor: pointer;
-            transition: transform 0.2s, opacity 0.2s;
+            transition: transform 0.2s;
         }
 
         .btn-cadastrar {
-            background: #28a745;
+            background: #27ae60;
             color: white;
-        }
-
-        .btn-cadastrar:hover {
-            background: #218838;
-            transform: scale(0.98);
         }
 
         .btn-consultar {
-            background: #007bff;
+            background: #3498db;
             color: white;
         }
 
-        .btn-consultar:hover {
-            background: #0069d9;
+        .btn-listar {
+            background: #9b59b6;
+            color: white;
+        }
+
+        .btn-principal:active {
             transform: scale(0.98);
         }
 
-        /* TELA DE CÂMERA - AGORA COM TAMANHO REDUZIDO */
+        /* TELA DE CÂMERA */
         .tela-camera {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(8px);
+            background: rgba(0, 0, 0, 0.9);
             z-index: 1000;
             display: flex;
             justify-content: center;
@@ -100,29 +101,16 @@
             visibility: visible;
         }
 
-        /* CONTAINER PRINCIPAL DA CÂMERA - TAMANHO REDUZIDO */
-        .camera-container {
+        .camera-card {
             width: 90%;
             max-width: 450px;
-            background: #000;
+            background: #1a1a1a;
             border-radius: 32px;
             overflow: hidden;
             box-shadow: 0 30px 50px rgba(0, 0, 0, 0.5);
-            animation: zoomIn 0.3s ease;
         }
 
-        @keyframes zoomIn {
-            from {
-                transform: scale(0.9);
-                opacity: 0;
-            }
-            to {
-                transform: scale(1);
-                opacity: 1;
-            }
-        }
-
-        .cabecalho-camera {
+        .camera-header {
             background: rgba(0, 0, 0, 0.8);
             padding: 15px 20px;
             display: flex;
@@ -131,9 +119,8 @@
             color: white;
         }
 
-        .cabecalho-camera h3 {
+        .camera-header h3 {
             font-size: 18px;
-            font-weight: 500;
         }
 
         .btn-fechar {
@@ -145,20 +132,13 @@
             height: 40px;
             border-radius: 50%;
             cursor: pointer;
-            transition: background 0.2s;
         }
 
-        .btn-fechar:hover {
-            background: rgba(255, 255, 255, 0.4);
-        }
-
-        /* CONTAINER DO VÍDEO - TAMANHO CONTROLADO */
-        .video-container {
+        .video-wrapper {
             position: relative;
             width: 100%;
             aspect-ratio: 4 / 3;
-            background: #1a1a1a;
-            overflow: hidden;
+            background: #000;
         }
 
         video {
@@ -167,19 +147,18 @@
             object-fit: cover;
         }
 
-        /* PAINEL DE CONTROLE */
-        .painel-controles {
+        .camera-controls {
             background: rgba(0, 0, 0, 0.9);
             padding: 20px;
         }
 
-        .feedback-area {
+        .feedback {
             background: rgba(255, 255, 255, 0.15);
             padding: 12px;
             border-radius: 12px;
             margin-bottom: 15px;
             text-align: center;
-            color: #ffd966;
+            color: #f39c12;
             font-size: 13px;
         }
 
@@ -194,11 +173,6 @@
             outline: none;
         }
 
-        .input-nome:focus {
-            background: white;
-            box-shadow: 0 0 0 2px #28a745;
-        }
-
         .btn-acao {
             width: 100%;
             padding: 14px;
@@ -208,37 +182,41 @@
             border-radius: 40px;
             cursor: pointer;
             margin-top: 10px;
-            transition: transform 0.1s;
         }
 
-        .btn-acao:active {
-            transform: scale(0.98);
-        }
-
-        .btn-acao-cadastrar {
-            background: #28a745;
+        .btn-cadastrar-acao {
+            background: #27ae60;
             color: white;
         }
 
-        .btn-acao-consultar {
-            background: #007bff;
+        .btn-consultar-acao {
+            background: #3498db;
             color: white;
         }
 
-        .btn-acao-voltar {
-            background: #6c757d;
+        .btn-voltar {
+            background: #7f8c8d;
             color: white;
             margin-top: 15px;
         }
 
-        .resultado-consulta {
+        .resultado {
             margin-top: 15px;
             padding: 15px;
             border-radius: 16px;
             text-align: center;
             font-weight: bold;
-            font-size: 15px;
             animation: slideDown 0.3s ease;
+        }
+
+        .resultado-sucesso {
+            background: #27ae60;
+            color: white;
+        }
+
+        .resultado-erro {
+            background: #e74c3c;
+            color: white;
         }
 
         @keyframes slideDown {
@@ -252,40 +230,97 @@
             }
         }
 
-        .resultado-sucesso {
-            background: #28a745;
+        /* TELA DE LISTAGEM */
+        .tela-lista {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s;
+        }
+
+        .tela-lista.ativa {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .lista-card {
+            width: 90%;
+            max-width: 500px;
+            background: white;
+            border-radius: 32px;
+            overflow: hidden;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .lista-header {
+            background: #3498db;
             color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        .resultado-erro {
-            background: #dc3545;
-            color: white;
-        }
-
-        .erro-camera {
-            background: #dc3545 !important;
-            color: white !important;
-        }
-
-        /* Lista de usuários cadastrados (opcional) */
-        .lista-usuarios {
-            margin-top: 10px;
-            max-height: 150px;
+        .lista-body {
+            padding: 20px;
             overflow-y: auto;
-            background: rgba(255, 255, 255, 0.1);
+            flex: 1;
+        }
+
+        .membro-item {
+            background: #f8f9fa;
+            padding: 15px;
             border-radius: 12px;
-            padding: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid #3498db;
         }
 
-        .lista-usuarios.hidden {
-            display: none;
+        .membro-info h4 {
+            color: #2c3e50;
+            margin-bottom: 5px;
         }
 
-        .usuario-item {
-            color: white;
+        .membro-info p {
+            color: #7f8c8d;
+            font-size: 11px;
+        }
+
+        .facial-status {
             font-size: 12px;
-            padding: 6px;
-            border-bottom: 1px solid rgba(255,255,255,0.2);
+            padding: 4px 8px;
+            border-radius: 20px;
+            background: #ecf0f1;
+            color: #2c3e50;
+        }
+
+        .facial-cadastrado {
+            background: #27ae60;
+            color: white;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        @media print {
+            body { background: white; }
+            .btn-principal, .btn-fechar, .btn-voltar { display: none; }
         }
     </style>
 </head>
@@ -293,41 +328,72 @@
 
     <!-- TELA INICIAL -->
     <div id="telaInicial" class="tela-inicial">
-        <h1>🔒 Acesso Facial</h1>
-        <p>Cadastre rostos ou consulte permissões</p>
-        <button id="btnAbrirCadastro" class="btn-principal btn-cadastrar">📝 CADASTRAR</button>
-        <button id="btnAbrirConsulta" class="btn-principal btn-consultar">🔍 CONSULTAR</button>
+        <h1>🚪 Acesso Facial CCB</h1>
+        <p class="subtitle">Sistema de reconhecimento para membros</p>
+        <button id="btnAbrirCadastro" class="btn-principal btn-cadastrar">📝 CADASTRAR ROSTO</button>
+        <button id="btnAbrirConsulta" class="btn-principal btn-consultar">🔍 CONSULTAR ACESSO</button>
+        <button id="btnAbrirLista" class="btn-principal btn-listar">📋 MEMBROS CADASTRADOS</button>
     </div>
 
-    <!-- TELA DE CÂMERA - TAMANHO REDUZIDO -->
+    <!-- TELA DE CÂMERA -->
     <div id="telaCamera" class="tela-camera">
-        <div class="camera-container">
-            <div class="cabecalho-camera">
+        <div class="camera-card">
+            <div class="camera-header">
                 <h3 id="tituloCamera">Modo</h3>
                 <button id="btnFecharCamera" class="btn-fechar">✕</button>
             </div>
-            <div class="video-container">
+            <div class="video-wrapper">
                 <video id="video" autoplay muted playsinline></video>
             </div>
-            <div class="painel-controles">
-                <div id="feedbackCamera" class="feedback-area">🔄 Iniciando câmera...</div>
+            <div class="camera-controls">
+                <div id="feedbackCamera" class="feedback">🔄 Iniciando câmera...</div>
                 <div id="zonaCadastro" style="display: none;">
-                    <input type="text" id="nomeCadastro" class="input-nome" placeholder="Digite o nome completo" autocomplete="off">
-                    <button id="btnConfirmarCadastro" class="btn-acao btn-acao-cadastrar">✅ CADASTRAR</button>
+                    <input type="text" id="nomeCadastro" class="input-nome" placeholder="Digite o nome do membro" autocomplete="off">
+                    <button id="btnConfirmarCadastro" class="btn-acao btn-cadastrar-acao">✅ CADASTRAR ROSTO</button>
                 </div>
                 <div id="zonaConsulta" style="display: none;">
-                    <button id="btnBuscarFace" class="btn-acao btn-acao-consultar">🔍 VERIFICAR ACESSO</button>
-                    <div id="resultadoConsulta" class="resultado-consulta" style="display: none;"></div>
+                    <button id="btnBuscarFace" class="btn-acao btn-consultar-acao">🔍 VERIFICAR ACESSO</button>
+                    <div id="resultadoConsulta" class="resultado" style="display: none;"></div>
                 </div>
-                <button id="btnVoltarMenu" class="btn-acao btn-acao-voltar">◀ VOLTAR</button>
+                <button id="btnVoltarMenu" class="btn-acao btn-voltar">◀ VOLTAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TELA DE LISTAGEM -->
+    <div id="telaLista" class="tela-lista">
+        <div class="lista-card">
+            <div class="lista-header">
+                <h3>📋 Membros Cadastrados</h3>
+                <button id="btnFecharLista" class="btn-fechar" style="background: rgba(255,255,255,0.2);">✕</button>
+            </div>
+            <div class="lista-body" id="listaBody">
+                <div class="loading">Carregando membros...</div>
             </div>
         </div>
     </div>
 
     <script>
-        // Elementos
+        // Firebase Config (USANDO A MESMA DO SEU PROJETO)
+        const firebaseConfig = {
+            apiKey: "AIzaSyA4COgeJSENsHrQHDx39gpZvif3zVrGjYE",
+            authDomain: "identidadeccb.firebaseapp.com",
+            projectId: "identidadeccb",
+            storageBucket: "identidadeccb.firebasestorage.app",
+            messagingSenderId: "385467794937",
+            appId: "1:385467794937:web:d2eb32429586f018e2a928"
+        };
+
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const membrosCollection = db.collection("membros");
+        const facialCollection = db.collection("dados_faciais"); // Coleção para armazenar os rostos
+
+        // Elementos DOM
         const telaInicial = document.getElementById('telaInicial');
         const telaCamera = document.getElementById('telaCamera');
+        const telaLista = document.getElementById('telaLista');
         const video = document.getElementById('video');
         const feedbackCamera = document.getElementById('feedbackCamera');
         const tituloCamera = document.getElementById('tituloCamera');
@@ -341,13 +407,17 @@
         const btnVoltarMenu = document.getElementById('btnVoltarMenu');
         const btnAbrirCadastro = document.getElementById('btnAbrirCadastro');
         const btnAbrirConsulta = document.getElementById('btnAbrirConsulta');
+        const btnAbrirLista = document.getElementById('btnAbrirLista');
+        const btnFecharLista = document.getElementById('btnFecharLista');
+        const listaBody = document.getElementById('listaBody');
 
-        // Banco de dados
-        let bancoUsuarios = JSON.parse(localStorage.getItem('meuBancoFacial')) || [];
+        // Variáveis
         let streamAtual = null;
         let modoAtual = null;
-        
-        // Função para parar a câmera
+        let membrosList = []; // Cache dos membros
+        let dadosFaciais = []; // Cache dos dados faciais cadastrados
+
+        // Função para parar câmera
         function pararCamera() {
             if (streamAtual) {
                 streamAtual.getTracks().forEach(track => track.stop());
@@ -355,200 +425,268 @@
             }
             video.srcObject = null;
         }
-        
-        // Função para iniciar a câmera
+
+        // Iniciar câmera
         async function iniciarCamera() {
             pararCamera();
-            
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        facingMode: "user",
-                        width: { ideal: 480 },
-                        height: { ideal: 360 }
-                    }
+                    video: { facingMode: "user", width: { ideal: 480 }, height: { ideal: 360 } }
                 });
-                
                 video.srcObject = stream;
                 streamAtual = stream;
-                
                 await new Promise((resolve) => {
-                    video.onloadedmetadata = () => {
-                        video.play();
-                        resolve();
-                    };
+                    video.onloadedmetadata = () => { video.play(); resolve(); };
                 });
-                
                 feedbackCamera.innerText = "✅ Câmera ativa! Posicione o rosto.";
-                feedbackCamera.classList.remove('erro-camera');
                 return true;
-                
             } catch (err) {
-                console.error("Erro ao acessar câmera:", err);
-                feedbackCamera.innerText = "❌ Não foi possível acessar a câmera. Verifique as permissões.";
-                feedbackCamera.classList.add('erro-camera');
+                feedbackCamera.innerText = "❌ Erro ao acessar câmera. Verifique as permissões.";
                 return false;
             }
         }
-        
-        // Capturar foto atual
-        function capturarFotoAtual() {
-            if (!video.videoWidth || !video.videoHeight) {
-                return null;
-            }
-            
+
+        // Capturar foto
+        function capturarFoto() {
+            if (!video.videoWidth) return null;
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
+            canvas.getContext('2d').drawImage(video, 0, 0);
             return canvas.toDataURL('image/jpeg', 0.7);
         }
-        
-        // Calcular cor média da imagem
-        function calcularCorMedia(fotoBase64) {
+
+        // Calcular hash simples da imagem (para comparação)
+        function calcularHashImagem(fotoBase64) {
             return new Promise((resolve) => {
                 const img = new Image();
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
-                    canvas.width = 50;
-                    canvas.height = 50;
+                    canvas.width = 32;
+                    canvas.height = 32;
                     const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, 50, 50);
-                    const imageData = ctx.getImageData(0, 0, 50, 50);
-                    let r = 0, g = 0, b = 0;
-                    for (let i = 0; i < imageData.data.length; i += 4) {
-                        r += imageData.data[i];
-                        g += imageData.data[i+1];
-                        b += imageData.data[i+2];
+                    ctx.drawImage(img, 0, 0, 32, 32);
+                    const data = ctx.getImageData(0, 0, 32, 32).data;
+                    
+                    // Calcular média de cinza
+                    let hash = '';
+                    for (let i = 0; i < data.length; i += 4) {
+                        const gray = (data[i] + data[i+1] + data[i+2]) / 3;
+                        hash += gray > 128 ? '1' : '0';
                     }
-                    const total = imageData.data.length / 4;
-                    resolve([r/total, g/total, b/total]);
+                    resolve(hash);
                 };
                 img.src = fotoBase64;
             });
         }
-        
-        function diferencaCores(cor1, cor2) {
-            const dr = cor1[0] - cor2[0];
-            const dg = cor1[1] - cor2[1];
-            const db = cor1[2] - cor2[2];
-            return Math.sqrt(dr*dr + dg*dg + db*db);
+
+        // Função de similaridade entre hashes (distância de Hamming)
+        function similaridadeHash(hash1, hash2) {
+            if (!hash1 || !hash2) return 0;
+            let diff = 0;
+            for (let i = 0; i < hash1.length; i++) {
+                if (hash1[i] !== hash2[i]) diff++;
+            }
+            return 1 - (diff / hash1.length);
         }
-        
-        // Cadastrar usuário
-        function cadastrarUsuario() {
-            const nome = nomeCadastroInput.value.trim();
-            
-            if (!nome) {
-                feedbackCamera.innerText = "⚠️ Digite um nome antes de cadastrar!";
-                return;
-            }
-            
-            const existe = bancoUsuarios.some(u => u.nome.toLowerCase() === nome.toLowerCase());
-            if (existe) {
-                feedbackCamera.innerText = "❌ Este nome já está cadastrado! Use outro.";
-                return;
-            }
-            
-            const foto = capturarFotoAtual();
-            if (!foto) {
-                feedbackCamera.innerText = "❌ Aguarde a câmera estabilizar. Tente novamente.";
-                return;
-            }
-            
-            bancoUsuarios.push({
-                nome: nome,
-                foto: foto,
-                dataCadastro: new Date().toISOString()
+
+        // Carregar membros do Firebase
+        async function carregarMembros() {
+            const snapshot = await membrosCollection.orderBy("id").get();
+            membrosList = [];
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                membrosList.push({
+                    id: doc.id,
+                    nomeId: data.id,
+                    nome: data.nome,
+                    cargo: data.cargo || '',
+                    congregacao: data.congregacao || ''
+                });
             });
-            
-            localStorage.setItem('meuBancoFacial', JSON.stringify(bancoUsuarios));
-            
-            feedbackCamera.innerHTML = `✅ "${nome}" cadastrado com sucesso!`;
-            nomeCadastroInput.value = "";
-            
-            setTimeout(() => {
-                fecharCameraEVoltar();
-            }, 1500);
+            return membrosList;
         }
-        
-        // Consulta facial
-        async function realizarConsultaFacial() {
-            if (bancoUsuarios.length === 0) {
-                resultadoConsultaDiv.style.display = "block";
-                resultadoConsultaDiv.className = "resultado-consulta resultado-erro";
-                resultadoConsultaDiv.innerHTML = "📭 Nenhum usuário cadastrado. Vá em CADASTRAR primeiro.";
-                feedbackCamera.innerText = "Nenhum cadastro encontrado.";
+
+        // Carregar dados faciais cadastrados
+        async function carregarDadosFaciais() {
+            const snapshot = await facialCollection.get();
+            dadosFaciais = [];
+            snapshot.forEach(doc => {
+                dadosFaciais.push({
+                    id: doc.id,
+                    membroId: doc.data().membroId,
+                    membroNome: doc.data().membroNome,
+                    fotoHash: doc.data().fotoHash,
+                    dataCadastro: doc.data().dataCadastro
+                });
+            });
+            return dadosFaciais;
+        }
+
+        // CADASTRAR no Firebase
+        async function cadastrarRosto() {
+            const nome = nomeCadastroInput.value.trim();
+            if (!nome) {
+                feedbackCamera.innerText = "⚠️ Digite o nome do membro!";
                 return;
             }
-            
-            feedbackCamera.innerText = "📸 Analisando rosto atual...";
-            
-            const fotoAtual = capturarFotoAtual();
-            if (!fotoAtual) {
-                feedbackCamera.innerText = "❌ Não foi possível capturar o rosto. Tente novamente.";
+
+            // Buscar membro pelo nome
+            const membroEncontrado = membrosList.find(m => 
+                m.nome.toLowerCase().includes(nome.toLowerCase())
+            );
+
+            if (!membroEncontrado) {
+                feedbackCamera.innerText = "❌ Membro não encontrado na lista de membros!";
                 return;
             }
+
+            // Verificar se já tem rosto cadastrado
+            const jaCadastrado = dadosFaciais.some(d => d.membroId === membroEncontrado.id);
+            if (jaCadastrado) {
+                feedbackCamera.innerText = `❌ ${membroEncontrado.nome} já possui rosto cadastrado!`;
+                return;
+            }
+
+            const foto = capturarFoto();
+            if (!foto) {
+                feedbackCamera.innerText = "❌ Aguarde a câmera estabilizar.";
+                return;
+            }
+
+            const fotoHash = await calcularHashImagem(foto);
             
-            const corAtual = await calcularCorMedia(fotoAtual);
-            
-            let melhorMatch = null;
-            let menorDiferenca = 60;
-            
-            for (const usuario of bancoUsuarios) {
-                const corCadastrada = await calcularCorMedia(usuario.foto);
-                const diff = diferencaCores(corAtual, corCadastrada);
+            feedbackCamera.innerText = "💾 Salvando no Firebase...";
+
+            try {
+                await facialCollection.add({
+                    membroId: membroEncontrado.id,
+                    membroNome: membroEncontrado.nome,
+                    fotoHash: fotoHash,
+                    dataCadastro: new Date().toISOString()
+                });
                 
-                if (diff < menorDiferenca) {
-                    menorDiferenca = diff;
-                    melhorMatch = usuario;
+                await carregarDadosFaciais();
+                feedbackCamera.innerHTML = `✅ Rosto de "${membroEncontrado.nome}" cadastrado!`;
+                nomeCadastroInput.value = "";
+                
+                setTimeout(() => fecharCameraEVoltar(), 1500);
+            } catch (error) {
+                console.error(error);
+                feedbackCamera.innerText = "❌ Erro ao salvar no Firebase.";
+            }
+        }
+
+        // CONSULTAR acesso
+        async function consultarAcesso() {
+            if (dadosFaciais.length === 0) {
+                await carregarDadosFaciais();
+                if (dadosFaciais.length === 0) {
+                    resultadoConsultaDiv.style.display = "block";
+                    resultadoConsultaDiv.className = "resultado resultado-erro";
+                    resultadoConsultaDiv.innerHTML = "📭 Nenhum rosto cadastrado! Vá em CADASTRAR primeiro.";
+                    return;
                 }
             }
             
-            if (melhorMatch && menorDiferenca < 55) {
+            feedbackCamera.innerText = "📸 Analisando rosto...";
+            const fotoAtual = capturarFoto();
+            if (!fotoAtual) {
+                feedbackCamera.innerText = "❌ Não foi possível capturar.";
+                return;
+            }
+            
+            const hashAtual = await calcularHashImagem(fotoAtual);
+            let melhorMatch = null;
+            let melhorSimilaridade = 0;
+            
+            for (const facial of dadosFaciais) {
+                const similaridade = similaridadeHash(hashAtual, facial.fotoHash);
+                if (similaridade > melhorSimilaridade && similaridade > 0.75) {
+                    melhorSimilaridade = similaridade;
+                    melhorMatch = facial;
+                }
+            }
+            
+            if (melhorMatch) {
                 resultadoConsultaDiv.style.display = "block";
-                resultadoConsultaDiv.className = "resultado-consulta resultado-sucesso";
-                resultadoConsultaDiv.innerHTML = `✅ ACESSO LIBERADO!<br>👤 ${melhorMatch.nome}`;
-                feedbackCamera.innerHTML = `🟢 Reconhecido: ${melhorMatch.nome}`;
+                resultadoConsultaDiv.className = "resultado resultado-sucesso";
+                resultadoConsultaDiv.innerHTML = `
+                    ✅ ACESSO LIBERADO!<br>
+                    👤 ${melhorMatch.membroNome}<br>
+                    🎯 Confiança: ${Math.round(melhorSimilaridade * 100)}%
+                `;
+                feedbackCamera.innerHTML = `🟢 Bem-vindo(a), ${melhorMatch.membroNome}!`;
+                
+                // Registrar log de acesso
+                const logCollection = db.collection("log_acessos");
+                await logCollection.add({
+                    membroId: melhorMatch.membroId,
+                    membroNome: melhorMatch.membroNome,
+                    dataHora: new Date().toISOString(),
+                    confianca: melhorSimilaridade
+                });
             } else {
                 resultadoConsultaDiv.style.display = "block";
-                resultadoConsultaDiv.className = "resultado-consulta resultado-erro";
+                resultadoConsultaDiv.className = "resultado resultado-erro";
                 resultadoConsultaDiv.innerHTML = "❌ ACESSO NEGADO!<br>Rosto não reconhecido.";
                 feedbackCamera.innerText = "🔴 Nenhuma correspondência encontrada.";
             }
         }
-        
-        // Abrir modo
+
+        // Listar membros com status facial
+        async function exibirListaMembros() {
+            listaBody.innerHTML = '<div class="loading">Carregando membros...</div>';
+            telaLista.classList.add('ativa');
+            
+            await carregarMembros();
+            await carregarDadosFaciais();
+            
+            if (membrosList.length === 0) {
+                listaBody.innerHTML = '<div style="text-align:center; padding:40px;">📭 Nenhum membro encontrado</div>';
+                return;
+            }
+            
+            listaBody.innerHTML = '';
+            for (const membro of membrosList) {
+                const temRosto = dadosFaciais.some(f => f.membroId === membro.id);
+                const card = document.createElement('div');
+                card.className = 'membro-item';
+                card.innerHTML = `
+                    <div class="membro-info">
+                        <h4>👤 ${membro.nome}</h4>
+                        <p>ID: ${membro.nomeId || membro.id} | ${membro.cargo || 'Membro'}</p>
+                    </div>
+                    <div class="facial-status ${temRosto ? 'facial-cadastrado' : ''}">
+                        ${temRosto ? '✅ Rosto cadastrado' : '⏳ Aguardando cadastro'}
+                    </div>
+                `;
+                listaBody.appendChild(card);
+            }
+        }
+
+        // Abrir modos
         async function abrirModo(modo) {
             modoAtual = modo;
-            
             zonaCadastroDiv.style.display = "none";
             zonaConsultaDiv.style.display = "none";
             resultadoConsultaDiv.style.display = "none";
             nomeCadastroInput.value = "";
-            feedbackCamera.classList.remove('erro-camera');
             
             if (modo === 'cadastro') {
-                tituloCamera.innerText = "📸 CADASTRO DE ROSTO";
+                tituloCamera.innerText = "📸 CADASTRAR ROSTO";
                 zonaCadastroDiv.style.display = "block";
-                feedbackCamera.innerText = "📷 Olhe para a câmera e digite seu nome.";
+                feedbackCamera.innerText = "📷 Olhe para a câmera e digite o nome do membro";
+                await carregarMembros();
+                await carregarDadosFaciais();
             } else {
-                tituloCamera.innerText = "🔍 CONSULTA DE ACESSO";
+                tituloCamera.innerText = "🔍 CONSULTAR ACESSO";
                 zonaConsultaDiv.style.display = "block";
-                feedbackCamera.innerText = "📷 Olhe para a câmera e clique em VERIFICAR.";
+                feedbackCamera.innerText = "📷 Olhe para a câmera e clique em VERIFICAR";
+                await carregarDadosFaciais();
             }
             
-            const cameraOk = await iniciarCamera();
-            if (!cameraOk) {
-                setTimeout(() => {
-                    if (modoAtual === modo) {
-                        feedbackCamera.innerText = "❌ Sem acesso à câmera. Verifique as permissões.";
-                    }
-                }, 100);
-            }
-            
+            await iniciarCamera();
             telaCamera.classList.add('ativa');
         }
         
@@ -556,7 +694,6 @@
             pararCamera();
             telaCamera.classList.remove('ativa');
             telaInicial.style.display = 'flex';
-            modoAtual = null;
         }
         
         // Eventos
@@ -570,31 +707,29 @@
             abrirModo('consulta');
         });
         
-        btnVoltarMenu.addEventListener('click', () => {
-            fecharCameraEVoltar();
+        btnAbrirLista.addEventListener('click', () => {
+            telaInicial.style.display = 'none';
+            exibirListaMembros();
         });
         
-        btnFecharCamera.addEventListener('click', () => {
-            fecharCameraEVoltar();
+        btnFecharLista.addEventListener('click', () => {
+            telaLista.classList.remove('ativa');
+            telaInicial.style.display = 'flex';
         });
         
-        btnConfirmarCadastro.addEventListener('click', cadastrarUsuario);
-        btnBuscarFace.addEventListener('click', realizarConsultaFacial);
+        btnVoltarMenu.addEventListener('click', fecharCameraEVoltar);
+        btnFecharCamera.addEventListener('click', fecharCameraEVoltar);
+        btnConfirmarCadastro.addEventListener('click', cadastrarRosto);
+        btnBuscarFace.addEventListener('click', consultarAcesso);
         
         nomeCadastroInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                cadastrarUsuario();
-            }
+            if (e.key === 'Enter') cadastrarRosto();
         });
         
-        // Inicialização
+        // Inicializar
         telaInicial.style.display = 'flex';
-        
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            alert("Seu navegador não suporta acesso à câmera.");
-        }
-        
-        console.log(`Banco de dados: ${bancoUsuarios.length} usuários cadastrados.`);
+        carregarMembros().catch(console.error);
+        carregarDadosFaciais().catch(console.error);
     </script>
 </body>
 </html>
