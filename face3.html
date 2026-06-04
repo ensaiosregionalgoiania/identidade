@@ -2,188 +2,676 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle de Acesso Facial Pro</title>
-    <!-- Carrega a biblioteca localmente da raiz do seu repositório -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Controle Facial - Cadastro e Consulta</title>
     <script src="face-api.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 15px; background: #f0f2f5; color: #333; }
-        h2 { text-align: center; font-size: 22px; margin-bottom: 20px; }
-        .container { display: flex; flex-direction: column; gap: 15px; max-width: 500px; margin: 0 auto; }
-        .box { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .video-container { position: relative; width: 100%; aspect-ratio: 4/3; background: #000; border-radius: 6px; overflow: hidden; }
-        video { width: 100%; height: 100%; object-fit: cover; }
-        input, button { display: block; width: 100%; margin: 10px 0; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
-        button { background: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; }
-        button:hover { background: #218838; }
-        ul { list-style: none; padding: 0; margin: 0; }
-        li { padding: 10px; background: #f8f9fa; margin-bottom: 6px; border-radius: 4px; display: flex; justify-content: space-between; font-size: 14px; border-left: 4px solid #007bff; }
-        .status { font-weight: bold; color: #28a745; }
-        #feedback { font-weight: bold; text-align: center; margin: 10px 0; color: #555; font-size: 15px; }
-        
-        /* Área de cadastro condicional (escondida por padrão) */
-        #zona-cadastro { display: none; margin-top: 10px; padding: 10px; background: #e9ecef; border-radius: 6px; }
-        .alerta-erro { color: #dc3545 !important; font-size: 16px; animation: piscar 0.5s alternate infinite; }
-        @keyframes piscar { from { opacity: 1; } to { opacity: 0.6; } }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        /* TELA INICIAL - DOIS BOTÕES */
+        .tela-inicial {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            width: 100%;
+            max-width: 320px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px 25px;
+            border-radius: 32px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .tela-inicial h1 {
+            font-size: 28px;
+            margin-bottom: 20px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .tela-inicial p {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .btn-principal {
+            padding: 18px 20px;
+            font-size: 18px;
+            font-weight: bold;
+            border: none;
+            border-radius: 60px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-cadastrar {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-cadastrar:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .btn-consultar {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-consultar:hover {
+            background: #0069d9;
+            transform: translateY(-2px);
+        }
+
+        /* TELA DE CÂMERA (compartilhada entre cadastro e consulta) */
+        .tela-camera {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .tela-camera.ativa {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .cabecalho-camera {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+            z-index: 10;
+        }
+
+        .cabecalho-camera h3 {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .btn-fechar {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            font-size: 24px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .btn-fechar:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .video-container {
+            flex: 1;
+            position: relative;
+            background: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .painel-controles {
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-top-left-radius: 24px;
+            border-top-right-radius: 24px;
+        }
+
+        .feedback-area {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            text-align: center;
+            color: #ffd966;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .input-nome {
+            width: 100%;
+            padding: 14px;
+            font-size: 16px;
+            border: none;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            background: #f0f0f0;
+            outline: none;
+        }
+
+        .input-nome:focus {
+            background: white;
+            box-shadow: 0 0 0 2px #28a745;
+        }
+
+        .btn-acao {
+            width: 100%;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-acao-cadastrar {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-acao-consultar {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-acao-voltar {
+            background: #6c757d;
+            color: white;
+            margin-top: 10px;
+        }
+
+        .btn-acao:hover {
+            transform: scale(0.98);
+            opacity: 0.9;
+        }
+
+        /* DIV DE RESULTADO NA CONSULTA */
+        .resultado-consulta {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 16px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+            animation: surgir 0.3s ease;
+        }
+
+        .resultado-sucesso {
+            background: #28a745;
+            color: white;
+        }
+
+        .resultado-erro {
+            background: #dc3545;
+            color: white;
+        }
+
+        @keyframes surgir {
+            from {
+                transform: translateY(10px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Loading pequeno */
+        .spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.6s linear infinite;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Mensagem de carregamento */
+        .carregando-modelos {
+            text-align: center;
+            color: white;
+            padding: 20px;
+        }
     </style>
 </head>
 <body>
 
-    <h2>🚪 Controle Facial de Acesso 2</h2>
-    
-    <div class="container">
-        <!-- ÁREA DA CÂMERA (OTIMIZADA PARA CELULAR) -->
-        <div class="box">
-            <div class="video-container">
-                <!-- playsinline impede o iPhone de abrir o vídeo em tela cheia -->
-                <video id="video" autoplay muted playsinline></video>
-            </div>
-            <p id="feedback">Carregando inteligência artificial... Aguarde.</p>
-            
-            <!-- FORMULÁRIO QUE SÓ APARECE SE O ROSTO FOR NOVO -->
-            <div id="zona-cadastro">
-                <p style="margin:0; color:#495057; font-weight:bold;">👤 Rosto desconhecido detectado:</p>
-                <input type="text" id="nome" placeholder="Digite o nome para cadastrar">
-                <button id="btn-cadastrar">Finalizar Cadastro</button>
-            </div>
-        </div>
+    <!-- TELA INICIAL COM DOIS BOTÕES -->
+    <div id="telaInicial" class="tela-inicial">
+        <h1>🔒 Acesso Facial</h1>
+        <p>Cadastre rostos ou consulte permissões</p>
+        <button id="btnAbrirCadastro" class="btn-principal btn-cadastrar">📝 CADASTRAR</button>
+        <button id="btnAbrirConsulta" class="btn-principal btn-consultar">🔍 CONSULTAR</button>
+    </div>
 
-        <!-- HISTÓRICO DE ACESSOS -->
-        <div class="box">
-            <h3>🕒 Registro de Entradas (Log)</h3>
-            <ul id="log-acesso"></ul>
+    <!-- TELA DE CÂMERA (REUTILIZÁVEL PARA CADASTRO E CONSULTA) -->
+    <div id="telaCamera" class="tela-camera">
+        <div class="cabecalho-camera">
+            <h3 id="tituloCamera">Modo</h3>
+            <button id="btnFecharCamera" class="btn-fechar">✕</button>
+        </div>
+        <div class="video-container">
+            <video id="video" autoplay muted playsinline></video>
+        </div>
+        <div class="painel-controles">
+            <div id="feedbackCamera" class="feedback-area">🔄 Carregando câmera...</div>
+            <div id="zonaCadastro" style="display: none;">
+                <input type="text" id="nomeCadastro" class="input-nome" placeholder="Nome completo" autocomplete="off">
+                <button id="btnConfirmarCadastro" class="btn-acao btn-acao-cadastrar">✅ CADASTRAR</button>
+            </div>
+            <div id="zonaConsulta" style="display: none;">
+                <button id="btnBuscarFace" class="btn-acao btn-acao-consultar">🔍 VERIFICAR AGORA</button>
+                <div id="resultadoConsulta" class="resultado-consulta" style="display: none;"></div>
+            </div>
+            <button id="btnVoltarMenu" class="btn-acao btn-acao-voltar">◀ VOLTAR</button>
         </div>
     </div>
 
     <script>
+        // ==================== ELEMENTOS DOM ====================
+        const telaInicial = document.getElementById('telaInicial');
+        const telaCamera = document.getElementById('telaCamera');
         const video = document.getElementById('video');
-        const feedback = document.getElementById('feedback');
-        const zonaCadastro = document.getElementById('zona-cadastro');
-        const btnCadastrar = document.getElementById('btn-cadastrar');
-        const nomeInput = document.getElementById('nome');
-        const logAcesso = document.getElementById('log-acesso');
+        const feedbackCamera = document.getElementById('feedbackCamera');
+        const tituloCamera = document.getElementById('tituloCamera');
+        const zonaCadastroDiv = document.getElementById('zonaCadastro');
+        const zonaConsultaDiv = document.getElementById('zonaConsulta');
+        const nomeCadastroInput = document.getElementById('nomeCadastro');
+        const btnConfirmarCadastro = document.getElementById('btnConfirmarCadastro');
+        const btnBuscarFace = document.getElementById('btnBuscarFace');
+        const resultadoConsultaDiv = document.getElementById('resultadoConsulta');
+        const btnFecharCamera = document.getElementById('btnFecharCamera');
+        const btnVoltarMenu = document.getElementById('btnVoltarMenu');
+        const btnAbrirCadastro = document.getElementById('btnAbrirCadastro');
+        const btnAbrirConsulta = document.getElementById('btnAbrirConsulta');
 
+        // ==================== ESTADO GLOBAL ====================
         let bancoDados = JSON.parse(localStorage.getItem('usuariosFaciais')) || [];
         let reconhecedorRostos = null;
-        let ultimoDescritorDetectado = null; // Guarda temporariamente o rosto visto
+        let ultimoDescritorDetectado = null;     // guarda o descriptor do rosto atual (para cadastro)
+        let modoAtual = null;                     // 'cadastro' ou 'consulta'
+        let cameraStream = null;
+        let modelsCarregados = false;
+        let intervaloReconhecimento = null;
+        let ultimoDescriptorConsulta = null;       // para consulta manual
+        
+        // Flag para evitar cadastros duplicados enquanto processa
+        let processandoCadastro = false;
 
-        // 1. Inicializar e carregar modelos da pasta "models"
-        async function iniciar() {
+        // ==================== CARREGAR MODELOS FACE-API ====================
+        async function carregarModelos() {
+            feedbackCamera.innerText = "📦 Carregando inteligência facial...";
+            try {
+                // Carrega os modelos da pasta 'models' (certifique-se que os arquivos estão lá)
+                await faceapi.nets.ssdMobilenetv1.loadFromUri('models');
+                await faceapi.nets.faceLandmark68Net.loadFromUri('models');
+                await faceapi.nets.faceRecognitionNet.loadFromUri('models');
+                modelsCarregados = true;
+                feedbackCamera.innerText = "✅ Modelos prontos. Iniciando câmera...";
+                return true;
+            } catch (err) {
+                console.error("Erro ao carregar modelos:", err);
+                feedbackCamera.innerText = "❌ Erro ao carregar IA. Verifique a pasta 'models'.";
+                return false;
+            }
+        }
+
+        // ==================== INICIAR CÂMERA ====================
+        async function iniciarCamera() {
+            if (cameraStream) {
+                pararCamera();
+            }
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: "user",
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    }
+                });
+                video.srcObject = stream;
+                cameraStream = stream;
+                await video.play();
+                feedbackCamera.innerText = "📷 Câmera ativa. Aguardando rosto...";
+                return true;
+            } catch (err) {
+                feedbackCamera.innerText = "❌ Permissão de câmera negada ou erro.";
+                console.error(err);
+                return false;
+            }
+        }
+
+        function pararCamera() {
+            if (intervaloReconhecimento) {
+                clearInterval(intervaloReconhecimento);
+                intervaloReconhecimento = null;
+            }
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+            video.srcObject = null;
+        }
+
+        // ==================== ATUALIZAR RECONHECEDOR ====================
+        function atualizarReconhecedor() {
+            if (bancoDados.length === 0) {
+                reconhecedorRostos = null;
+                return;
+            }
+            const labeledDescriptors = bancoDados.map(usuario => {
+                // Garante que o descriptor seja Float32Array
+                let descArray = usuario.descriptor;
+                if (descArray && !(descArray instanceof Float32Array)) {
+                    descArray = new Float32Array(descArray);
+                }
+                return new faceapi.LabeledFaceDescriptors(usuario.nome, [descArray]);
+            });
+            // Limiar 0.55 para reconhecimento preciso
+            reconhecedorRostos = new faceapi.FaceMatcher(labeledDescriptors, 0.55);
+        }
+
+        // ==================== DETECTAR ROSTO E EXTRAIR DESCRIPTOR ====================
+        async function detectarRosto() {
+            if (!modelsCarregados || !video.videoWidth || video.paused) return null;
+            try {
+                const deteccao = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
+                if (!deteccao) return null;
+                return {
+                    descriptor: Array.from(deteccao.descriptor),
+                    full: deteccao
+                };
+            } catch (err) {
+                console.warn("Erro na detecção:", err);
+                return null;
+            }
+        }
+
+        // ==================== LOOP PARA CADASTRO (CAPTURA ROSTO EM TEMPO REAL) ====================
+        async function loopCadastro() {
+            if (modoAtual !== 'cadastro') return;
+            const rosto = await detectarRosto();
+            if (!rosto) {
+                feedbackCamera.innerText = "😕 Nenhum rosto detectado. Olhe para a câmera.";
+                ultimoDescritorDetectado = null;
+                return;
+            }
+            ultimoDescritorDetectado = rosto.descriptor;
+            feedbackCamera.innerText = "✅ Rosto capturado! Digite o nome e clique em CADASTRAR.";
+        }
+
+        // ==================== CADASTRAR NOVO USUÁRIO ====================
+        async function cadastrarUsuario() {
+            if (processandoCadastro) return;
+            const nome = nomeCadastroInput.value.trim();
+            if (!nome) {
+                feedbackCamera.innerText = "⚠️ Digite um nome antes de cadastrar.";
+                return;
+            }
+            if (!ultimoDescritorDetectado) {
+                feedbackCamera.innerText = "⚠️ Nenhum rosto detectado. Olhe para a câmera.";
+                return;
+            }
+
+            processandoCadastro = true;
+            
+            // Verifica se o nome já existe no banco
+            const existe = bancoDados.some(u => u.nome.toLowerCase() === nome.toLowerCase());
+            if (existe) {
+                feedbackCamera.innerText = "❌ Este nome já está cadastrado! Use outro nome.";
+                processandoCadastro = false;
+                return;
+            }
+
+            // Salvar
+            bancoDados.push({
+                nome: nome,
+                descriptor: ultimoDescritorDetectado
+            });
+            localStorage.setItem('usuariosFaciais', JSON.stringify(bancoDados));
+            
+            // Limpa e mostra sucesso
+            nomeCadastroInput.value = "";
+            ultimoDescritorDetectado = null;
+            feedbackCamera.innerHTML = `✅ "${nome}" cadastrado com sucesso!`;
+            // Recria o reconhecedor com os novos dados
+            atualizarReconhecedor();
+            
+            // Espera 1.5 segundos e fecha a tela (ou mantém, mas sugerimos voltar menu)
+            setTimeout(() => {
+                if (modoAtual === 'cadastro') {
+                    fecharTelaCamera();
+                }
+            }, 1500);
+            
+            processandoCadastro = false;
+        }
+
+        // ==================== CONSULTA MANUAL (BOTÃO VERIFICAR AGORA) ====================
+        async function realizarConsulta() {
+            if (!modelsCarregados) {
+                resultadoConsultaDiv.style.display = "block";
+                resultadoConsultaDiv.className = "resultado-consulta resultado-erro";
+                resultadoConsultaDiv.innerText = "⏳ Aguarde o carregamento da IA.";
+                return;
+            }
+            if (bancoDados.length === 0) {
+                resultadoConsultaDiv.style.display = "block";
+                resultadoConsultaDiv.className = "resultado-consulta resultado-erro";
+                resultadoConsultaDiv.innerText = "📭 Nenhum usuário cadastrado. Vá em CADASTRAR primeiro.";
+                return;
+            }
+            
+            feedbackCamera.innerText = "🔍 Analisando rosto... aguarde.";
+            const rosto = await detectarRosto();
+            
+            if (!rosto) {
+                resultadoConsultaDiv.style.display = "block";
+                resultadoConsultaDiv.className = "resultado-consulta resultado-erro";
+                resultadoConsultaDiv.innerText = "❌ Nenhum rosto identificado. Posicione-se bem.";
+                feedbackCamera.innerText = "📷 Câmera ativa. Tente novamente.";
+                return;
+            }
+            
+            if (!reconhecedorRostos) {
+                atualizarReconhecedor();
+                if (!reconhecedorRostos) {
+                    resultadoConsultaDiv.style.display = "block";
+                    resultadoConsultaDiv.className = "resultado-consulta resultado-erro";
+                    resultadoConsultaDiv.innerText = "⚠️ Banco vazio ou erro. Cadastre rostos primeiro.";
+                    return;
+                }
+            }
+            
+            const descriptorFloat = new Float32Array(rosto.descriptor);
+            const melhorMatch = reconhecedorRostos.findBestMatch(descriptorFloat);
+            
+            if (melhorMatch.label !== 'unknown') {
+                // ENCONTROU CORRESPONDÊNCIA
+                resultadoConsultaDiv.style.display = "block";
+                resultadoConsultaDiv.className = "resultado-consulta resultado-sucesso";
+                resultadoConsultaDiv.innerHTML = `✅ ACESSO LIBERADO!<br>👤 ${melhorMatch.label}`;
+                feedbackCamera.innerText = `🟢 Reconhecido: ${melhorMatch.label}`;
+                // Animação extra
+                setTimeout(() => {
+                    if (modoAtual === 'consulta') {
+                        // mantém a div, mas não fecha automático
+                    }
+                }, 500);
+            } else {
+                resultadoConsultaDiv.style.display = "block";
+                resultadoConsultaDiv.className = "resultado-consulta resultado-erro";
+                resultadoConsultaDiv.innerHTML = "❌ ACESSO NEGADO!<br>Rosto não cadastrado no sistema.";
+                feedbackCamera.innerText = "🔴 Rosto não reconhecido.";
+            }
+        }
+        
+        // Loop contínuo para consulta não é obrigatório, mas vamos deixar um helper para feedback de detecção
+        async function loopConsultaFeedback() {
+            if (modoAtual !== 'consulta') return;
+            const rosto = await detectarRosto();
+            if (rosto) {
+                if (feedbackCamera.innerText.includes("Nenhum rosto") || feedbackCamera.innerText.includes("olhe")) {
+                    feedbackCamera.innerText = "🎯 Rosto detectado! Pressione VERIFICAR.";
+                }
+            } else {
+                if (!feedbackCamera.innerText.includes("VERIFICAR")) {
+                    feedbackCamera.innerText = "😕 Nenhum rosto visível. Olhe para a câmera e clique em VERIFICAR.";
+                }
+            }
+        }
+
+        // ==================== ABRIR TELA DE CÂMERA (CADASTRO OU CONSULTA) ====================
+        async function abrirCameraModo(modo) {
+            modoAtual = modo;
+            
+            // Resetar interfaces
+            zonaCadastroDiv.style.display = "none";
+            zonaConsultaDiv.style.display = "none";
+            resultadoConsultaDiv.style.display = "none";
+            resultadoConsultaDiv.innerHTML = "";
+            nomeCadastroInput.value = "";
+            ultimoDescritorDetectado = null;
+            
+            if (modo === 'cadastro') {
+                tituloCamera.innerText = "📸 CADASTRO DE ROSTO";
+                zonaCadastroDiv.style.display = "block";
+                zonaConsultaDiv.style.display = "none";
+                feedbackCamera.innerText = "📷 Olhe para a câmera. Seu rosto será capturado.";
+                // Inicia loop de captura continua
+                if (intervaloReconhecimento) clearInterval(intervaloReconhecimento);
+                intervaloReconhecimento = setInterval(() => loopCadastro(), 800);
+            } 
+            else if (modo === 'consulta') {
+                tituloCamera.innerText = "🔍 CONSULTA DE ACESSO";
+                zonaCadastroDiv.style.display = "none";
+                zonaConsultaDiv.style.display = "block";
+                feedbackCamera.innerText = "📷 Mostre o rosto e clique em VERIFICAR";
+                // Loop apenas para dar feedback visual de detecção
+                if (intervaloReconhecimento) clearInterval(intervaloReconhecimento);
+                intervaloReconhecimento = setInterval(() => loopConsultaFeedback(), 800);
+            }
+            
+            // Garantir que os modelos estão prontos
+            if (!modelsCarregados) {
+                const sucesso = await carregarModelos();
+                if (!sucesso) {
+                    feedbackCamera.innerText = "Falha crítica nos modelos. Verifique a pasta 'models'.";
+                    return;
+                }
+            }
+            
+            // Iniciar câmera
+            const cameraOk = await iniciarCamera();
+            if (!cameraOk) {
+                feedbackCamera.innerText = "Não foi possível acessar a câmera.";
+                return;
+            }
+            
+            atualizarReconhecedor();
+            telaCamera.classList.add('ativa');
+        }
+        
+        function fecharTelaCamera() {
+            if (intervaloReconhecimento) {
+                clearInterval(intervaloReconhecimento);
+                intervaloReconhecimento = null;
+            }
+            pararCamera();
+            telaCamera.classList.remove('ativa');
+            modoAtual = null;
+        }
+        
+        // ==================== EVENTOS DOS BOTÕES ====================
+        btnAbrirCadastro.addEventListener('click', () => {
+            telaInicial.style.display = 'none';
+            abrirCameraModo('cadastro');
+        });
+        
+        btnAbrirConsulta.addEventListener('click', () => {
+            telaInicial.style.display = 'none';
+            abrirCameraModo('consulta');
+        });
+        
+        btnVoltarMenu.addEventListener('click', () => {
+            fecharTelaCamera();
+            telaInicial.style.display = 'flex';
+        });
+        
+        btnFecharCamera.addEventListener('click', () => {
+            fecharTelaCamera();
+            telaInicial.style.display = 'flex';
+        });
+        
+        btnConfirmarCadastro.addEventListener('click', cadastrarUsuario);
+        btnBuscarFace.addEventListener('click', realizarConsulta);
+        
+        // Permitir pressionar Enter no campo nome para cadastrar
+        nomeCadastroInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') cadastrarUsuario();
+        });
+        
+        // Inicialização: ao abrir o app, exibir tela inicial apenas, sem câmera
+        // mas pré-carregar modelos em background para agilizar?
+        (async function preload() {
+            telaInicial.style.display = 'flex';
+            telaCamera.classList.remove('ativa');
+            // Carrega modelos em segundo plano sem travar a UI
             try {
                 await faceapi.nets.ssdMobilenetv1.loadFromUri('models');
                 await faceapi.nets.faceLandmark68Net.loadFromUri('models');
                 await faceapi.nets.faceRecognitionNet.loadFromUri('models');
-                
-                feedback.innerText = "Modelos carregados. Acessando câmera...";
-                
-                // Configuração ideal para celulares (Câmera de selfie e resolução padrão)
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { 
-                        facingMode: "user",
-                        width: { ideal: 640 },
-                        height: { ideal: 480 }
-                    } 
-                });
-                video.srcObject = stream;
+                modelsCarregados = true;
+                // Atualizar reconhecedor se já houver dados
+                atualizarReconhecedor();
+                console.log("Modelos pré-carregados com sucesso.");
             } catch (err) {
-                feedback.innerText = "Erro ao iniciar. Verifique as permissões de câmera.";
-                console.error(err);
+                console.warn("Pré-carga de modelos falhou, será feita sob demanda.", err);
             }
-        }
-
-        // 2. Quando o vídeo iniciar, ativa as validações em loop
-        video.addEventListener('play', () => {
-            feedback.innerText = "Olhe para a câmera...";
-            atualizarReconhecedor();
-            setInterval(processarFrameFacial, 1500); // Roda a checagem a cada 1.5 segundos
-        });
-
-        // 3. Monta o comparador matemático de rostos
-        function atualizarReconhecedor() {
-            if (bancoDados.length === 0) return;
-            const rotulosIdentificados = bancoDados.map(usuario => {
-                return new faceapi.LabeledFaceDescriptors(usuario.nome, [new Float32Array(usuario.descriptor)]);
-            });
-            // Margem de precisão: 0.55 (quanto menor, mais rigoroso o reconhecimento)
-            reconhecedorRostos = new faceapi.FaceMatcher(rotulosIdentificados, 0.55);
-        }
-
-        // 4. Lógica Principal: Escaneia e decide o que exibir na tela
-        async function processarFrameFacial() {
-            const deteccao = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
-            
-            if (!deteccao) {
-                feedback.innerText = "Nenhum rosto visível. Posicione-se em frente à tela.";
-                feedback.classList.remove('alerta-erro');
-                zonaCadastro.style.display = "none";
-                ultimoDescritorDetectado = null;
-                return;
-            }
-
-            // Armazena o vetor matemático do rosto atual para uso no cadastro
-            ultimoDescritorDetectado = Array.from(deteccao.descriptor);
-
-            // Cenário A: Não há ninguém cadastrado ainda no banco
-            if (bancoDados.length === 0) {
-                feedback.innerText = "Nenhum usuário no banco. Cadastre o primeiro!";
-                zonaCadastro.style.display = "block";
-                return;
-            }
-
-            // Cenário B: Comparar rosto atual com os cadastrados
-            const resultado = reconhecedorRostos.findBestMatch(deteccao.descriptor);
-
-            if (resultado.label !== 'unknown') {
-                // ROSTO ENCONTRADO
-                feedback.innerText = `🛑 ${resultado.label} JÁ CADASTRADO(A)!`;
-                feedback.classList.add('alerta-erro');
-                zonaCadastro.style.display = "none"; // Esconde o formulário se já existe
-                registrarEntrada(resultado.label);   // Bate o ponto no log automaticamente
-            } else {
-                // ROSTO NOVO
-                feedback.innerText = "✨ Rosto pronto para registro.";
-                feedback.classList.remove('alerta-erro');
-                zonaCadastro.style.display = "block"; // Abre os campos de nome e cadastro
-            }
-        }
-
-        // 5. Salvar Novo Registro no LocalStorage
-        btnCadastrar.addEventListener('click', () => {
-            const nome = nomeInput.value.trim();
-            if (!nome) return alert("Por favor, digite o nome.");
-            if (!ultimoDescritorDetectado) return alert("Rosto perdido. Olhe para a câmera novamente.");
-
-            // Adiciona no "banco" do navegador
-            bancoDados.push({ nome: nome, descriptor: ultimoDescritorDetectado });
-            localStorage.setItem('usuariosFaciais', JSON.stringify(bancoDados));
-
-            nomeInput.value = "";
-            zonaCadastro.style.display = "none";
-            feedback.innerText = `✅ ${nome} cadastrado com sucesso!`;
-            
-            atualizarReconhecedor();
-        });
-
-        // 6. Imprime a hora de chegada no histórico da tela
-        let ultimoRegistrado = "";
-        let tempoUltimoRegistro = 0;
-
-        function registrarEntrada(nome) {
-            const agora = Date.now();
-            // Evita registrar a mesma pessoa repetidamente em menos de 8 segundos
-            if (nome === ultimoRegistrado && (agora - tempoUltimoRegistro) < 8000) return;
-
-            ultimoRegistrado = nome;
-            tempoUltimoRegistro = agora;
-
-            const horaAtual = new Date().toLocaleTimeString('pt-BR');
-            const item = document.createElement('li');
-            item.innerHTML = `<span>👤 ${nome}</span> <span class="status">Chegou às ${horaAtual}</span>`;
-            logAcesso.prepend(item);
-        }
-
-        // Inicializa a aplicação ao carregar a página
-        iniciar();
+        })();
     </script>
 </body>
 </html>
