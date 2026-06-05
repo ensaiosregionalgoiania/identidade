@@ -14,7 +14,7 @@
             min-height: 100vh;
             padding: 20px;
         }
-        .container { max-width: 800px; margin: 0 auto; }
+        .container { max-width: 900px; margin: 0 auto; }
         
         .top-bar {
             background: white;
@@ -40,7 +40,7 @@
         
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: 600; color: #555; }
-        .form-group input, .form-group select { width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; font-family: inherit; }
         
         button { background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px; }
         button:hover { background: #219a52; }
@@ -48,13 +48,14 @@
         .btn-danger:hover { background: #c0392b; }
         .btn-editar { background: #3498db; }
         .btn-editar:hover { background: #2980b9; }
+        .btn-salvar { background: #27ae60; }
+        .btn-cancelar { background: #95a5a6; }
+        .btn-cancelar:hover { background: #7f8c8d; }
         
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
         .modal-content { background: white; border-radius: 15px; padding: 25px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
         .modal-content h3 { margin-bottom: 20px; color: #2c3e50; }
         .modal-buttons { margin-top: 20px; display: flex; gap: 10px; justify-content: center; }
-        
-        .select-multiplo { width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; min-height: 100px; }
         
         .toast { position: fixed; bottom: 20px; right: 20px; background: #27ae60; color: white; padding: 12px 24px; border-radius: 8px; z-index: 1000; animation: fadeIn 0.3s ease; }
         .toast.error { background: #e74c3c; }
@@ -76,13 +77,77 @@
         .tab-content.active { display: block; }
         
         .lista-eventos { max-height: 500px; overflow-y: auto; }
-        
         .loading { text-align: center; padding: 20px; color: #999; }
         
-        .tipo-botoes { display: flex; gap: 10px; margin-top: 10px; }
+        .tipo-botoes { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
         .tipo-botoes button { margin-top: 0; padding: 5px 10px; font-size: 0.85rem; }
         
         .permissao-item { margin: 5px 0; padding: 5px; background: #f0f0f0; border-radius: 5px; display: inline-block; margin-right: 5px; font-size: 0.85rem; }
+        
+        .secao-detalhes {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 2px solid #e0e0e0;
+        }
+        .secao-detalhes h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+        .radio-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 5px;
+            margin-bottom: 10px;
+        }
+        .radio-opcao {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #f8f9fa;
+            padding: 6px 14px;
+            border-radius: 25px;
+            cursor: pointer;
+        }
+        .radio-opcao input {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            margin: 0;
+        }
+        .radio-opcao label {
+            margin: 0;
+            cursor: pointer;
+            font-weight: normal;
+            font-size: 0.9rem;
+        }
+        
+        .botoes-form {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .evento-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .evento-actions button {
+            margin-top: 0;
+            padding: 5px 12px;
+            font-size: 0.8rem;
+        }
+        
+        .info-extra {
+            font-size: 0.8rem;
+            color: #555;
+            margin-top: 5px;
+            padding: 5px;
+            background: #f0f0f0;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
@@ -98,16 +163,28 @@
         </div>
 
         <div class="tabs">
-            <button class="tab-btn active" onclick="trocarAba('novo')">➕ Novo Evento</button>
-            <button class="tab-btn" onclick="trocarAba('lista')">📋 Lista de Eventos</button>
+            <button class="tab-btn" onclick="trocarAba('novo')">➕ Novo Evento</button>
+            <button class="tab-btn active" onclick="trocarAba('lista')">📋 Lista de Eventos</button>
             <button class="tab-btn" onclick="trocarAba('tipos')">🎯 Tipos de Evento</button>
         </div>
 
-        <!-- Aba Novo Evento -->
-        <div id="abaNovo" class="tab-content active">
+        <!-- Aba Lista de Eventos (agora como padrão) -->
+        <div id="abaLista" class="tab-content active">
             <div class="card">
-                <div class="card-header"><h2>📅 Criar Novo Evento</h2></div>
+                <div class="card-header"><h2>📋 Eventos Cadastrados</h2></div>
+                <div id="listaEventos" class="lista-eventos">
+                    <div class="loading">Carregando eventos...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Aba Novo Evento -->
+        <div id="abaNovo" class="tab-content">
+            <div class="card">
+                <div class="card-header"><h2 id="formTitle">📅 Criar Novo Evento</h2></div>
                 <form id="formEvento">
+                    <input type="hidden" id="eventoEditandoId">
+                    
                     <div class="form-group">
                         <label>Data do Evento *</label>
                         <input type="date" id="dataEvento" required>
@@ -127,18 +204,69 @@
                         </select>
                     </div>
 
-                    <button type="submit">💾 Salvar Evento</button>
-                </form>
-            </div>
-        </div>
+                    <!-- Seção Ministério -->
+                    <div class="secao-detalhes">
+                        <h3>👥 Ministério</h3>
+                        <div class="form-group">
+                            <label>Nome do Membro do Ministério:</label>
+                            <input type="text" id="nomeMinisterio" placeholder="Digite o nome do membro...">
+                        </div>
+                        <div class="radio-group">
+                            <div class="radio-opcao">
+                                <input type="radio" name="ministerioRadio" id="ministerioAnciao" value="Ancião">
+                                <label for="ministerioAnciao">Ancião</label>
+                            </div>
+                            <div class="radio-opcao">
+                                <input type="radio" name="ministerioRadio" id="ministerioCooperadorOficial" value="Cooperador Oficial">
+                                <label for="ministerioCooperadorOficial">Cooperador Oficial</label>
+                            </div>
+                            <div class="radio-opcao">
+                                <input type="radio" name="ministerioRadio" id="ministerioCooperadorJovens" value="Cooperador de Jovens e Menores">
+                                <label for="ministerioCooperadorJovens">Cooperador de Jovens e Menores</label>
+                            </div>
+                            <div class="radio-opcao">
+                                <input type="radio" name="ministerioRadio" id="ministerioDiacono" value="Diácono">
+                                <label for="ministerioDiacono">Diácono</label>
+                            </div>
+                        </div>
+                    </div>
 
-        <!-- Aba Lista de Eventos -->
-        <div id="abaLista" class="tab-content">
-            <div class="card">
-                <div class="card-header"><h2>📋 Eventos Cadastrados</h2></div>
-                <div id="listaEventos" class="lista-eventos">
-                    <div class="loading">Carregando eventos...</div>
-                </div>
+                    <!-- Seção Atendimento -->
+                    <div class="secao-detalhes">
+                        <h3>🎯 Atendimento</h3>
+                        <div class="form-group">
+                            <label>Nome do Membro do Atendimento:</label>
+                            <input type="text" id="nomeAtendimento" placeholder="Digite o nome do membro...">
+                        </div>
+                        <div class="radio-group">
+                            <div class="radio-opcao">
+                                <input type="radio" name="atendimentoRadio" id="atendimentoRegional" value="Encarregado Regional">
+                                <label for="atendimentoRegional">Encarregado Regional</label>
+                            </div>
+                            <div class="radio-opcao">
+                                <input type="radio" name="atendimentoRadio" id="atendimentoLocal" value="Encarregado Local">
+                                <label for="atendimentoLocal">Encarregado Local</label>
+                            </div>
+                            <div class="radio-opcao">
+                                <input type="radio" name="atendimentoRadio" id="atendimentoInstrutor" value="Instrutor">
+                                <label for="atendimentoInstrutor">Instrutor</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Seção Hinos Ensaiados -->
+                    <div class="secao-detalhes">
+                        <h3>🎵 Hinos Ensaiados / Tocados</h3>
+                        <div class="form-group">
+                            <textarea id="hinosEnsaiados" rows="3" placeholder="Digite os hinos ensaiados/tocados neste evento..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="botoes-form">
+                        <button type="submit" class="btn-salvar">💾 Salvar Evento</button>
+                        <button type="button" onclick="cancelarEdicao()" class="btn-cancelar">❌ Cancelar</button>
+                    </div>
+                </form>
             </div>
         </div>
 
@@ -161,7 +289,7 @@
             
             <div class="form-group">
                 <label>Nome do Tipo de Evento *</label>
-                <input type="text" id="novoTipoNome" placeholder="Ex: Aula, Ensaio GEM, Culto" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px;">
+                <input type="text" id="novoTipoNome" placeholder="Ex: Aula, Ensaio GEM, Culto">
             </div>
             
             <div class="form-group">
@@ -191,12 +319,12 @@
     <div id="modalExcluir" class="modal">
         <div class="modal-content">
             <h3>⚠️ Confirmar Exclusão</h3>
-            <p>Tem certeza que deseja excluir este tipo de evento?</p>
+            <p>Tem certeza que deseja excluir este evento?</p>
             <p><strong id="excluirNome"></strong></p>
             <p style="color: #e74c3c; font-size: 0.9rem;">Esta ação não poderá ser desfeita!</p>
             <div class="modal-buttons">
                 <button onclick="fecharModalExcluir()" style="background:#95a5a6;">Cancelar</button>
-                <button onclick="confirmarExcluir()" style="background:#e74c3c;">Excluir</button>
+                <button onclick="confirmarExcluirEvento()" style="background:#e74c3c;">Excluir</button>
             </div>
         </div>
     </div>
@@ -226,7 +354,7 @@
         let cargos = [];
         let niveis = [];
         let tipoEditandoId = null;
-        let excluirId = null;
+        let excluirEventoId = null;
 
         function mostrarToast(msg, tipo = 'success') {
             const toast = document.createElement('div');
@@ -236,10 +364,40 @@
             setTimeout(() => toast.remove(), 3000);
         }
 
+        function obterMinisterioSelecionado() {
+            const radios = document.querySelectorAll('input[name="ministerioRadio"]');
+            for (const radio of radios) {
+                if (radio.checked) return radio.value;
+            }
+            return '';
+        }
+
+        function setarMinisterioRadio(valor) {
+            const radios = document.querySelectorAll('input[name="ministerioRadio"]');
+            radios.forEach(radio => {
+                radio.checked = radio.value === valor;
+            });
+        }
+
+        function obterAtendimentoSelecionado() {
+            const radios = document.querySelectorAll('input[name="atendimentoRadio"]');
+            for (const radio of radios) {
+                if (radio.checked) return radio.value;
+            }
+            return '';
+        }
+
+        function setarAtendimentoRadio(valor) {
+            const radios = document.querySelectorAll('input[name="atendimentoRadio"]');
+            radios.forEach(radio => {
+                radio.checked = radio.value === valor;
+            });
+        }
+
         async function carregarDados() {
             const congSnapshot = await congregacoesCollection.orderBy('nome').get();
             congregacoes = [];
-            congSnapshot.forEach(doc => congregacoes.push({ id: doc.id, nome: doc.data().nome }));
+            congSnapshot.forEach(doc => congregacoes.push({ id: doc.id, nome: doc.data().nome, cidade: doc.data().cidade }));
 
             const tipoSnapshot = await tiposEventoCollection.orderBy('nome').get();
             tiposEvento = [];
@@ -258,7 +416,8 @@
             const congSelect = document.getElementById('congregacaoSelect');
             congSelect.innerHTML = '<option value="">Selecione...</option>';
             congregacoes.forEach(c => {
-                congSelect.innerHTML += `<option value="${c.id}">${c.nome}</option>`;
+                const cidadeTexto = c.cidade ? ` (${c.cidade})` : '';
+                congSelect.innerHTML += `<option value="${c.id}">${c.nome}${cidadeTexto}</option>`;
             });
 
             const tipoSelect = document.getElementById('tipoEventoSelect');
@@ -270,7 +429,12 @@
         }
 
         function configurarSelectNovoTipo() {
-            document.getElementById('tipoEventoSelect').addEventListener('change', function(e) {
+            const tipoSelect = document.getElementById('tipoEventoSelect');
+            const newSelect = tipoSelect.cloneNode(true);
+            tipoSelect.parentNode.replaceChild(newSelect, tipoSelect);
+            newSelect.id = 'tipoEventoSelect';
+            
+            newSelect.addEventListener('change', function(e) {
                 if (this.value === '__NOVO__') {
                     abrirModalNovoTipo();
                     this.value = '';
@@ -351,7 +515,6 @@
             document.getElementById('modalTitulo').textContent = '✏️ Editar Tipo de Evento';
             document.getElementById('novoTipoNome').value = nome;
             
-            // Buscar permissões existentes
             const permissoesSnapshot = await permissoesCollection.where('tipoEventoId', '==', id).get();
             const cargosSelecionados = [];
             const niveisSelecionados = [];
@@ -385,17 +548,13 @@
             const cargosSelecionados = [];
             const cargosCheckboxes = document.querySelectorAll('#cargosCheckboxContainer input[type="checkbox"]');
             cargosCheckboxes.forEach(cb => {
-                if (cb.checked) {
-                    cargosSelecionados.push(cb.value);
-                }
+                if (cb.checked) cargosSelecionados.push(cb.value);
             });
 
             const niveisSelecionados = [];
             const niveisCheckboxes = document.querySelectorAll('#niveisCheckboxContainer input[type="checkbox"]');
             niveisCheckboxes.forEach(cb => {
-                if (cb.checked) {
-                    niveisSelecionados.push(cb.value);
-                }
+                if (cb.checked) niveisSelecionados.push(cb.value);
             });
 
             if (cargosSelecionados.length === 0 || niveisSelecionados.length === 0) {
@@ -405,19 +564,16 @@
 
             try {
                 if (tipoEditandoId) {
-                    // Atualizar nome
                     await tiposEventoCollection.doc(tipoEditandoId).update({
                         nome: nome,
                         atualizadoEm: new Date().toISOString()
                     });
                     
-                    // Remover permissões antigas
                     const permissoesAntigas = await permissoesCollection.where('tipoEventoId', '==', tipoEditandoId).get();
                     for (const doc of permissoesAntigas.docs) {
                         await doc.ref.delete();
                     }
                     
-                    // Adicionar novas permissões
                     for (const cargoId of cargosSelecionados) {
                         for (const nivelId of niveisSelecionados) {
                             await permissoesCollection.add({
@@ -451,6 +607,7 @@
                 fecharModalNovoTipo();
                 await carregarDados();
                 renderizarSelects();
+                configurarSelectNovoTipo();
                 carregarListaTiposEvento();
                 
             } catch(error) {
@@ -458,9 +615,11 @@
             }
         }
 
+        // Função para salvar/atualizar evento com os novos campos
         document.getElementById('formEvento').addEventListener('submit', async (e) => {
             e.preventDefault();
             
+            const eventoId = document.getElementById('eventoEditandoId').value;
             const data = document.getElementById('dataEvento').value;
             const congregacaoId = document.getElementById('congregacaoSelect').value;
             const tipoEventoId = document.getElementById('tipoEventoSelect').value;
@@ -470,23 +629,99 @@
                 return;
             }
             
+            // Dados do ministério
+            const nomeMinisterio = document.getElementById('nomeMinisterio').value;
+            const cargoMinisterio = obterMinisterioSelecionado();
+            
+            // Dados do atendimento
+            const nomeAtendimento = document.getElementById('nomeAtendimento').value;
+            const cargoAtendimento = obterAtendimentoSelecionado();
+            
+            // Hinos ensaiados/tocados
+            const hinosTocados = document.getElementById('hinosEnsaiados').value;
+            
+            const dadosEvento = {
+                data: data,
+                congregacaoId: congregacaoId,
+                tipoEventoId: tipoEventoId,
+                // Novos campos
+                nomeMinisterio: nomeMinisterio,
+                cargoMinisterio: cargoMinisterio,
+                nomeAtendimento: nomeAtendimento,
+                cargoAtendimento: cargoAtendimento,
+                hinosTocados: hinosTocados,
+                atualizadoEm: new Date().toISOString()
+            };
+            
             try {
-                await eventosCollection.add({
-                    data: data,
-                    congregacaoId: congregacaoId,
-                    tipoEventoId: tipoEventoId,
-                    criadoEm: new Date().toISOString()
-                });
+                if (eventoId) {
+                    // Atualizar evento existente
+                    await eventosCollection.doc(eventoId).update(dadosEvento);
+                    mostrarToast('✅ Evento atualizado com sucesso!');
+                } else {
+                    // Criar novo evento
+                    dadosEvento.criadoEm = new Date().toISOString();
+                    dadosEvento.status = 'aberto';
+                    await eventosCollection.add(dadosEvento);
+                    mostrarToast('✅ Evento cadastrado com sucesso!');
+                }
                 
-                mostrarToast('✅ Evento cadastrado com sucesso!');
-                document.getElementById('formEvento').reset();
-                document.getElementById('dataEvento').valueAsDate = new Date();
+                cancelarEdicao();
                 carregarListaEventos();
                 
             } catch(error) {
                 mostrarToast('❌ Erro: ' + error.message, 'error');
             }
         });
+
+        async function editarEvento(eventoId) {
+            try {
+                const eventoDoc = await eventosCollection.doc(eventoId).get();
+                if (!eventoDoc.exists) {
+                    mostrarToast('Evento não encontrado!', 'error');
+                    return;
+                }
+                
+                const evento = { id: eventoDoc.id, ...eventoDoc.data() };
+                
+                // Preencher formulário
+                document.getElementById('formTitle').innerHTML = '✏️ Editar Evento';
+                document.getElementById('eventoEditandoId').value = evento.id;
+                document.getElementById('dataEvento').value = evento.data;
+                document.getElementById('congregacaoSelect').value = evento.congregacaoId;
+                document.getElementById('tipoEventoSelect').value = evento.tipoEventoId;
+                
+                // Preencher dados do ministério
+                document.getElementById('nomeMinisterio').value = evento.nomeMinisterio || '';
+                setarMinisterioRadio(evento.cargoMinisterio || '');
+                
+                // Preencher dados do atendimento
+                document.getElementById('nomeAtendimento').value = evento.nomeAtendimento || '';
+                setarAtendimentoRadio(evento.cargoAtendimento || '');
+                
+                // Preencher hinos tocados
+                document.getElementById('hinosEnsaiados').value = evento.hinosTocados || '';
+                
+                // Mudar para aba de formulário
+                trocarAba('novo');
+                
+            } catch(error) {
+                mostrarToast('❌ Erro ao carregar evento: ' + error.message, 'error');
+            }
+        }
+
+        function cancelarEdicao() {
+            document.getElementById('formTitle').innerHTML = '📅 Criar Novo Evento';
+            document.getElementById('eventoEditandoId').value = '';
+            document.getElementById('formEvento').reset();
+            document.getElementById('dataEvento').valueAsDate = new Date();
+            document.getElementById('nomeMinisterio').value = '';
+            document.getElementById('nomeAtendimento').value = '';
+            document.getElementById('hinosEnsaiados').value = '';
+            setarMinisterioRadio('');
+            setarAtendimentoRadio('');
+            trocarAba('lista');
+        }
 
         async function carregarListaEventos() {
             const container = document.getElementById('listaEventos');
@@ -507,15 +742,42 @@
                     
                     const congregacao = congregacoes.find(c => c.id === evento.congregacaoId);
                     const congregacaoNome = congregacao ? congregacao.nome : 'Desconhecida';
+                    const congregacaoCidade = congregacao?.cidade ? ` (${congregacao.cidade})` : '';
                     
                     const tipoEvento = tiposEvento.find(t => t.id === evento.tipoEventoId);
                     const tipoEventoNome = tipoEvento ? tipoEvento.nome : 'Desconhecido';
+                    
+                    // Montar resumo das informações
+                    let resumo = '';
+                    if (evento.cargoMinisterio || evento.cargoAtendimento) {
+                        resumo = '<div class="info-extra">';
+                        if (evento.cargoMinisterio) {
+                            resumo += `👥 ${evento.cargoMinisterio}`;
+                            if (evento.nomeMinisterio) resumo += `: ${evento.nomeMinisterio}`;
+                        }
+                        if (evento.cargoAtendimento) {
+                            if (evento.cargoMinisterio) resumo += ' | ';
+                            resumo += `🎯 ${evento.cargoAtendimento}`;
+                            if (evento.nomeAtendimento) resumo += `: ${evento.nomeAtendimento}`;
+                        }
+                        if (evento.hinosTocados) {
+                            resumo += ` | 🎵 Hinos: ${evento.hinosTocados.substring(0, 50)}${evento.hinosTocados.length > 50 ? '...' : ''}`;
+                        }
+                        resumo += '</div>';
+                    } else if (evento.hinosTocados) {
+                        resumo = `<div class="info-extra">🎵 Hinos: ${evento.hinosTocados.substring(0, 50)}${evento.hinosTocados.length > 50 ? '...' : ''}</div>`;
+                    }
                     
                     html += `
                         <div class="evento-item">
                             <div class="evento-data">📅 ${dataFormatada}</div>
                             <div><strong>${tipoEventoNome}</strong></div>
-                            <div class="evento-nome">📍 ${congregacaoNome}</div>
+                            <div class="evento-nome">📍 ${congregacaoNome}${congregacaoCidade}</div>
+                            ${resumo}
+                            <div class="evento-actions">
+                                <button class="btn-editar" onclick="editarEvento('${evento.id}')">✏️ Editar</button>
+                                <button class="btn-danger" onclick="abrirModalExcluirEvento('${evento.id}', '${tipoEventoNome} - ${dataFormatada}')">🗑️ Excluir</button>
+                            </div>
                         </div>
                     `;
                 }
@@ -581,49 +843,79 @@
             }
         }
 
-        function abrirModalExcluirTipo(id, nome) {
-            excluirId = id;
+        function abrirModalExcluirEvento(id, nome) {
+            excluirEventoId = id;
             document.getElementById('excluirNome').textContent = nome;
             document.getElementById('modalExcluir').style.display = 'flex';
         }
 
         function fecharModalExcluir() {
-            excluirId = null;
+            excluirEventoId = null;
             document.getElementById('modalExcluir').style.display = 'none';
         }
 
-        async function confirmarExcluir() {
-            if (!excluirId) return;
+        async function confirmarExcluirEvento() {
+            if (!excluirEventoId) return;
             
             try {
-                // Verificar se existem eventos usando este tipo
-                const eventosComTipo = await eventosCollection.where('tipoEventoId', '==', excluirId).get();
+                // Verificar se existem presenças vinculadas
+                const presencasVinculadas = await db.collection("presencas").where('eventoId', '==', excluirEventoId).get();
                 
-                if (!eventosComTipo.empty) {
-                    mostrarToast(`❌ Não é possível excluir: existem ${eventosComTipo.size} eventos usando este tipo!`, 'error');
+                if (!presencasVinculadas.empty) {
+                    mostrarToast(`❌ Não é possível excluir: existem ${presencasVinculadas.size} presença(s) vinculada(s) a este evento!`, 'error');
                     fecharModalExcluir();
                     return;
                 }
                 
-                // Remover permissões
-                const permissoes = await permissoesCollection.where('tipoEventoId', '==', excluirId).get();
-                for (const doc of permissoes.docs) {
-                    await doc.ref.delete();
-                }
+                // Remover o evento
+                await eventosCollection.doc(excluirEventoId).delete();
                 
-                // Remover o tipo
-                await tiposEventoCollection.doc(excluirId).delete();
-                
-                mostrarToast('✅ Tipo de evento excluído com sucesso!');
+                mostrarToast('✅ Evento excluído com sucesso!');
                 fecharModalExcluir();
-                
-                await carregarDados();
-                renderizarSelects();
-                carregarListaTiposEvento();
+                carregarListaEventos();
                 
             } catch(error) {
                 mostrarToast('❌ Erro ao excluir: ' + error.message, 'error');
+                fecharModalExcluir();
             }
+        }
+
+        function abrirModalExcluirTipo(id, nome) {
+            excluirEventoId = id;
+            document.getElementById('excluirNome').textContent = nome;
+            document.getElementById('modalExcluir').style.display = 'flex';
+            
+            window.confirmarExcluirTipo = async function() {
+                if (!excluirEventoId) return;
+                
+                try {
+                    const eventosComTipo = await eventosCollection.where('tipoEventoId', '==', excluirEventoId).get();
+                    
+                    if (!eventosComTipo.empty) {
+                        mostrarToast(`❌ Não é possível excluir: existem ${eventosComTipo.size} eventos usando este tipo!`, 'error');
+                        fecharModalExcluir();
+                        return;
+                    }
+                    
+                    const permissoes = await permissoesCollection.where('tipoEventoId', '==', excluirEventoId).get();
+                    for (const doc of permissoes.docs) {
+                        await doc.ref.delete();
+                    }
+                    
+                    await tiposEventoCollection.doc(excluirEventoId).delete();
+                    
+                    mostrarToast('✅ Tipo de evento excluído com sucesso!');
+                    fecharModalExcluir();
+                    
+                    await carregarDados();
+                    renderizarSelects();
+                    configurarSelectNovoTipo();
+                    carregarListaTiposEvento();
+                    
+                } catch(error) {
+                    mostrarToast('❌ Erro ao excluir: ' + error.message, 'error');
+                }
+            };
         }
 
         async function trocarAba(aba) {
@@ -633,7 +925,6 @@
             if (aba === 'novo') {
                 document.getElementById('abaNovo').classList.add('active');
                 document.querySelector('.tab-btn:first-child').classList.add('active');
-                document.getElementById('dataEvento').valueAsDate = new Date();
             } else if (aba === 'lista') {
                 document.getElementById('abaLista').classList.add('active');
                 document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
@@ -650,9 +941,11 @@
             renderizarSelects();
             configurarSelectNovoTipo();
             document.getElementById('dataEvento').valueAsDate = new Date();
+            await carregarListaEventos();
         }
         
         init();
     </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </body>
 </html>

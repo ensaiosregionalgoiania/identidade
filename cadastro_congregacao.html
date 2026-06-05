@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Congregações - Identidade Ministerial</title>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        
+        .top-bar {
+            background: white;
+            border-radius: 15px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+        .logo h1 { color: #2c3e50; font-size: 1.3rem; }
+        .logo h1 i { color: #f39c12; margin-right: 10px; }
+        .top-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn-voltar { background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; }
+        .btn-eventos { background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; }
+        
+        .card { background: white; border-radius: 20px; padding: 25px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .card-header { border-bottom: 2px solid #e0e0e0; margin-bottom: 20px; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        .card-header h2 { color: #2c3e50; }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; color: #555; }
+        .form-group input, .form-group select { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; transition: border 0.3s; }
+        .form-group input:focus, .form-group select:focus { border-color: #667eea; outline: none; }
+        
+        button { background: #27ae60; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1rem; transition: all 0.3s; margin-top: 10px; }
+        button:hover { background: #219a52; transform: scale(1.02); }
+        .btn-danger { background: #e74c3c; }
+        .btn-danger:hover { background: #c0392b; }
+        .btn-editar { background: #3498db; }
+        .btn-editar:hover { background: #2980b9; }
+        .btn-cancelar { background: #95a5a6; }
+        .btn-cancelar:hover { background: #7f8c8d; }
+        
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; border-radius: 15px; padding: 25px; width: 90%; max-width: 500px; }
+        .modal-content h3 { margin-bottom: 20px; color: #2c3e50; }
+        .modal-buttons { margin-top: 20px; display: flex; gap: 10px; justify-content: center; }
+        
+        .toast { position: fixed; bottom: 20px; right: 20px; background: #27ae60; color: white; padding: 12px 24px; border-radius: 8px; z-index: 1000; animation: fadeIn 0.3s ease; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .toast.error { background: #e74c3c; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .cong-item { background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 10px; transition: all 0.3s ease; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .cong-item:hover { background: #e3f2fd; transform: translateX(5px); }
+        .cong-info { flex: 1; }
+        .cong-nome { font-weight: bold; color: #2c3e50; font-size: 1.1rem; }
+        .cong-cidade { color: #7f8c8d; font-size: 0.9rem; margin-top: 5px; }
+        .cong-cidade i { color: #f39c12; margin-right: 5px; }
+        .cong-buttons { display: flex; gap: 8px; }
+        .cong-buttons button { margin: 0; padding: 8px 15px; font-size: 0.85rem; }
+        
+        .lista-congs { max-height: 500px; overflow-y: auto; }
+        .loading { text-align: center; padding: 20px; color: #999; }
+        
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab-btn {
+            flex: 1; padding: 12px; background: rgba(255,255,255,0.2); color: white;
+            border: none; border-radius: 10px; font-size: 1rem; font-weight: bold;
+            cursor: pointer; transition: all 0.3s ease;
+        }
+        .tab-btn.active { background: white; color: #2c3e50; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .search-box { margin-bottom: 20px; }
+        .search-box input { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; }
+        
+        .stats { background: #ecf0f1; border-radius: 10px; padding: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .stats span { font-weight: bold; color: #2c3e50; }
+        .stats .total { font-size: 1.2rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="top-bar">
+            <div class="logo">
+                <h1><i class="fas fa-church"></i> Cadastro de Congregações</h1>
+            </div>
+            <div class="top-buttons">
+                <a href="eventos.html" class="btn-eventos">📅 Eventos</a>
+                <a href="sistema_completo.html" class="btn-voltar">📋 Manutenção</a>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="trocarAba('novo')">➕ Nova Congregação</button>
+            <button class="tab-btn" onclick="trocarAba('lista')">📋 Lista de Congregações</button>
+        </div>
+
+        <!-- Aba Nova Congregação -->
+        <div id="abaNovo" class="tab-content active">
+            <div class="card">
+                <div class="card-header">
+                    <h2>🏛️ Cadastrar Nova Congregação</h2>
+                </div>
+                <form id="formCongregacao">
+                    <div class="form-group">
+                        <label>📌 Nome da Congregação *</label>
+                        <input type="text" id="nomeCongregacao" placeholder="Ex: Congregação Central" required autocomplete="off">
+                    </div>
+
+                    <div class="form-group">
+                        <label>📍 Cidade *</label>
+                        <input type="text" id="cidadeCongregacao" placeholder="Ex: São Paulo - SP" required autocomplete="off">
+                    </div>
+
+                    <button type="submit">💾 Salvar Congregação</button>
+                    <button type="button" onclick="limparForm()" class="btn-cancelar" style="margin-left: 10px;">🗑️ Limpar</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Aba Lista de Congregações -->
+        <div id="abaLista" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2>📋 Congregações Cadastradas</h2>
+                </div>
+                
+                <div class="stats" id="stats">
+                    <span>Total de congregações: <span id="totalCongregacoes" class="total">0</span></span>
+                    <span>Última atualização: <span id="ultimaAtualizacao">---</span></span>
+                </div>
+                
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="🔍 Pesquisar por nome ou cidade..." onkeyup="filtrarCongregacoes()">
+                </div>
+                
+                <div id="listaCongregacoes" class="lista-congs">
+                    <div class="loading">Carregando congregações...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de confirmação de exclusão -->
+    <div id="modalExcluir" class="modal">
+        <div class="modal-content">
+            <h3>⚠️ Confirmar Exclusão</h3>
+            <p>Tem certeza que deseja excluir esta congregação?</p>
+            <p><strong id="excluirNome"></strong></p>
+            <p style="color: #e74c3c; font-size: 0.9rem;">⚠️ Atenção: Esta ação não poderá ser desfeita!</p>
+            <p style="color: #e67e22; font-size: 0.85rem;">Se existirem eventos vinculados a esta congregação, a exclusão será bloqueada.</p>
+            <div class="modal-buttons">
+                <button onclick="fecharModalExcluir()" class="btn-cancelar">Cancelar</button>
+                <button onclick="confirmarExcluir()" class="btn-danger">Excluir</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyA4COgeJSENsHrQHDx39gpZvif3zVrGjYE",
+            authDomain: "identidadeccb.firebaseapp.com",
+            projectId: "identidadeccb",
+            storageBucket: "identidadeccb.firebasestorage.app",
+            messagingSenderId: "385467794937",
+            appId: "1:385467794937:web:d2eb32429586f018e2a928"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const congregacoesCollection = db.collection("congregacoes");
+        const eventosCollection = db.collection("eventos");
+
+        let congregacoes = [];
+        let excluirId = null;
+        let filtroAtual = '';
+
+        function mostrarToast(msg, tipo = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${tipo === 'error' ? 'error' : ''}`;
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function limparForm() {
+            document.getElementById('nomeCongregacao').value = '';
+            document.getElementById('cidadeCongregacao').value = '';
+            document.getElementById('nomeCongregacao').focus();
+        }
+
+        // Salvar congregação
+        document.getElementById('formCongregacao').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const nome = document.getElementById('nomeCongregacao').value.trim();
+            const cidade = document.getElementById('cidadeCongregacao').value.trim();
+            
+            if (!nome || !cidade) {
+                mostrarToast('Preencha todos os campos!', 'error');
+                return;
+            }
+            
+            // Verificar se já existe congregação com mesmo nome
+            const existe = congregacoes.some(c => c.nome.toLowerCase() === nome.toLowerCase());
+            if (existe) {
+                mostrarToast('❌ Já existe uma congregação com este nome!', 'error');
+                return;
+            }
+            
+            try {
+                await congregacoesCollection.add({
+                    nome: nome,
+                    cidade: cidade,
+                    criadoEm: new Date().toISOString(),
+                    atualizadoEm: new Date().toISOString()
+                });
+                
+                mostrarToast(`✅ Congregação "${nome}" cadastrada com sucesso!`);
+                limparForm();
+                
+                // Recarregar a lista de congregações (importante!)
+                await carregarCongregacoes();
+                
+                // Se a aba lista estiver visível, atualizar a exibição
+                if (document.getElementById('abaLista').classList.contains('active')) {
+                    renderizarLista(congregacoes);
+                }
+                
+            } catch(error) {
+                mostrarToast('❌ Erro ao salvar: ' + error.message, 'error');
+            }
+        });
+
+        // Carregar todas as congregações do Firestore
+        async function carregarCongregacoes() {
+            try {
+                const snapshot = await congregacoesCollection.orderBy('nome').get();
+                congregacoes = [];
+                snapshot.forEach(doc => {
+                    congregacoes.push({ 
+                        id: doc.id, 
+                        nome: doc.data().nome,
+                        cidade: doc.data().cidade,
+                        criadoEm: doc.data().criadoEm
+                    });
+                });
+                
+                // Atualizar estatísticas
+                document.getElementById('totalCongregacoes').textContent = congregacoes.length;
+                const agora = new Date();
+                document.getElementById('ultimaAtualizacao').textContent = agora.toLocaleTimeString('pt-BR');
+                
+                console.log('Congregações carregadas:', congregacoes.length); // Debug
+                return congregacoes;
+            } catch(error) {
+                console.error('Erro ao carregar:', error);
+                return [];
+            }
+        }
+
+        function filtrarCongregacoes() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            filtroAtual = searchTerm;
+            
+            const filtradas = congregacoes.filter(c => 
+                c.nome.toLowerCase().includes(searchTerm) || 
+                c.cidade.toLowerCase().includes(searchTerm)
+            );
+            
+            renderizarLista(filtradas);
+        }
+
+        function renderizarLista(congs) {
+            const container = document.getElementById('listaCongregacoes');
+            
+            if (!congs || congs.length === 0) {
+                container.innerHTML = '<div class="loading">📭 Nenhuma congregação cadastrada ainda</div>';
+                return;
+            }
+            
+            let html = '';
+            congs.forEach(cong => {
+                const nomeEscapado = cong.nome.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                const cidadeEscapada = cong.cidade.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                
+                html += `
+                    <div class="cong-item" data-id="${cong.id}">
+                        <div class="cong-info">
+                            <div class="cong-nome">🏛️ ${cong.nome}</div>
+                            <div class="cong-cidade"><i class="fas fa-city"></i> 📍 ${cong.cidade}</div>
+                        </div>
+                        <div class="cong-buttons">
+                            <button class="btn-editar" onclick="abrirModalEditar('${cong.id}', '${nomeEscapado}', '${cidadeEscapada}')">✏️ Editar</button>
+                            <button class="btn-danger" onclick="abrirModalExcluir('${cong.id}', '${nomeEscapado}')">🗑️ Excluir</button>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        // Carregar e exibir lista completa (chamada quando entra na aba)
+        async function carregarListaCongregacoes() {
+            const container = document.getElementById('listaCongregacoes');
+            container.innerHTML = '<div class="loading">🔄 Carregando congregações...</div>';
+            
+            await carregarCongregacoes(); // Recarrega do Firestore
+            
+            if (filtroAtual) {
+                document.getElementById('searchInput').value = filtroAtual;
+                filtrarCongregacoes();
+            } else {
+                renderizarLista(congregacoes);
+            }
+        }
+
+        // Edição
+        let editandoId = null;
+        
+        window.abrirModalEditar = function(id, nome, cidade) {
+            editandoId = id;
+            
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.id = 'modalEditar';
+            modal.style.display = 'flex';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <h3>✏️ Editar Congregação</h3>
+                    <div class="form-group">
+                        <label>📌 Nome da Congregação</label>
+                        <input type="text" id="editarNome" value="${nome}" placeholder="Nome da congregação">
+                    </div>
+                    <div class="form-group">
+                        <label>📍 Cidade</label>
+                        <input type="text" id="editarCidade" value="${cidade}" placeholder="Cidade">
+                    </div>
+                    <div class="modal-buttons">
+                        <button onclick="fecharModalEditar()" class="btn-cancelar">Cancelar</button>
+                        <button onclick="salvarEdicao()" style="background:#3498db;">Salvar Alterações</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+        
+        window.fecharModalEditar = function() {
+            const modal = document.getElementById('modalEditar');
+            if (modal) modal.remove();
+            editandoId = null;
+        }
+        
+        window.salvarEdicao = async function() {
+            const novoNome = document.getElementById('editarNome').value.trim();
+            const novaCidade = document.getElementById('editarCidade').value.trim();
+            
+            if (!novoNome || !novaCidade) {
+                mostrarToast('Preencha todos os campos!', 'error');
+                return;
+            }
+            
+            const nomeExiste = congregacoes.some(c => c.id !== editandoId && c.nome.toLowerCase() === novoNome.toLowerCase());
+            if (nomeExiste) {
+                mostrarToast('❌ Já existe outra congregação com este nome!', 'error');
+                return;
+            }
+            
+            try {
+                await congregacoesCollection.doc(editandoId).update({
+                    nome: novoNome,
+                    cidade: novaCidade,
+                    atualizadoEm: new Date().toISOString()
+                });
+                
+                mostrarToast(`✅ Congregação atualizada com sucesso!`);
+                fecharModalEditar();
+                await carregarCongregacoes();
+                
+                if (document.getElementById('abaLista').classList.contains('active')) {
+                    renderizarLista(congregacoes);
+                }
+                
+            } catch(error) {
+                mostrarToast('❌ Erro ao atualizar: ' + error.message, 'error');
+            }
+        }
+
+        // Exclusão
+        window.abrirModalExcluir = function(id, nome) {
+            excluirId = id;
+            document.getElementById('excluirNome').textContent = nome;
+            document.getElementById('modalExcluir').style.display = 'flex';
+        }
+
+        window.fecharModalExcluir = function() {
+            excluirId = null;
+            document.getElementById('modalExcluir').style.display = 'none';
+        }
+
+        window.confirmarExcluir = async function() {
+            if (!excluirId) return;
+            
+            try {
+                const eventosVinculados = await eventosCollection.where('congregacaoId', '==', excluirId).get();
+                
+                if (!eventosVinculados.empty) {
+                    mostrarToast(`❌ Não é possível excluir: existem ${eventosVinculados.size} evento(s) vinculado(s) a esta congregação!`, 'error');
+                    fecharModalExcluir();
+                    return;
+                }
+                
+                await congregacoesCollection.doc(excluirId).delete();
+                mostrarToast('✅ Congregação excluída com sucesso!');
+                fecharModalExcluir();
+                
+                await carregarCongregacoes();
+                
+                if (document.getElementById('abaLista').classList.contains('active')) {
+                    renderizarLista(congregacoes);
+                }
+                
+            } catch(error) {
+                mostrarToast('❌ Erro ao excluir: ' + error.message, 'error');
+                fecharModalExcluir();
+            }
+        }
+
+        // Trocar abas
+        window.trocarAba = async function(aba) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            
+            if (aba === 'novo') {
+                document.getElementById('abaNovo').classList.add('active');
+                document.querySelector('.tab-btn:first-child').classList.add('active');
+                limparForm();
+            } else if (aba === 'lista') {
+                document.getElementById('abaLista').classList.add('active');
+                document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
+                await carregarListaCongregacoes(); // Recarrega ao entrar na aba
+            }
+        }
+
+        // Inicialização - carregar as congregações quando a página abrir
+        async function init() {
+            await carregarCongregacoes(); // Carrega os dados do Firestore
+            console.log('Init: congregações carregadas =', congregacoes.length);
+            // A aba inicial é a de novo, mas já temos os dados em memória
+            // Se quiser mostrar na lista mesmo sem clicar, descomente abaixo:
+            // await carregarListaCongregacoes();
+        }
+        
+        init();
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</body>
+</html>
