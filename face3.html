@@ -9,6 +9,11 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     
+    <!-- Face-api.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.0.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-detection@0.0.3/dist/face-detection.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    
     <style>
         * {
             margin: 0;
@@ -23,7 +28,6 @@
             padding: 20px;
         }
 
-        /* TELA INICIAL */
         .tela-inicial {
             display: flex;
             flex-direction: column;
@@ -79,7 +83,6 @@
             transform: scale(0.98);
         }
 
-        /* TELA DE CÂMERA */
         .tela-camera {
             position: fixed;
             top: 0;
@@ -145,6 +148,14 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+        }
+
+        .canvas-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
         }
 
         .camera-controls {
@@ -219,6 +230,20 @@
             color: white;
         }
 
+        .progresso-carregamento {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 20px 40px;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 2000;
+            display: none;
+        }
+
         @keyframes slideDown {
             from {
                 transform: translateY(-10px);
@@ -230,7 +255,6 @@
             }
         }
 
-        /* TELA DE LISTAGEM */
         .tela-lista {
             position: fixed;
             top: 0;
@@ -317,25 +341,23 @@
             padding: 40px;
             color: #999;
         }
-
-        @media print {
-            body { background: white; }
-            .btn-principal, .btn-fechar, .btn-voltar { display: none; }
-        }
     </style>
 </head>
 <body>
 
-    <!-- TELA INICIAL -->
+    <div class="progresso-carregamento" id="progressoCarregamento">
+        <div>🔄 Carregando modelos de IA...</div>
+        <div style="font-size: 12px; margin-top: 10px;">Aguarde, isso pode levar alguns segundos</div>
+    </div>
+
     <div id="telaInicial" class="tela-inicial">
         <h1>🚪 Acesso Facial CCB</h1>
-        <p class="subtitle">Sistema de reconhecimento para membros</p>
+        <p class="subtitle">Sistema de reconhecimento facial para membros</p>
         <button id="btnAbrirCadastro" class="btn-principal btn-cadastrar">📝 CADASTRAR ROSTO</button>
         <button id="btnAbrirConsulta" class="btn-principal btn-consultar">🔍 CONSULTAR ACESSO</button>
         <button id="btnAbrirLista" class="btn-principal btn-listar">📋 MEMBROS CADASTRADOS</button>
     </div>
 
-    <!-- TELA DE CÂMERA -->
     <div id="telaCamera" class="tela-camera">
         <div class="camera-card">
             <div class="camera-header">
@@ -344,9 +366,10 @@
             </div>
             <div class="video-wrapper">
                 <video id="video" autoplay muted playsinline></video>
+                <canvas id="canvas" class="canvas-overlay"></canvas>
             </div>
             <div class="camera-controls">
-                <div id="feedbackCamera" class="feedback">🔄 Iniciando câmera...</div>
+                <div id="feedbackCamera" class="feedback">🔄 Aguardando...</div>
                 <div id="zonaCadastro" style="display: none;">
                     <input type="text" id="nomeCadastro" class="input-nome" placeholder="Digite o nome do membro" autocomplete="off">
                     <button id="btnConfirmarCadastro" class="btn-acao btn-cadastrar-acao">✅ CADASTRAR ROSTO</button>
@@ -360,7 +383,6 @@
         </div>
     </div>
 
-    <!-- TELA DE LISTAGEM -->
     <div id="telaLista" class="tela-lista">
         <div class="lista-card">
             <div class="lista-header">
@@ -374,7 +396,7 @@
     </div>
 
     <script>
-        // Firebase Config (USANDO A MESMA DO SEU PROJETO)
+        // Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyA4COgeJSENsHrQHDx39gpZvif3zVrGjYE",
             authDomain: "identidadeccb.firebaseapp.com",
@@ -384,17 +406,23 @@
             appId: "1:385467794937:web:d2eb32429586f018e2a928"
         };
 
-        // Inicializar Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const membrosCollection = db.collection("membros");
-        const facialCollection = db.collection("dados_faciais"); // Coleção para armazenar os rostos
+        const facialCollection = db.collection("dados_faciais_v2"); // Nova coleção para os descriptors
 
-        // Elementos DOM
+        let modelsLoaded = false;
+        let streamAtual = null;
+        let modoAtual = null;
+        let membrosList = [];
+        let labeledDescriptors = []; // Array de {label, descriptor}
+
+        // Elementos
         const telaInicial = document.getElementById('telaInicial');
         const telaCamera = document.getElementById('telaCamera');
         const telaLista = document.getElementById('telaLista');
         const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
         const feedbackCamera = document.getElementById('feedbackCamera');
         const tituloCamera = document.getElementById('tituloCamera');
         const zonaCadastroDiv = document.getElementById('zonaCadastro');
@@ -410,20 +438,37 @@
         const btnAbrirLista = document.getElementById('btnAbrirLista');
         const btnFecharLista = document.getElementById('btnFecharLista');
         const listaBody = document.getElementById('listaBody');
+        const progressoDiv = document.getElementById('progressoCarregamento');
 
-        // Variáveis
-        let streamAtual = null;
-        let modoAtual = null;
-        let membrosList = []; // Cache dos membros
-        let dadosFaciais = []; // Cache dos dados faciais cadastrados
+        // Carregar modelos do Face-api.js
+        async function carregarModelos() {
+            progressoDiv.style.display = 'block';
+            try {
+                const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/models';
+                await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
+                await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+                await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+                console.log('✅ Modelos carregados!');
+                modelsLoaded = true;
+                progressoDiv.style.display = 'none';
+            } catch (error) {
+                console.error('Erro ao carregar modelos:', error);
+                progressoDiv.innerHTML = '<div>❌ Erro ao carregar modelos de IA</div><div style="font-size:12px">Recarregue a página e tente novamente</div>';
+                setTimeout(() => {
+                    progressoDiv.style.display = 'none';
+                }, 3000);
+            }
+        }
 
-        // Função para parar câmera
+        // Parar câmera
         function pararCamera() {
             if (streamAtual) {
                 streamAtual.getTracks().forEach(track => track.stop());
                 streamAtual = null;
             }
             video.srcObject = null;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
 
         // Iniciar câmera
@@ -431,13 +476,18 @@
             pararCamera();
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: "user", width: { ideal: 480 }, height: { ideal: 360 } }
+                    video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }
                 });
                 video.srcObject = stream;
                 streamAtual = stream;
                 await new Promise((resolve) => {
                     video.onloadedmetadata = () => { video.play(); resolve(); };
                 });
+                
+                // Configurar canvas para o mesmo tamanho do video
+                canvas.width = video.videoWidth || 640;
+                canvas.height = video.videoHeight || 480;
+                
                 feedbackCamera.innerText = "✅ Câmera ativa! Posicione o rosto.";
                 return true;
             } catch (err) {
@@ -446,84 +496,49 @@
             }
         }
 
-        // Capturar foto
-        function capturarFoto() {
-            if (!video.videoWidth) return null;
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
-            return canvas.toDataURL('image/jpeg', 0.7);
-        }
-
-        // Calcular hash simples da imagem (para comparação)
-        function calcularHashImagem(fotoBase64) {
-            return new Promise((resolve) => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = 32;
-                    canvas.height = 32;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, 32, 32);
-                    const data = ctx.getImageData(0, 0, 32, 32).data;
-                    
-                    // Calcular média de cinza
-                    let hash = '';
-                    for (let i = 0; i < data.length; i += 4) {
-                        const gray = (data[i] + data[i+1] + data[i+2]) / 3;
-                        hash += gray > 128 ? '1' : '0';
-                    }
-                    resolve(hash);
-                };
-                img.src = fotoBase64;
-            });
-        }
-
-        // Função de similaridade entre hashes (distância de Hamming)
-        function similaridadeHash(hash1, hash2) {
-            if (!hash1 || !hash2) return 0;
-            let diff = 0;
-            for (let i = 0; i < hash1.length; i++) {
-                if (hash1[i] !== hash2[i]) diff++;
+        // Detectar e desenhar face
+        async function detectarFace() {
+            if (!modelsLoaded || !video.srcObject) return null;
+            
+            const detections = await faceapi.detectAllFaces(video, new faceapi.SsdMobilenetv1Options())
+                .withFaceLandmarks()
+                .withFaceDescriptors();
+            
+            // Desenhar no canvas
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (detections.length > 0) {
+                const resizedDetections = faceapi.resizeResults(detections, { width: canvas.width, height: canvas.height });
+                faceapi.draw.drawDetections(canvas, resizedDetections);
+                faceapi.draw.drawFaceLandmarks(canvas, resizedDetections);
+                return detections[0]; // Retorna a primeira face detectada
             }
-            return 1 - (diff / hash1.length);
+            return null;
         }
 
-        // Carregar membros do Firebase
-        async function carregarMembros() {
-            const snapshot = await membrosCollection.orderBy("id").get();
-            membrosList = [];
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                membrosList.push({
-                    id: doc.id,
-                    nomeId: data.id,
-                    nome: data.nome,
-                    cargo: data.cargo || '',
-                    congregacao: data.congregacao || ''
-                });
-            });
-            return membrosList;
-        }
-
-        // Carregar dados faciais cadastrados
-        async function carregarDadosFaciais() {
+        // Carregar todos os rostos cadastrados
+        async function carregarRostosCadastrados() {
             const snapshot = await facialCollection.get();
-            dadosFaciais = [];
-            snapshot.forEach(doc => {
-                dadosFaciais.push({
-                    id: doc.id,
-                    membroId: doc.data().membroId,
-                    membroNome: doc.data().membroNome,
-                    fotoHash: doc.data().fotoHash,
-                    dataCadastro: doc.data().dataCadastro
-                });
-            });
-            return dadosFaciais;
+            labeledDescriptors = [];
+            
+            for (const doc of snapshot.docs) {
+                const data = doc.data();
+                if (data.descriptor && data.membroNome) {
+                    const descriptor = new Float32Array(data.descriptor);
+                    labeledDescriptors.push({
+                        label: data.membroNome,
+                        membroId: data.membroId,
+                        descriptor: descriptor
+                    });
+                }
+            }
+            
+            console.log(`✅ ${labeledDescriptors.length} rostos carregados do banco`);
+            return labeledDescriptors;
         }
 
-        // CADASTRAR no Firebase
+        // CADASTRAR novo rosto
         async function cadastrarRosto() {
             const nome = nomeCadastroInput.value.trim();
             if (!nome) {
@@ -531,43 +546,44 @@
                 return;
             }
 
-            // Buscar membro pelo nome
             const membroEncontrado = membrosList.find(m => 
                 m.nome.toLowerCase().includes(nome.toLowerCase())
             );
 
             if (!membroEncontrado) {
-                feedbackCamera.innerText = "❌ Membro não encontrado na lista de membros!";
+                feedbackCamera.innerText = "❌ Membro não encontrado na lista!";
                 return;
             }
 
             // Verificar se já tem rosto cadastrado
-            const jaCadastrado = dadosFaciais.some(d => d.membroId === membroEncontrado.id);
+            const jaCadastrado = labeledDescriptors.some(d => d.membroId === membroEncontrado.id);
             if (jaCadastrado) {
                 feedbackCamera.innerText = `❌ ${membroEncontrado.nome} já possui rosto cadastrado!`;
                 return;
             }
 
-            const foto = capturarFoto();
-            if (!foto) {
-                feedbackCamera.innerText = "❌ Aguarde a câmera estabilizar.";
+            feedbackCamera.innerText = "📸 Detectando rosto...";
+            const faceDetection = await detectarFace();
+            
+            if (!faceDetection || !faceDetection.descriptor) {
+                feedbackCamera.innerText = "❌ Nenhum rosto detectado! Posicione-se bem na frente da câmera.";
                 return;
             }
 
-            const fotoHash = await calcularHashImagem(foto);
+            const descriptor = Array.from(faceDetection.descriptor);
             
             feedbackCamera.innerText = "💾 Salvando no Firebase...";
-
+            
             try {
                 await facialCollection.add({
                     membroId: membroEncontrado.id,
                     membroNome: membroEncontrado.nome,
-                    fotoHash: fotoHash,
+                    descriptor: descriptor,
                     dataCadastro: new Date().toISOString()
                 });
                 
-                await carregarDadosFaciais();
-                feedbackCamera.innerHTML = `✅ Rosto de "${membroEncontrado.nome}" cadastrado!`;
+                await carregarRostosCadastrados();
+                feedbackCamera.innerHTML = `✅ Rosto de "${membroEncontrado.nome}" cadastrado com sucesso!`;
                 nomeCadastroInput.value = "";
                 
                 setTimeout(() => fecharCameraEVoltar(), 1500);
@@ -579,9 +595,9 @@
 
         // CONSULTAR acesso
         async function consultarAcesso() {
-            if (dadosFaciais.length === 0) {
-                await carregarDadosFaciais();
-                if (dadosFaciais.length === 0) {
+            if (labeledDescriptors.length === 0) {
+                await carregarRostosCadastrados();
+                if (labeledDescriptors.length === 0) {
                     resultadoConsultaDiv.style.display = "block";
                     resultadoConsultaDiv.className = "resultado resultado-erro";
                     resultadoConsultaDiv.innerHTML = "📭 Nenhum rosto cadastrado! Vá em CADASTRAR primeiro.";
@@ -589,42 +605,49 @@
                 }
             }
             
-            feedbackCamera.innerText = "📸 Analisando rosto...";
-            const fotoAtual = capturarFoto();
-            if (!fotoAtual) {
-                feedbackCamera.innerText = "❌ Não foi possível capturar.";
+            feedbackCamera.innerText = "📸 Detectando rosto...";
+            const faceDetection = await detectarFace();
+            
+            if (!faceDetection || !faceDetection.descriptor) {
+                feedbackCamera.innerText = "❌ Nenhum rosto detectado!";
+                resultadoConsultaDiv.style.display = "block";
+                resultadoConsultaDiv.className = "resultado resultado-erro";
+                resultadoConsultaDiv.innerHTML = "❌ Nenhum rosto detectado!<br>Posicione-se bem na frente da câmera.";
                 return;
             }
             
-            const hashAtual = await calcularHashImagem(fotoAtual);
+            // Comparar com os rostos cadastrados
             let melhorMatch = null;
-            let melhorSimilaridade = 0;
+            let melhorDistancia = 0.6; // Distância máxima aceitável (menor é melhor)
             
-            for (const facial of dadosFaciais) {
-                const similaridade = similaridadeHash(hashAtual, facial.fotoHash);
-                if (similaridade > melhorSimilaridade && similaridade > 0.75) {
-                    melhorSimilaridade = similaridade;
-                    melhorMatch = facial;
+            for (const labeled of labeledDescriptors) {
+                const distancia = faceapi.euclideanDistance(faceDetection.descriptor, labeled.descriptor);
+                console.log(`Comparando com ${labeled.label}: distância = ${distancia}`);
+                
+                if (distancia < melhorDistancia) {
+                    melhorDistancia = distancia;
+                    melhorMatch = labeled;
                 }
             }
             
-            if (melhorMatch) {
+            if (melhorMatch && melhorDistancia < 0.6) {
+                const confianca = Math.round((1 - melhorDistancia) * 100);
                 resultadoConsultaDiv.style.display = "block";
                 resultadoConsultaDiv.className = "resultado resultado-sucesso";
                 resultadoConsultaDiv.innerHTML = `
                     ✅ ACESSO LIBERADO!<br>
-                    👤 ${melhorMatch.membroNome}<br>
-                    🎯 Confiança: ${Math.round(melhorSimilaridade * 100)}%
+                    👤 ${melhorMatch.label}<br>
+                    🎯 Confiança: ${confianca}%
                 `;
-                feedbackCamera.innerHTML = `🟢 Bem-vindo(a), ${melhorMatch.membroNome}!`;
+                feedbackCamera.innerHTML = `🟢 Bem-vindo(a), ${melhorMatch.label}!`;
                 
                 // Registrar log de acesso
                 const logCollection = db.collection("log_acessos");
                 await logCollection.add({
                     membroId: melhorMatch.membroId,
-                    membroNome: melhorMatch.membroNome,
+                    membroNome: melhorMatch.label,
                     dataHora: new Date().toISOString(),
-                    confianca: melhorSimilaridade
+                    confianca: confianca
                 });
             } else {
                 resultadoConsultaDiv.style.display = "block";
@@ -634,13 +657,13 @@
             }
         }
 
-        // Listar membros com status facial
+        // Listar membros
         async function exibirListaMembros() {
             listaBody.innerHTML = '<div class="loading">Carregando membros...</div>';
             telaLista.classList.add('ativa');
             
             await carregarMembros();
-            await carregarDadosFaciais();
+            await carregarRostosCadastrados();
             
             if (membrosList.length === 0) {
                 listaBody.innerHTML = '<div style="text-align:center; padding:40px;">📭 Nenhum membro encontrado</div>';
@@ -649,19 +672,54 @@
             
             listaBody.innerHTML = '';
             for (const membro of membrosList) {
-                const temRosto = dadosFaciais.some(f => f.membroId === membro.id);
+                const temRosto = labeledDescriptors.some(d => d.membroId === membro.id);
                 const card = document.createElement('div');
                 card.className = 'membro-item';
                 card.innerHTML = `
                     <div class="membro-info">
                         <h4>👤 ${membro.nome}</h4>
-                        <p>ID: ${membro.nomeId || membro.id} | ${membro.cargo || 'Membro'}</p>
+                        <p>ID: ${membro.nomeId || membro.id}</p>
                     </div>
                     <div class="facial-status ${temRosto ? 'facial-cadastrado' : ''}">
                         ${temRosto ? '✅ Rosto cadastrado' : '⏳ Aguardando cadastro'}
                     </div>
                 `;
                 listaBody.appendChild(card);
+            }
+        }
+
+        // Carregar membros
+        async function carregarMembros() {
+            const snapshot = await membrosCollection.orderBy("id").get();
+            membrosList = [];
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                membrosList.push({
+                    id: doc.id,
+                    nomeId: data.id,
+                    nome: data.nome,
+                    cargo: data.cargo || ''
+                });
+            });
+            return membrosList;
+        }
+
+        // Loop de detecção contínua
+        let detectionInterval = null;
+        
+        function iniciarDeteccaoContinua() {
+            if (detectionInterval) clearInterval(detectionInterval);
+            detectionInterval = setInterval(async () => {
+                if (video.srcObject && modoAtual === 'consulta') {
+                    await detectarFace();
+                }
+            }, 100);
+        }
+        
+        function pararDeteccaoContinua() {
+            if (detectionInterval) {
+                clearInterval(detectionInterval);
+                detectionInterval = null;
             }
         }
 
@@ -678,19 +736,21 @@
                 zonaCadastroDiv.style.display = "block";
                 feedbackCamera.innerText = "📷 Olhe para a câmera e digite o nome do membro";
                 await carregarMembros();
-                await carregarDadosFaciais();
+                await carregarRostosCadastrados();
             } else {
                 tituloCamera.innerText = "🔍 CONSULTAR ACESSO";
                 zonaConsultaDiv.style.display = "block";
                 feedbackCamera.innerText = "📷 Olhe para a câmera e clique em VERIFICAR";
-                await carregarDadosFaciais();
+                await carregarRostosCadastrados();
             }
             
             await iniciarCamera();
+            iniciarDeteccaoContinua();
             telaCamera.classList.add('ativa');
         }
         
         function fecharCameraEVoltar() {
+            pararDeteccaoContinua();
             pararCamera();
             telaCamera.classList.remove('ativa');
             telaInicial.style.display = 'flex';
@@ -727,9 +787,14 @@
         });
         
         // Inicializar
-        telaInicial.style.display = 'flex';
-        carregarMembros().catch(console.error);
-        carregarDadosFaciais().catch(console.error);
+        async function init() {
+            await carregarModelos();
+            await carregarMembros();
+            await carregarRostosCadastrados();
+            telaInicial.style.display = 'flex';
+        }
+        
+        init().catch(console.error);
     </script>
 </body>
 </html>
