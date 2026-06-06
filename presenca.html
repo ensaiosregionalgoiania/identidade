@@ -146,9 +146,7 @@
             border-radius: 20px;
             padding: 25px;
             width: 90%;
-            max-width: 500px;
-            max-height: 80vh;
-            overflow-y: auto;
+            max-width: 550px;
             animation: fadeIn 0.3s ease;
         }
         .modal-confirm-content h3, .modal-visitantes-content h3 {
@@ -189,85 +187,79 @@
         .btn-cancelar:hover { background: #7f8c8d; }
         .btn-salvar-visitantes { background: #27ae60; color: white; }
         .btn-salvar-visitantes:hover { background: #219a52; }
-        
-        .secao-visitantes {
-            margin-top: 20px;
-            padding-top: 15px;
-            border-top: 2px solid #e0e0e0;
-        }
-        .secao-visitantes h4 {
-            color: #2c3e50;
-            margin-bottom: 15px;
-            font-size: 1rem;
-        }
-        .grid-itens {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        .item-linha {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 8px 12px;
-            background: #f8f9fa;
+        .btn-consultar {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
             border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
         }
-        .item-nome {
-            flex: 2;
-            font-weight: 500;
+        .btn-consultar:hover {
+            background: #2980b9;
+        }
+        
+        .secao-visitante {
+            margin-bottom: 25px;
+        }
+        .secao-visitante h4 {
             color: #2c3e50;
-            font-size: 0.9rem;
+            margin-bottom: 10px;
+            font-size: 1rem;
         }
-        .item-quantidade {
+        .campo-visitante {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .campo-visitante select {
+            flex: 2;
+            min-width: 180px;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            background: white;
+        }
+        .quantidade-control {
             display: flex;
             align-items: center;
-            gap: 10px;
-            background: white;
-            padding: 3px 12px;
-            border-radius: 25px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            gap: 8px;
+            background: #f8f9fa;
+            padding: 5px 15px;
+            border-radius: 30px;
         }
-        .item-quantidade span {
-            min-width: 35px;
+        .quantidade-control span {
+            min-width: 40px;
             text-align: center;
-            font-size: 1rem;
+            font-size: 1.1rem;
             font-weight: bold;
-            color: #2c3e50;
         }
         .btn-qtd {
             background: #3498db;
             color: white;
             border: none;
-            width: 26px;
-            height: 26px;
+            width: 30px;
+            height: 30px;
             border-radius: 50%;
             font-size: 1rem;
             font-weight: bold;
             cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .btn-qtd:hover {
-            background: #2980b9;
-            transform: scale(1.05);
         }
         .btn-qtd.minus {
             background: #e74c3c;
         }
-        .btn-qtd.minus:hover {
-            background: #c0392b;
+        .btn-qtd:hover {
+            transform: scale(1.05);
         }
-        .total-visitantes {
-            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
-            color: white;
-            padding: 12px;
-            border-radius: 10px;
-            text-align: center;
-            margin-top: 20px;
-        }
-        .total-visitantes .numero {
-            font-size: 1.5rem;
-            font-weight: bold;
+        
+        .info-salvo {
+            font-size: 0.8rem;
+            color: #27ae60;
+            margin-top: 5px;
+            padding-left: 5px;
         }
         
         option {
@@ -348,9 +340,9 @@
                     <thead>
                         <tr><th>Nome</th><th>Instrumento</th><th>Cargo</th><th>Nível</th><th>Status</th><th>Ação</th></tr>
                     </thead>
-                    <tbody id="corpoTabela"><tr><td colspan="6" class="loading">Selecione um evento...</td></tr>
-                </tbody>
-             </table>
+                    <tbody id="corpoTabela"><tr><td colspan="6" class="loading">Selecione um evento...<\/td><\/tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -376,46 +368,43 @@
         <div class="modal-visitantes-content">
             <h3>👥 Registro de Visitantes</h3>
             
-            <!-- Instrumentos (excluindo Órgão) -->
-            <div class="secao-visitantes">
-                <h4>🎵 Instrumentos</h4>
-                <div id="instrumentosVisitantes" class="grid-itens">
-                    <div class="loading">Carregando...</div>
-                </div>
-            </div>
-
-            <!-- Organistas -->
-            <div class="secao-visitantes">
-                <h4>🎹 Organistas</h4>
-                <div id="organistasVisitantes" class="grid-itens">
-                    <div class="item-linha">
-                        <div class="item-nome">Organistas</div>
-                        <div class="item-quantidade">
-                            <button class="btn-qtd minus" data-id="organistas" data-delta="-1">-</button>
-                            <span id="organistas">0</span>
-                            <button class="btn-qtd" data-id="organistas" data-delta="1">+</button>
-                        </div>
+            <!-- Instrumento -->
+            <div class="secao-visitante">
+                <h4>🎵 Instrumento</h4>
+                <div class="campo-visitante">
+                    <select id="selectInstrumento">
+                        <option value="">Selecione um instrumento...</option>
+                    </select>
+                    <button id="btnConsultarInstrumento" class="btn-consultar">🔍 Consultar</button>
+                    <div class="quantidade-control">
+                        <button type="button" class="btn-qtd minus" id="instrumentoMinus">-</button>
+                        <span id="instrumentoQuantidade">0</span>
+                        <button type="button" class="btn-qtd" id="instrumentoPlus">+</button>
                     </div>
                 </div>
+                <div id="infoInstrumentoSalvo" class="info-salvo"></div>
             </div>
 
-            <!-- Cargos (excluindo músico, instrutor, instrutora, secretários e organista) -->
-            <div class="secao-visitantes">
-                <h4>⭐ Cargos</h4>
-                <div id="cargosVisitantes" class="grid-itens">
-                    <div class="loading">Carregando cargos...</div>
+            <!-- Cargo -->
+            <div class="secao-visitante">
+                <h4>⭐ Cargo</h4>
+                <div class="campo-visitante">
+                    <select id="selectCargo">
+                        <option value="">Selecione um cargo...</option>
+                    </select>
+                    <button id="btnConsultarCargo" class="btn-consultar">🔍 Consultar</button>
+                    <div class="quantidade-control">
+                        <button type="button" class="btn-qtd minus" id="cargoMinus">-</button>
+                        <span id="cargoQuantidade">0</span>
+                        <button type="button" class="btn-qtd" id="cargoPlus">+</button>
+                    </div>
                 </div>
-            </div>
-
-            <!-- Total -->
-            <div class="total-visitantes">
-                <strong>🎯 Total de Visitantes:</strong>
-                <div class="numero" id="totalVisitantes">0</div>
+                <div id="infoCargoSalvo" class="info-salvo"></div>
             </div>
 
             <div class="modal-buttons">
                 <button id="btnSalvarVisitantes" class="btn-salvar-visitantes">💾 Salvar</button>
-                <button id="btnFecharVisitantes" class="btn-cancelar">❌ Fechar</button>
+                <button id="btnFecharVisitantes" class="btn-cancelar">❌ Cancelar</button>
             </div>
         </div>
     </div>
@@ -430,15 +419,18 @@
         const niveisCollection = db.collection("niveis");
         const congregacoesCollection = db.collection("congregacoes");
         const presencasCollection = db.collection("presencas");
-        const visitantesCollection = db.collection("visitantes");
+        
+        // Novas coleções para visitantes
+        const visitantesInstrumentoCollection = db.collection("visitantes_instrumento");
+        const visitantesCargoCollection = db.collection("visitantes_cargo");
 
         let eventos = [];
         let tiposEvento = [];
         let eventoSelecionado = null;
         let permissoesEvento = [];
         let todosMembros = [];
-        let instrumentos = [];
-        let cargos = [];
+        let todosInstrumentos = [];
+        let todosCargos = [];
         let niveis = [];
         let congregacoes = [];
         
@@ -450,24 +442,22 @@
         let pendingMembro = null;
         let pendingNaoAutorizado = false;
         
-        let quantidadesVisitantes = {
-            instrumentos: {},
-            organistas: 0,
-            cargos: {}
-        };
+        let quantidadeInstrumento = 0;
+        let quantidadeCargo = 0;
 
-        // Lista de instrumentos a serem excluídos
-        const instrumentosExcluir = ['Órgão', 'orgão', 'Orgao', 'orgao', 'ÓRGÃO', 'ORGÃO'];
-        
         // Lista de cargos a serem excluídos
         const cargosExcluir = [
             'Músico', 'musico', 'MUSICO', 'MÚSICO',
-            'Instrutor', 'instrutor', 'INSTRUTOR',
-            'Instrutora', 'instrutora', 'INSTRUTORA',
             'SECRETÁRIO DO GEM', 'Secretário do GEM', 'secretario do gem',
             'SECRETÁRIO (A) DA MÚSICA', 'Secretário(a) da Música', 'secretario da musica',
             'ORGANISTA', 'Organista', 'organista'
         ];
+
+        function deveriaExcluirCargo(nome) {
+            return cargosExcluir.some(excluir => 
+                nome.toLowerCase() === excluir.toLowerCase()
+            );
+        }
 
         function formatarDataLocal(dataISO) {
             if (!dataISO) return '';
@@ -514,43 +504,26 @@
             return item ? item.nome : `${tipo} ${id || '?'}`;
         }
 
-        function deveriaExcluirInstrumento(nome) {
-            return instrumentosExcluir.some(excluir => 
-                nome.toLowerCase() === excluir.toLowerCase() ||
-                nome.toLowerCase().includes(excluir.toLowerCase())
-            );
-        }
-
-        function deveriaExcluirCargo(nome) {
-            return cargosExcluir.some(excluir => 
-                nome.toLowerCase() === excluir.toLowerCase() ||
-                nome.toLowerCase().includes(excluir.toLowerCase())
-            );
-        }
-
         async function carregarDados() {
             try {
                 const instSnapshot = await instrumentosCollection.get();
-                instrumentos = [];
+                todosInstrumentos = [];
                 instSnapshot.forEach(doc => {
-                    const nomeInstrumento = doc.data().nome;
-                    if (!deveriaExcluirInstrumento(nomeInstrumento)) {
-                        instrumentos.push({ id: doc.data().id, nome: nomeInstrumento });
-                    }
+                    todosInstrumentos.push({ id: doc.data().id, nome: doc.data().nome });
                 });
-                instrumentos.sort((a, b) => a.id - b.id);
-                console.log('✅ Instrumentos carregados (excluindo Órgão):', instrumentos.length);
+                todosInstrumentos.sort((a, b) => a.id - b.id);
+                console.log('✅ Instrumentos carregados:', todosInstrumentos.length);
 
                 const cargoSnapshot = await cargosCollection.get();
-                cargos = [];
+                todosCargos = [];
                 cargoSnapshot.forEach(doc => {
                     const nomeCargo = doc.data().nome;
                     if (!deveriaExcluirCargo(nomeCargo)) {
-                        cargos.push({ id: doc.data().id, nome: nomeCargo });
+                        todosCargos.push({ id: doc.data().id, nome: nomeCargo });
                     }
                 });
-                cargos.sort((a, b) => a.id - b.id);
-                console.log('✅ Cargos carregados (excluindo músico, instrutor, etc.):', cargos.length);
+                todosCargos.sort((a, b) => a.id - b.id);
+                console.log('✅ Cargos carregados:', todosCargos.length);
 
                 const nivelSnapshot = await niveisCollection.get();
                 niveis = [];
@@ -578,7 +551,7 @@
                     });
                 });
                 
-                console.log('✅ Dados carregados:', { instrumentos: instrumentos.length, cargos: cargos.length, membros: todosMembros.length });
+                console.log('✅ Dados carregados, membros:', todosMembros.length);
             } catch(error) {
                 console.error('Erro ao carregar dados:', error);
                 mostrarToast('Erro ao carregar dados: ' + error.message, 'error');
@@ -631,6 +604,106 @@
                 option.style.borderLeft = `4px solid ${status === 'hoje' ? '#27ae60' : (status === 'passado' ? '#e74c3c' : '#3498db')}`;
                 
                 select.appendChild(option);
+            }
+        }
+
+        function popularSelectsVisitantes() {
+            const selectInst = document.getElementById('selectInstrumento');
+            selectInst.innerHTML = '<option value="">Selecione um instrumento...</option>';
+            for (const inst of todosInstrumentos) {
+                const option = document.createElement('option');
+                option.value = inst.id;
+                option.textContent = inst.nome;
+                selectInst.appendChild(option);
+            }
+            
+            const selectCargo = document.getElementById('selectCargo');
+            selectCargo.innerHTML = '<option value="">Selecione um cargo...</option>';
+            for (const cargo of todosCargos) {
+                const option = document.createElement('option');
+                option.value = cargo.id;
+                option.textContent = cargo.nome;
+                selectCargo.appendChild(option);
+            }
+        }
+
+        async function consultarQuantidadeInstrumento() {
+            if (!eventoSelecionado) {
+                mostrarToast('⚠️ Selecione um evento primeiro!', 'warning');
+                return;
+            }
+            
+            const selectInst = document.getElementById('selectInstrumento');
+            const instId = selectInst.value;
+            
+            if (!instId) {
+                mostrarToast('⚠️ Selecione um instrumento!', 'warning');
+                return;
+            }
+            
+            const instNome = selectInst.options[selectInst.selectedIndex]?.text;
+            
+            try {
+                const snapshot = await visitantesInstrumentoCollection
+                    .where('eventoId', '==', eventoSelecionado.id)
+                    .where('instrumentoId', '==', instId)
+                    .get();
+                
+                if (!snapshot.empty) {
+                    const data = snapshot.docs[0].data();
+                    quantidadeInstrumento = data.quantidade || 0;
+                    document.getElementById('instrumentoQuantidade').textContent = quantidadeInstrumento;
+                    document.getElementById('infoInstrumentoSalvo').innerHTML = `📌 Quantidade salva para "${instNome}": ${quantidadeInstrumento}`;
+                    mostrarToast(`✅ Quantidade carregada: ${quantidadeInstrumento}`, 'success');
+                } else {
+                    quantidadeInstrumento = 0;
+                    document.getElementById('instrumentoQuantidade').textContent = '0';
+                    document.getElementById('infoInstrumentoSalvo').innerHTML = `📌 Nenhum registro encontrado para "${instNome}"`;
+                    mostrarToast(`ℹ️ Nenhum registro encontrado para "${instNome}"`, 'info');
+                }
+            } catch(error) {
+                console.error('Erro ao consultar:', error);
+                mostrarToast('❌ Erro ao consultar: ' + error.message, 'error');
+            }
+        }
+
+        async function consultarQuantidadeCargo() {
+            if (!eventoSelecionado) {
+                mostrarToast('⚠️ Selecione um evento primeiro!', 'warning');
+                return;
+            }
+            
+            const selectCargo = document.getElementById('selectCargo');
+            const cargoId = selectCargo.value;
+            
+            if (!cargoId) {
+                mostrarToast('⚠️ Selecione um cargo!', 'warning');
+                return;
+            }
+            
+            const cargoNome = selectCargo.options[selectCargo.selectedIndex]?.text;
+            
+            try {
+                const snapshot = await visitantesCargoCollection
+                    .where('eventoId', '==', eventoSelecionado.id)
+                    .where('cargoId', '==', cargoId)
+                    .get();
+                
+                if (!snapshot.empty) {
+                    const data = snapshot.docs[0].data();
+                    quantidadeCargo = data.quantidade || 0;
+                    document.getElementById('cargoQuantidade').textContent = quantidadeCargo;
+                    document.getElementById('infoCargoSalvo').innerHTML = `📌 Quantidade salva para "${cargoNome}": ${quantidadeCargo}`;
+                    mostrarToast(`✅ Quantidade carregada: ${quantidadeCargo}`, 'success');
+                } else {
+                    quantidadeCargo = 0;
+                    document.getElementById('cargoQuantidade').textContent = '0';
+                    document.getElementById('infoCargoSalvo').innerHTML = `📌 Nenhum registro encontrado para "${cargoNome}"`;
+                    mostrarToast(`ℹ️ Nenhum registro encontrado para "${cargoNome}"`, 'info');
+                }
+            } catch(error) {
+                console.error('Erro ao consultar:', error);
+                mostrarToast('❌ Erro ao consultar: ' + error.message, 'error');
             }
         }
 
@@ -754,7 +827,12 @@
         window.removerPresenca = removerPresenca;
 
         async function renderizarListaMembros() {
-            if (!eventoSelecionado) return;
+            if (!eventoSelecionado) {
+                console.log('Nenhum evento selecionado');
+                return;
+            }
+            
+            console.log('Renderizando lista para evento:', eventoSelecionado.id);
             
             const presentesMap = await verificarPresencasEvento(eventoSelecionado.id);
             const statusEvento = compararDatas(eventoSelecionado.data);
@@ -820,8 +898,9 @@
                 
                 const linhaClasse = foiLidoSemPermissao ? 'lido-sem-permissao' : '';
                 
-                const instrumentoNome = getNome(instrumentos, m.instrumentoId, 'Inst');
-                const cargoNome = getNome(cargos, m.cargoId, 'Cargo');
+                // CORREÇÃO AQUI: usar as variáveis corretas
+                const instrumentoNome = getNome(todosInstrumentos, m.instrumentoId, 'Inst');
+                const cargoNome = getNome(todosCargos, m.cargoId, 'Cargo');
                 const nivelNome = getNome(niveis, m.nivelId, 'Nível');
                 
                 let statusHtml = '';
@@ -859,109 +938,19 @@
                 </tr>`;
             }
             tbody.innerHTML = html;
+            console.log('Lista renderizada com sucesso, total:', listaFinal.length);
         }
 
         function carregarModalVisitantes() {
-            // Carregar instrumentos (já filtrados)
-            const instContainer = document.getElementById('instrumentosVisitantes');
-            if (instrumentos.length > 0) {
-                let html = '';
-                instrumentos.forEach(inst => {
-                    quantidadesVisitantes.instrumentos[inst.id] = 0;
-                    html += `
-                        <div class="item-linha">
-                            <div class="item-nome">${inst.nome}</div>
-                            <div class="item-quantidade">
-                                <button class="btn-qtd minus" data-instrumento="${inst.id}" data-delta="-1">-</button>
-                                <span id="inst_${inst.id}">0</span>
-                                <button class="btn-qtd" data-instrumento="${inst.id}" data-delta="1">+</button>
-                            </div>
-                        </div>
-                    `;
-                });
-                instContainer.innerHTML = html;
-                
-                instContainer.querySelectorAll('.btn-qtd').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const instId = btn.getAttribute('data-instrumento');
-                        const delta = parseInt(btn.getAttribute('data-delta'));
-                        if (instId && !isNaN(delta)) {
-                            const novoValor = (quantidadesVisitantes.instrumentos[instId] || 0) + delta;
-                            quantidadesVisitantes.instrumentos[instId] = Math.max(0, novoValor);
-                            document.getElementById(`inst_${instId}`).textContent = quantidadesVisitantes.instrumentos[instId];
-                            atualizarTotalVisitantes();
-                        }
-                    });
-                });
-            } else {
-                instContainer.innerHTML = '<div class="loading">Nenhum instrumento cadastrado</div>';
-            }
+            quantidadeInstrumento = 0;
+            quantidadeCargo = 0;
             
-            // Carregar cargos (já filtrados)
-            const cargoContainer = document.getElementById('cargosVisitantes');
-            if (cargos.length > 0) {
-                let html = '';
-                cargos.forEach(cargo => {
-                    quantidadesVisitantes.cargos[cargo.id] = 0;
-                    html += `
-                        <div class="item-linha">
-                            <div class="item-nome">${cargo.nome}</div>
-                            <div class="item-quantidade">
-                                <button class="btn-qtd minus" data-cargo="${cargo.id}" data-delta="-1">-</button>
-                                <span id="cargo_${cargo.id}">0</span>
-                                <button class="btn-qtd" data-cargo="${cargo.id}" data-delta="1">+</button>
-                            </div>
-                        </div>
-                    `;
-                });
-                cargoContainer.innerHTML = html;
-                
-                cargoContainer.querySelectorAll('.btn-qtd').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const cargoId = btn.getAttribute('data-cargo');
-                        const delta = parseInt(btn.getAttribute('data-delta'));
-                        if (cargoId && !isNaN(delta)) {
-                            const novoValor = (quantidadesVisitantes.cargos[cargoId] || 0) + delta;
-                            quantidadesVisitantes.cargos[cargoId] = Math.max(0, novoValor);
-                            document.getElementById(`cargo_${cargoId}`).textContent = quantidadesVisitantes.cargos[cargoId];
-                            atualizarTotalVisitantes();
-                        }
-                    });
-                });
-            } else {
-                cargoContainer.innerHTML = '<div class="loading">Nenhum cargo cadastrado</div>';
-            }
-            
-            // Organistas
-            quantidadesVisitantes.organistas = 0;
-            document.getElementById('organistas').textContent = '0';
-            const organistasBtns = document.querySelectorAll('#organistasVisitantes .btn-qtd');
-            organistasBtns.forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const delta = parseInt(btn.getAttribute('data-delta'));
-                    if (!isNaN(delta)) {
-                        const novoValor = quantidadesVisitantes.organistas + delta;
-                        quantidadesVisitantes.organistas = Math.max(0, novoValor);
-                        document.getElementById('organistas').textContent = quantidadesVisitantes.organistas;
-                        atualizarTotalVisitantes();
-                    }
-                });
-            });
-            
-            atualizarTotalVisitantes();
-        }
-        
-        function atualizarTotalVisitantes() {
-            let total = quantidadesVisitantes.organistas;
-            
-            for (const key in quantidadesVisitantes.instrumentos) {
-                total += quantidadesVisitantes.instrumentos[key];
-            }
-            for (const key in quantidadesVisitantes.cargos) {
-                total += quantidadesVisitantes.cargos[key];
-            }
-            
-            document.getElementById('totalVisitantes').textContent = total;
+            document.getElementById('selectInstrumento').value = '';
+            document.getElementById('selectCargo').value = '';
+            document.getElementById('instrumentoQuantidade').textContent = '0';
+            document.getElementById('cargoQuantidade').textContent = '0';
+            document.getElementById('infoInstrumentoSalvo').innerHTML = '';
+            document.getElementById('infoCargoSalvo').innerHTML = '';
         }
         
         async function salvarVisitantes() {
@@ -970,42 +959,114 @@
                 return;
             }
             
-            const total = parseInt(document.getElementById('totalVisitantes').textContent);
+            const selectInst = document.getElementById('selectInstrumento');
+            const instId = selectInst.value;
             
-            if (total === 0) {
-                mostrarToast('⚠️ Nenhum visitante registrado!', 'warning');
-                return;
+            const selectCargoEl = document.getElementById('selectCargo');
+            const cargoId = selectCargoEl.value;
+            
+            let salvou = false;
+            let total = 0;
+            
+            // Salvar visitante instrumento
+            if (instId && quantidadeInstrumento > 0) {
+                try {
+                    const snapshot = await visitantesInstrumentoCollection
+                        .where('eventoId', '==', eventoSelecionado.id)
+                        .where('instrumentoId', '==', instId)
+                        .get();
+                    
+                    if (!snapshot.empty) {
+                        const doc = snapshot.docs[0];
+                        await doc.ref.update({
+                            quantidade: quantidadeInstrumento,
+                            atualizadoEm: new Date().toISOString()
+                        });
+                    } else {
+                        await visitantesInstrumentoCollection.add({
+                            eventoId: eventoSelecionado.id,
+                            instrumentoId: instId,
+                            quantidade: quantidadeInstrumento,
+                            dataRegistro: new Date().toISOString(),
+                            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    }
+                    total += quantidadeInstrumento;
+                    salvou = true;
+                    console.log(`✅ Visitante instrumento salvo: ${instId} - ${quantidadeInstrumento}`);
+                } catch(error) {
+                    console.error('Erro ao salvar visitante instrumento:', error);
+                    mostrarToast('❌ Erro ao salvar instrumento: ' + error.message, 'error');
+                }
+            } else if (instId && quantidadeInstrumento === 0) {
+                // Se quantidade for 0, remover o registro se existir
+                try {
+                    const snapshot = await visitantesInstrumentoCollection
+                        .where('eventoId', '==', eventoSelecionado.id)
+                        .where('instrumentoId', '==', instId)
+                        .get();
+                    
+                    if (!snapshot.empty) {
+                        await snapshot.docs[0].ref.delete();
+                        console.log(`✅ Registro de instrumento removido: ${instId}`);
+                    }
+                } catch(error) {
+                    console.error('Erro ao remover registro de instrumento:', error);
+                }
             }
             
-            try {
-                const visitantesData = {
-                    eventoId: eventoSelecionado.id,
-                    eventoNome: eventoSelecionado.tipoEventoNome,
-                    eventoData: eventoSelecionado.data,
-                    congregacaoNome: eventoSelecionado.congregacaoNome,
-                    instrumentos: quantidadesVisitantes.instrumentos,
-                    organistas: quantidadesVisitantes.organistas,
-                    cargos: quantidadesVisitantes.cargos,
-                    totalGeral: total,
-                    dataRegistro: new Date().toISOString(),
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                };
-                
-                await visitantesCollection.add(visitantesData);
+            // Salvar visitante cargo
+            if (cargoId && quantidadeCargo > 0) {
+                try {
+                    const snapshot = await visitantesCargoCollection
+                        .where('eventoId', '==', eventoSelecionado.id)
+                        .where('cargoId', '==', cargoId)
+                        .get();
+                    
+                    if (!snapshot.empty) {
+                        const doc = snapshot.docs[0];
+                        await doc.ref.update({
+                            quantidade: quantidadeCargo,
+                            atualizadoEm: new Date().toISOString()
+                        });
+                    } else {
+                        await visitantesCargoCollection.add({
+                            eventoId: eventoSelecionado.id,
+                            cargoId: cargoId,
+                            quantidade: quantidadeCargo,
+                            dataRegistro: new Date().toISOString(),
+                            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    }
+                    total += quantidadeCargo;
+                    salvou = true;
+                    console.log(`✅ Visitante cargo salvo: ${cargoId} - ${quantidadeCargo}`);
+                } catch(error) {
+                    console.error('Erro ao salvar visitante cargo:', error);
+                    mostrarToast('❌ Erro ao salvar cargo: ' + error.message, 'error');
+                }
+            } else if (cargoId && quantidadeCargo === 0) {
+                // Se quantidade for 0, remover o registro se existir
+                try {
+                    const snapshot = await visitantesCargoCollection
+                        .where('eventoId', '==', eventoSelecionado.id)
+                        .where('cargoId', '==', cargoId)
+                        .get();
+                    
+                    if (!snapshot.empty) {
+                        await snapshot.docs[0].ref.delete();
+                        console.log(`✅ Registro de cargo removido: ${cargoId}`);
+                    }
+                } catch(error) {
+                    console.error('Erro ao remover registro de cargo:', error);
+                }
+            }
+            
+            if (salvou) {
                 mostrarToast(`✅ ${total} visitante(s) registrado(s) com sucesso!`);
-                
-                quantidadesVisitantes = {
-                    instrumentos: {},
-                    organistas: 0,
-                    cargos: {}
-                };
-                
-                const modal = document.getElementById('modalVisitantes');
-                if (modal) modal.style.display = 'none';
-                
-            } catch(error) {
-                console.error('Erro ao salvar visitantes:', error);
-                mostrarToast('❌ Erro ao salvar: ' + error.message, 'error');
+                document.getElementById('modalVisitantes').style.display = 'none';
+            } else if ((!instId || quantidadeInstrumento === 0) && (!cargoId || quantidadeCargo === 0)) {
+                mostrarToast('⚠️ Selecione um instrumento ou cargo com quantidade maior que zero!', 'warning');
             }
         }
 
@@ -1015,16 +1076,16 @@
                 return;
             }
             
+            popularSelectsVisitantes();
             carregarModalVisitantes();
-            const modal = document.getElementById('modalVisitantes');
-            if (modal) modal.style.display = 'flex';
+            document.getElementById('modalVisitantes').style.display = 'flex';
         }
 
         function mostrarModalConfirmacao(membro, naoAutorizado = false) {
             if (!eventoSelecionado) return;
             
-            const instrumento = getNome(instrumentos, membro.instrumentoId, 'Instrumento');
-            const cargo = getNome(cargos, membro.cargoId, 'Cargo');
+            const instrumento = getNome(todosInstrumentos, membro.instrumentoId, 'Instrumento');
+            const cargo = getNome(todosCargos, membro.cargoId, 'Cargo');
             const nivel = getNome(niveis, membro.nivelId, 'Nível');
             
             const modalInfo = document.getElementById('modalMembroInfo');
@@ -1055,8 +1116,7 @@
             
             pendingMembro = membro;
             pendingNaoAutorizado = naoAutorizado;
-            const modal = document.getElementById('modalConfirm');
-            if (modal) modal.style.display = 'flex';
+            document.getElementById('modalConfirm').style.display = 'flex';
             pararLeitor();
         }
 
@@ -1065,8 +1125,7 @@
                 await registrarPresenca(pendingMembro.id, pendingMembro.nome, pendingNaoAutorizado);
                 pendingMembro = null;
                 pendingNaoAutorizado = false;
-                const modal = document.getElementById('modalConfirm');
-                if (modal) modal.style.display = 'none';
+                document.getElementById('modalConfirm').style.display = 'none';
                 iniciarLeitor();
             }
         }
@@ -1074,8 +1133,7 @@
         function cancelarPresenca() {
             pendingMembro = null;
             pendingNaoAutorizado = false;
-            const modal = document.getElementById('modalConfirm');
-            if (modal) modal.style.display = 'none';
+            document.getElementById('modalConfirm').style.display = 'none';
             atualizarStatusLeitor('Leitura cancelada. Aponte novamente para o QR Code.', 'info');
             iniciarLeitor();
         }
@@ -1197,8 +1255,34 @@
             const btnCancelarPresenca = document.getElementById('btnCancelarPresenca');
             const btnSalvarVisitantes = document.getElementById('btnSalvarVisitantes');
             const btnFecharVisitantes = document.getElementById('btnFecharVisitantes');
+            const btnConsultarInstrumento = document.getElementById('btnConsultarInstrumento');
+            const btnConsultarCargo = document.getElementById('btnConsultarCargo');
             const buscaMembros = document.getElementById('buscaMembros');
             const statCards = document.querySelectorAll('.stat-card');
+            
+            // Controles de quantidade do instrumento
+            document.getElementById('instrumentoMinus')?.addEventListener('click', () => {
+                quantidadeInstrumento = Math.max(0, quantidadeInstrumento - 1);
+                document.getElementById('instrumentoQuantidade').textContent = quantidadeInstrumento;
+            });
+            document.getElementById('instrumentoPlus')?.addEventListener('click', () => {
+                quantidadeInstrumento++;
+                document.getElementById('instrumentoQuantidade').textContent = quantidadeInstrumento;
+            });
+            
+            // Controles de quantidade do cargo
+            document.getElementById('cargoMinus')?.addEventListener('click', () => {
+                quantidadeCargo = Math.max(0, quantidadeCargo - 1);
+                document.getElementById('cargoQuantidade').textContent = quantidadeCargo;
+            });
+            document.getElementById('cargoPlus')?.addEventListener('click', () => {
+                quantidadeCargo++;
+                document.getElementById('cargoQuantidade').textContent = quantidadeCargo;
+            });
+            
+            // Botões de consulta
+            if (btnConsultarInstrumento) btnConsultarInstrumento.addEventListener('click', consultarQuantidadeInstrumento);
+            if (btnConsultarCargo) btnConsultarCargo.addEventListener('click', consultarQuantidadeCargo);
             
             if (eventoSelect) {
                 eventoSelect.addEventListener('change', async (e) => {
