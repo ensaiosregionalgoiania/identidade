@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Sistema de Acesso Facial - CCB</title>
+    <title>Sistema de Acesso Facial - CCB 1</title>
     
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -372,7 +372,7 @@
     <div id="telaLista" class="tela-lista">
         <div class="lista-card">
             <div class="lista-header">
-                <h3>📋 Membros Cadastrados 1</h3>
+                <h3>📋 Membros Cadastrados</h3>
                 <button id="btnFecharLista" class="btn-fechar" style="background: rgba(255,255,255,0.2);">✕</button>
             </div>
             <div class="lista-body" id="listaBody">
@@ -395,12 +395,12 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const membrosCollection = db.collection("membros");
-        const facialCollection = db.collection("dados_faciais_v2");
+        const facialCollection = db.collection("dados_faciais_v3"); // Nova coleção
 
         let streamAtual = null;
         let modoAtual = null;
         let membrosList = [];
-        let rostosCadastrados = []; // {membroId, membroNome, faceData}
+        let rostosCadastrados = [];
 
         // Elementos
         const telaInicial = document.getElementById('telaInicial');
@@ -424,7 +424,6 @@
         const listaBody = document.getElementById('listaBody');
         const progressoDiv = document.getElementById('progressoCarregamento');
 
-        // Parar câmera
         function pararCamera() {
             if (streamAtual) {
                 streamAtual.getTracks().forEach(track => track.stop());
@@ -433,7 +432,6 @@
             video.srcObject = null;
         }
 
-        // Iniciar câmera
         async function iniciarCamera() {
             pararCamera();
             try {
@@ -445,78 +443,165 @@
                 await new Promise((resolve) => {
                     video.onloadedmetadata = () => { video.play(); resolve(); };
                 });
-                
                 feedbackCamera.innerText = "✅ Câmera ativa! Posicione o rosto.";
                 return true;
             } catch (err) {
-                feedbackCamera.innerText = "❌ Erro ao acessar câmera. Verifique as permissões.";
+                feedbackCamera.innerText = "❌ Erro ao acessar câmera.";
                 return false;
             }
         }
 
-        // Capturar foto e converter para dados da face
+        // Capturar rosto com foco na região central (onde normalmente está o rosto)
         async function capturarFace() {
             if (!video.videoWidth) return null;
             
             const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+            const videoWidth = video.videoWidth;
+            const videoHeight = video.videoHeight;
+            
+            // Focar na região central onde o rosto geralmente está
+            const cropX = videoWidth * 0.2;
+            const cropY = videoHeight * 0.15;
+            const cropWidth = videoWidth * 0.6;
+            const cropHeight = videoHeight * 0.7;
+            
+            canvas.width = 128;
+            canvas.height = 128;
             const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             
-            // Detectar região do rosto (simplificado - pega o centro da imagem)
-            // Em uma implementação real, usaríamos face-api.js, mas vamos fazer um método simplificado
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            // Desenhar apenas a região do rosto
+            ctx.drawImage(video, cropX, cropY, cropWidth, cropHeight, 0, 0, 128, 128);
             
-            // Criar um hash da imagem para comparação
-            const hash = await calcularHashRapido(imageData);
+            // Aplicar melhorias na imagem
+            const imageData = ctx.getImageData(0, 0, 128, 128);
+            
+            // Aplicar equalização de histograma para melhorar contraste
+            const equalizedData = equalizarHistograma(imageData);
+            ctx.putImageData(equalizedData, 0, 0);
+            
+            // Gerar hash perceptual mais robusto
+            const hash = await gerarHashPerceptual(canvas);
             
             return {
                 hash: hash,
-                width: canvas.width,
-                height: canvas.height,
-                imageData: imageData
+                timestamp: Date.now()
             };
         }
 
-        // Calcular hash rápido da imagem para comparação
-        function calcularHashRapido(imageData) {
-            return new Promise((resolve) => {
-                // Reduzir para 64x64
-                const size = 64;
-                const canvas = document.createElement('canvas');
-                canvas.width = size;
-                canvas.height = size;
-                const ctx = canvas.getContext('2d');
+        // Equalização de histograma para melhorar contraste
+        function equalizarHistograma(imageData) {
+            const data = imageData.data;
+            const histR = new Array(256).fill(0);
+            const histG = new Array(256).fill(0);
+            const histB = new Array(256).fill(0);
+            
+            for (let i = 0; i < data.length; i += 4) {
+                histR[data[i]]++;
+                histG[data[i+1]]++;
+                histB[data[i+2]]++;
+            }
+            
+            let cdfR = 0, cdfG = 0, cdfB = 0;
+            const minR = histR.findIndex(v => v > 0);
+            const minG = histG.findIndex(v => v > 0);
+            const minB = histB.findIndex(v => v > 0);
+            const total = data.length / 4;
+            
+            for (let i = 0; i < 256; i++) {
+                cdfR += histR[i];
+                cdfG += histG[i];
+                cdfB += histB[i];
                 
-                const img = new Image();
-                img.onload = () => {
-                    ctx.drawImage(img, 0, 0, size, size);
-                    const data = ctx.getImageData(0, 0, size, size).data;
-                    
-                    // Calcular média de cinza
-                    let hash = '';
-                    for (let i = 0; i < data.length; i += 4) {
-                        const gray = (data[i] + data[i+1] + data[i+2]) / 3;
-                        hash += gray > 128 ? '1' : '0';
-                    }
-                    resolve(hash);
-                };
-                img.src = canvas.toDataURL();
-            });
+                const equalR = Math.round(((cdfR - minR) / (total - minR)) * 255);
+                const equalG = Math.round(((cdfG - minG) / (total - minG)) * 255);
+                const equalB = Math.round(((cdfB - minB) / (total - minB)) * 255);
+                
+                histR[i] = Math.max(0, Math.min(255, equalR));
+                histG[i] = Math.max(0, Math.min(255, equalG));
+                histB[i] = Math.max(0, Math.min(255, equalB));
+            }
+            
+            const newData = new Uint8ClampedArray(data.length);
+            for (let i = 0; i < data.length; i += 4) {
+                newData[i] = histR[data[i]];
+                newData[i+1] = histG[data[i+1]];
+                newData[i+2] = histB[data[i+2]];
+                newData[i+3] = 255;
+            }
+            
+            return new ImageData(newData, imageData.width, imageData.height);
         }
 
-        // Comparar duas imagens pela similaridade de hash
-        function compararHash(hash1, hash2) {
-            if (!hash1 || !hash2) return 0;
+        // Gerar hash perceptual (pHash) mais robusto
+        async function gerarHashPerceptual(canvas) {
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, 32, 32);
+            const data = imageData.data;
+            
+            // Converter para escala de cinza
+            const gray = [];
+            for (let i = 0; i < data.length; i += 4) {
+                const g = (data[i] + data[i+1] + data[i+2]) / 3;
+                gray.push(g);
+            }
+            
+            // Calcular DCT (simplificada)
+            const dct = aplicarDCT(gray, 32);
+            
+            // Extrair os 64 bits mais significativos
+            let hash = '';
+            const media = calcularMedia(dct);
+            
+            for (let i = 0; i < 64; i++) {
+                hash += dct[i] > media ? '1' : '0';
+            }
+            
+            return hash;
+        }
+
+        // Aplicar DCT simplificada
+        function aplicarDCT(matrix, size) {
+            const result = [];
+            for (let u = 0; u < 8; u++) {
+                for (let v = 0; v < 8; v++) {
+                    let sum = 0;
+                    for (let x = 0; x < size; x++) {
+                        for (let y = 0; y < size; y++) {
+                            const val = matrix[x * size + y];
+                            const cu = u === 0 ? 1 / Math.sqrt(2) : 1;
+                            const cv = v === 0 ? 1 / Math.sqrt(2) : 1;
+                            const cosU = Math.cos((2 * x + 1) * u * Math.PI / (2 * size));
+                            const cosV = Math.cos((2 * y + 1) * v * Math.PI / (2 * size));
+                            sum += val * cosU * cosV;
+                        }
+                    }
+                    const dctVal = sum * 0.25 * cu * cv;
+                    result.push(dctVal);
+                }
+            }
+            return result;
+        }
+
+        function calcularMedia(arr) {
+            const sum = arr.reduce((a, b) => a + b, 0);
+            return sum / arr.length;
+        }
+
+        // Calcular distância de Hamming (diferença entre hashes)
+        function calcularDistanciaHash(hash1, hash2) {
+            if (!hash1 || !hash2 || hash1.length !== hash2.length) return 1;
             let diff = 0;
-            for (let i = 0; i < Math.min(hash1.length, hash2.length); i++) {
+            for (let i = 0; i < hash1.length; i++) {
                 if (hash1[i] !== hash2[i]) diff++;
             }
-            return 1 - (diff / Math.min(hash1.length, hash2.length));
+            return diff / hash1.length;
         }
 
-        // Carregar rostos cadastrados
+        // Similaridade (0 a 1, onde 1 é idêntico)
+        function calcularSimilaridade(hash1, hash2) {
+            return 1 - calcularDistanciaHash(hash1, hash2);
+        }
+
         async function carregarRostosCadastrados() {
             const snapshot = await facialCollection.get();
             rostosCadastrados = [];
@@ -533,7 +618,6 @@
             return rostosCadastrados;
         }
 
-        // Carregar membros
         async function carregarMembros() {
             const snapshot = await membrosCollection.orderBy("id").get();
             membrosList = [];
@@ -549,7 +633,7 @@
             return membrosList;
         }
 
-        // CADASTRAR rosto
+        // CADASTRAR - Captura múltiplas imagens para melhor precisão
         async function cadastrarRosto() {
             const nome = nomeCadastroInput.value.trim();
             if (!nome) {
@@ -562,32 +646,45 @@
             );
 
             if (!membroEncontrado) {
-                feedbackCamera.innerText = "❌ Membro não encontrado na lista!";
+                feedbackCamera.innerText = "❌ Membro não encontrado!";
                 return;
             }
 
-            // Verificar se já tem rosto
             const jaCadastrado = rostosCadastrados.some(r => r.membroId === membroEncontrado.id);
             if (jaCadastrado) {
                 feedbackCamera.innerText = `❌ ${membroEncontrado.nome} já possui rosto cadastrado!`;
                 return;
             }
 
-            feedbackCamera.innerText = "📸 Capturando rosto...";
+            feedbackCamera.innerText = "📸 Capturando rosto (aguarde 3 segundos)...";
             
-            const faceData = await capturarFace();
-            if (!faceData || !faceData.hash) {
+            // Capturar múltiplas imagens para obter a melhor
+            let melhoresHashes = [];
+            
+            for (let i = 0; i < 5; i++) {
+                await new Promise(r => setTimeout(r, 500));
+                const faceData = await capturarFace();
+                if (faceData && faceData.hash) {
+                    melhoresHashes.push(faceData.hash);
+                }
+                feedbackCamera.innerText = `📸 Capturando... ${i+1}/5`;
+            }
+            
+            if (melhoresHashes.length === 0) {
                 feedbackCamera.innerText = "❌ Não foi possível capturar. Tente novamente.";
                 return;
             }
-
+            
+            // Usar o hash mais consistente
+            const hashFinal = encontrarHashMaisConsistente(melhoresHashes);
+            
             feedbackCamera.innerText = "💾 Salvando no Firebase...";
             
             try {
                 await facialCollection.add({
                     membroId: membroEncontrado.id,
                     membroNome: membroEncontrado.nome,
-                    faceHash: faceData.hash,
+                    faceHash: hashFinal,
                     dataCadastro: new Date().toISOString()
                 });
                 
@@ -598,45 +695,77 @@
                 setTimeout(() => fecharCameraEVoltar(), 1500);
             } catch (error) {
                 console.error(error);
-                feedbackCamera.innerText = "❌ Erro ao salvar no Firebase.";
+                feedbackCamera.innerText = "❌ Erro ao salvar.";
             }
         }
 
-        // CONSULTAR acesso
+        function encontrarHashMaisConsistente(hashes) {
+            // Retorna o hash que mais se repete
+            const contagem = {};
+            for (const hash of hashes) {
+                contagem[hash] = (contagem[hash] || 0) + 1;
+            }
+            let maxHash = hashes[0];
+            let maxCount = 0;
+            for (const [hash, count] of Object.entries(contagem)) {
+                if (count > maxCount) {
+                    maxCount = count;
+                    maxHash = hash;
+                }
+            }
+            return maxHash;
+        }
+
+        // CONSULTAR acesso com limiar alto
         async function consultarAcesso() {
             if (rostosCadastrados.length === 0) {
                 await carregarRostosCadastrados();
                 if (rostosCadastrados.length === 0) {
                     resultadoConsultaDiv.style.display = "block";
                     resultadoConsultaDiv.className = "resultado resultado-erro";
-                    resultadoConsultaDiv.innerHTML = "📭 Nenhum rosto cadastrado! Vá em CADASTRAR primeiro.";
+                    resultadoConsultaDiv.innerHTML = "📭 Nenhum rosto cadastrado!";
                     return;
                 }
             }
             
             feedbackCamera.innerText = "📸 Analisando rosto...";
-            const faceAtual = await capturarFace();
             
-            if (!faceAtual || !faceAtual.hash) {
-                feedbackCamera.innerText = "❌ Não foi possível capturar o rosto.";
-                resultadoConsultaDiv.style.display = "block";
-                resultadoConsultaDiv.className = "resultado resultado-erro";
-                resultadoConsultaDiv.innerHTML = "❌ Não foi possível capturar o rosto!<br>Posicione-se bem na frente da câmera.";
-                return;
-            }
-            
-            let melhorMatch = null;
-            let melhorSimilaridade = 0;
-            
-            for (const rost of rostosCadastrados) {
-                const similaridade = compararHash(faceAtual.hash, rost.faceHash);
-                if (similaridade > melhorSimilaridade && similaridade > 0.75) {
-                    melhorSimilaridade = similaridade;
-                    melhorMatch = rost;
+            // Capturar múltiplas amostras para verificação
+            let amostras = [];
+            for (let i = 0; i < 3; i++) {
+                await new Promise(r => setTimeout(r, 300));
+                const faceData = await capturarFace();
+                if (faceData && faceData.hash) {
+                    amostras.push(faceData.hash);
                 }
             }
             
-            if (melhorMatch) {
+            if (amostras.length === 0) {
+                feedbackCamera.innerText = "❌ Não foi possível capturar o rosto.";
+                resultadoConsultaDiv.style.display = "block";
+                resultadoConsultaDiv.className = "resultado resultado-erro";
+                resultadoConsultaDiv.innerHTML = "❌ Não foi possível capturar o rosto!";
+                return;
+            }
+            
+            // Testar cada amostra contra cada rosto cadastrado
+            let melhorMatch = null;
+            let melhorSimilaridade = 0;
+            
+            for (const amostra of amostras) {
+                for (const rost of rostosCadastrados) {
+                    const similaridade = calcularSimilaridade(amostra, rost.faceHash);
+                    console.log(`Comparando com ${rost.membroNome}: similaridade = ${similaridade.toFixed(4)}`);
+                    
+                    // Limiar aumentado para 0.85 (85% de similaridade)
+                    if (similaridade > melhorSimilaridade && similaridade > 0.85) {
+                        melhorSimilaridade = similaridade;
+                        melhorMatch = rost;
+                    }
+                }
+            }
+            
+            if (melhorMatch && melhorSimilaridade > 0.85) {
                 const confianca = Math.round(melhorSimilaridade * 100);
                 resultadoConsultaDiv.style.display = "block";
                 resultadoConsultaDiv.className = "resultado resultado-sucesso";
@@ -647,7 +776,6 @@
                 `;
                 feedbackCamera.innerHTML = `🟢 Bem-vindo(a), ${melhorMatch.membroNome}!`;
                 
-                // Registrar log
                 const logCollection = db.collection("log_acessos");
                 await logCollection.add({
                     membroId: melhorMatch.membroId,
@@ -663,7 +791,6 @@
             }
         }
 
-        // Listar membros
         async function exibirListaMembros() {
             listaBody.innerHTML = '<div class="loading">Carregando membros...</div>';
             telaLista.classList.add('ativa');
@@ -694,7 +821,6 @@
             }
         }
 
-        // Abrir modos
         async function abrirModo(modo) {
             modoAtual = modo;
             zonaCadastroDiv.style.display = "none";
@@ -705,7 +831,7 @@
             if (modo === 'cadastro') {
                 tituloCamera.innerText = "📸 CADASTRAR ROSTO";
                 zonaCadastroDiv.style.display = "block";
-                feedbackCamera.innerText = "📷 Olhe para a câmera e digite o nome do membro";
+                feedbackCamera.innerText = "📷 Olhe para a câmera e digite o nome";
                 await carregarMembros();
                 await carregarRostosCadastrados();
             } else {
@@ -725,7 +851,6 @@
             telaInicial.style.display = 'flex';
         }
         
-        // Eventos
         btnAbrirCadastro.addEventListener('click', () => {
             telaInicial.style.display = 'none';
             abrirModo('cadastro');
@@ -755,7 +880,6 @@
             if (e.key === 'Enter') cadastrarRosto();
         });
         
-        // Inicializar
         async function init() {
             progressoDiv.style.display = 'block';
             await carregarMembros();
