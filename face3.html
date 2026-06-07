@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Sistema de Acesso Facial - CCB 1</title>
+    <title>Sistema de Acesso Facial - CCB 2</title>
     
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -323,10 +323,72 @@
             color: white;
         }
 
+        .btn-excluir {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 11px;
+            margin-left: 10px;
+        }
+
+        .btn-excluir:hover {
+            background: #c0392b;
+        }
+
         .loading {
             text-align: center;
             padding: 40px;
             color: #999;
+        }
+
+        .modal-confirm {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+        }
+
+        .modal-confirm-content {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            width: 90%;
+            max-width: 350px;
+            text-align: center;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .modal-buttons button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn-confirmar-excluir {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-cancelar-excluir {
+            background: #95a5a6;
+            color: white;
         }
     </style>
 </head>
@@ -381,8 +443,19 @@
         </div>
     </div>
 
+    <!-- Modal de confirmação -->
+    <div id="modalConfirm" class="modal-confirm">
+        <div class="modal-confirm-content">
+            <h3>⚠️ Confirmar Exclusão</h3>
+            <p id="modalMensagem">Tem certeza que deseja excluir o rosto deste membro?</p>
+            <div class="modal-buttons">
+                <button id="btnConfirmarExcluir" class="btn-confirmar-excluir">🗑️ Excluir</button>
+                <button id="btnCancelarExcluir" class="btn-cancelar-excluir">❌ Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyA4COgeJSENsHrQHDx39gpZvif3zVrGjYE",
             authDomain: "identidadeccb.firebaseapp.com",
@@ -395,14 +468,14 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const membrosCollection = db.collection("membros");
-        const facialCollection = db.collection("dados_faciais_v3"); // Nova coleção
+        const facialCollection = db.collection("dados_faciais_v3");
 
         let streamAtual = null;
         let modoAtual = null;
         let membrosList = [];
         let rostosCadastrados = [];
+        let excluirId = null;
 
-        // Elementos
         const telaInicial = document.getElementById('telaInicial');
         const telaCamera = document.getElementById('telaCamera');
         const telaLista = document.getElementById('telaLista');
@@ -423,6 +496,9 @@
         const btnFecharLista = document.getElementById('btnFecharLista');
         const listaBody = document.getElementById('listaBody');
         const progressoDiv = document.getElementById('progressoCarregamento');
+        const modalConfirm = document.getElementById('modalConfirm');
+        const btnConfirmarExcluir = document.getElementById('btnConfirmarExcluir');
+        const btnCancelarExcluir = document.getElementById('btnCancelarExcluir');
 
         function pararCamera() {
             if (streamAtual) {
@@ -451,155 +527,58 @@
             }
         }
 
-        // Capturar rosto com foco na região central (onde normalmente está o rosto)
-        async function capturarFace() {
+        // Capturar face de forma simples e rápida
+        function capturarFace() {
             if (!video.videoWidth) return null;
             
             const canvas = document.createElement('canvas');
-            const videoWidth = video.videoWidth;
-            const videoHeight = video.videoHeight;
-            
-            // Focar na região central onde o rosto geralmente está
-            const cropX = videoWidth * 0.2;
-            const cropY = videoHeight * 0.15;
-            const cropWidth = videoWidth * 0.6;
-            const cropHeight = videoHeight * 0.7;
-            
             canvas.width = 128;
             canvas.height = 128;
             const ctx = canvas.getContext('2d');
             
-            // Desenhar apenas a região do rosto
-            ctx.drawImage(video, cropX, cropY, cropWidth, cropHeight, 0, 0, 128, 128);
+            // Capturar o centro do vídeo (onde o rosto deve estar)
+            const videoWidth = video.videoWidth;
+            const videoHeight = video.videoHeight;
+            const cropX = videoWidth * 0.2;
+            const cropY = videoHeight * 0.15;
+            const cropW = videoWidth * 0.6;
+            const cropH = videoHeight * 0.7;
             
-            // Aplicar melhorias na imagem
+            ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, 128, 128);
+            
+            // Gerar hash simples
             const imageData = ctx.getImageData(0, 0, 128, 128);
+            const hash = gerarHashSimples(imageData);
             
-            // Aplicar equalização de histograma para melhorar contraste
-            const equalizedData = equalizarHistograma(imageData);
-            ctx.putImageData(equalizedData, 0, 0);
-            
-            // Gerar hash perceptual mais robusto
-            const hash = await gerarHashPerceptual(canvas);
-            
-            return {
-                hash: hash,
-                timestamp: Date.now()
-            };
+            return { hash: hash };
         }
 
-        // Equalização de histograma para melhorar contraste
-        function equalizarHistograma(imageData) {
+        function gerarHashSimples(imageData) {
             const data = imageData.data;
-            const histR = new Array(256).fill(0);
-            const histG = new Array(256).fill(0);
-            const histB = new Array(256).fill(0);
-            
-            for (let i = 0; i < data.length; i += 4) {
-                histR[data[i]]++;
-                histG[data[i+1]]++;
-                histB[data[i+2]]++;
-            }
-            
-            let cdfR = 0, cdfG = 0, cdfB = 0;
-            const minR = histR.findIndex(v => v > 0);
-            const minG = histG.findIndex(v => v > 0);
-            const minB = histB.findIndex(v => v > 0);
-            const total = data.length / 4;
-            
-            for (let i = 0; i < 256; i++) {
-                cdfR += histR[i];
-                cdfG += histG[i];
-                cdfB += histB[i];
-                
-                const equalR = Math.round(((cdfR - minR) / (total - minR)) * 255);
-                const equalG = Math.round(((cdfG - minG) / (total - minG)) * 255);
-                const equalB = Math.round(((cdfB - minB) / (total - minB)) * 255);
-                
-                histR[i] = Math.max(0, Math.min(255, equalR));
-                histG[i] = Math.max(0, Math.min(255, equalG));
-                histB[i] = Math.max(0, Math.min(255, equalB));
-            }
-            
-            const newData = new Uint8ClampedArray(data.length);
-            for (let i = 0; i < data.length; i += 4) {
-                newData[i] = histR[data[i]];
-                newData[i+1] = histG[data[i+1]];
-                newData[i+2] = histB[data[i+2]];
-                newData[i+3] = 255;
-            }
-            
-            return new ImageData(newData, imageData.width, imageData.height);
-        }
-
-        // Gerar hash perceptual (pHash) mais robusto
-        async function gerarHashPerceptual(canvas) {
-            const ctx = canvas.getContext('2d');
-            const imageData = ctx.getImageData(0, 0, 32, 32);
-            const data = imageData.data;
-            
-            // Converter para escala de cinza
-            const gray = [];
-            for (let i = 0; i < data.length; i += 4) {
-                const g = (data[i] + data[i+1] + data[i+2]) / 3;
-                gray.push(g);
-            }
-            
-            // Calcular DCT (simplificada)
-            const dct = aplicarDCT(gray, 32);
-            
-            // Extrair os 64 bits mais significativos
+            // Reduzir para 32x32
+            const size = 32;
+            const step = Math.floor(128 / size);
             let hash = '';
-            const media = calcularMedia(dct);
             
-            for (let i = 0; i < 64; i++) {
-                hash += dct[i] > media ? '1' : '0';
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    const px = x * step;
+                    const py = y * step;
+                    const idx = (py * 128 + px) * 4;
+                    const gray = (data[idx] + data[idx+1] + data[idx+2]) / 3;
+                    hash += gray > 128 ? '1' : '0';
+                }
             }
-            
             return hash;
         }
 
-        // Aplicar DCT simplificada
-        function aplicarDCT(matrix, size) {
-            const result = [];
-            for (let u = 0; u < 8; u++) {
-                for (let v = 0; v < 8; v++) {
-                    let sum = 0;
-                    for (let x = 0; x < size; x++) {
-                        for (let y = 0; y < size; y++) {
-                            const val = matrix[x * size + y];
-                            const cu = u === 0 ? 1 / Math.sqrt(2) : 1;
-                            const cv = v === 0 ? 1 / Math.sqrt(2) : 1;
-                            const cosU = Math.cos((2 * x + 1) * u * Math.PI / (2 * size));
-                            const cosV = Math.cos((2 * y + 1) * v * Math.PI / (2 * size));
-                            sum += val * cosU * cosV;
-                        }
-                    }
-                    const dctVal = sum * 0.25 * cu * cv;
-                    result.push(dctVal);
-                }
-            }
-            return result;
-        }
-
-        function calcularMedia(arr) {
-            const sum = arr.reduce((a, b) => a + b, 0);
-            return sum / arr.length;
-        }
-
-        // Calcular distância de Hamming (diferença entre hashes)
-        function calcularDistanciaHash(hash1, hash2) {
-            if (!hash1 || !hash2 || hash1.length !== hash2.length) return 1;
+        function calcularSimilaridade(hash1, hash2) {
+            if (!hash1 || !hash2 || hash1.length !== hash2.length) return 0;
             let diff = 0;
             for (let i = 0; i < hash1.length; i++) {
                 if (hash1[i] !== hash2[i]) diff++;
             }
-            return diff / hash1.length;
-        }
-
-        // Similaridade (0 a 1, onde 1 é idêntico)
-        function calcularSimilaridade(hash1, hash2) {
-            return 1 - calcularDistanciaHash(hash1, hash2);
+            return 1 - (diff / hash1.length);
         }
 
         async function carregarRostosCadastrados() {
@@ -633,7 +612,7 @@
             return membrosList;
         }
 
-        // CADASTRAR - Captura múltiplas imagens para melhor precisão
+        // CADASTRAR - Versão simplificada e rápida
         async function cadastrarRosto() {
             const nome = nomeCadastroInput.value.trim();
             if (!nome) {
@@ -656,40 +635,26 @@
                 return;
             }
 
-            feedbackCamera.innerText = "📸 Capturando rosto (aguarde 3 segundos)...";
+            feedbackCamera.innerText = "📸 Capturando rosto...";
             
-            // Capturar múltiplas imagens para obter a melhor
-            let melhoresHashes = [];
-            
-            for (let i = 0; i < 5; i++) {
-                await new Promise(r => setTimeout(r, 500));
-                const faceData = await capturarFace();
-                if (faceData && faceData.hash) {
-                    melhoresHashes.push(faceData.hash);
-                }
-                feedbackCamera.innerText = `📸 Capturando... ${i+1}/5`;
-            }
-            
-            if (melhoresHashes.length === 0) {
+            const faceData = capturarFace();
+            if (!faceData || !faceData.hash) {
                 feedbackCamera.innerText = "❌ Não foi possível capturar. Tente novamente.";
                 return;
             }
-            
-            // Usar o hash mais consistente
-            const hashFinal = encontrarHashMaisConsistente(melhoresHashes);
-            
-            feedbackCamera.innerText = "💾 Salvando no Firebase...";
+
+            feedbackCamera.innerText = "💾 Salvando...";
             
             try {
                 await facialCollection.add({
                     membroId: membroEncontrado.id,
                     membroNome: membroEncontrado.nome,
-                    faceHash: hashFinal,
+                    faceHash: faceData.hash,
                     dataCadastro: new Date().toISOString()
                 });
                 
                 await carregarRostosCadastrados();
-                feedbackCamera.innerHTML = `✅ Rosto de "${membroEncontrado.nome}" cadastrado com sucesso!`;
+                feedbackCamera.innerHTML = `✅ Rosto de "${membroEncontrado.nome}" cadastrado!`;
                 nomeCadastroInput.value = "";
                 
                 setTimeout(() => fecharCameraEVoltar(), 1500);
@@ -699,24 +664,7 @@
             }
         }
 
-        function encontrarHashMaisConsistente(hashes) {
-            // Retorna o hash que mais se repete
-            const contagem = {};
-            for (const hash of hashes) {
-                contagem[hash] = (contagem[hash] || 0) + 1;
-            }
-            let maxHash = hashes[0];
-            let maxCount = 0;
-            for (const [hash, count] of Object.entries(contagem)) {
-                if (count > maxCount) {
-                    maxCount = count;
-                    maxHash = hash;
-                }
-            }
-            return maxHash;
-        }
-
-        // CONSULTAR acesso com limiar alto
+        // CONSULTAR acesso
         async function consultarAcesso() {
             if (rostosCadastrados.length === 0) {
                 await carregarRostosCadastrados();
@@ -730,42 +678,29 @@
             
             feedbackCamera.innerText = "📸 Analisando rosto...";
             
-            // Capturar múltiplas amostras para verificação
-            let amostras = [];
-            for (let i = 0; i < 3; i++) {
-                await new Promise(r => setTimeout(r, 300));
-                const faceData = await capturarFace();
-                if (faceData && faceData.hash) {
-                    amostras.push(faceData.hash);
-                }
-            }
-            
-            if (amostras.length === 0) {
-                feedbackCamera.innerText = "❌ Não foi possível capturar o rosto.";
+            const faceAtual = capturarFace();
+            if (!faceAtual || !faceAtual.hash) {
+                feedbackCamera.innerText = "❌ Não foi possível capturar.";
                 resultadoConsultaDiv.style.display = "block";
                 resultadoConsultaDiv.className = "resultado resultado-erro";
                 resultadoConsultaDiv.innerHTML = "❌ Não foi possível capturar o rosto!";
                 return;
             }
             
-            // Testar cada amostra contra cada rosto cadastrado
             let melhorMatch = null;
             let melhorSimilaridade = 0;
             
-            for (const amostra of amostras) {
-                for (const rost of rostosCadastrados) {
-                    const similaridade = calcularSimilaridade(amostra, rost.faceHash);
-                    console.log(`Comparando com ${rost.membroNome}: similaridade = ${similaridade.toFixed(4)}`);
-                    
-                    // Limiar aumentado para 0.85 (85% de similaridade)
-                    if (similaridade > melhorSimilaridade && similaridade > 0.85) {
-                        melhorSimilaridade = similaridade;
-                        melhorMatch = rost;
-                    }
+            for (const rost of rostosCadastrados) {
+                const similaridade = calcularSimilaridade(faceAtual.hash, rost.faceHash);
+                console.log(`${rost.membroNome}: ${similaridade.toFixed(4)}`);
+                
+                if (similaridade > melhorSimilaridade && similaridade > 0.75) {
+                    melhorSimilaridade = similaridade;
+                    melhorMatch = rost;
                 }
             }
             
-            if (melhorMatch && melhorSimilaridade > 0.85) {
+            if (melhorMatch && melhorSimilaridade > 0.75) {
                 const confianca = Math.round(melhorSimilaridade * 100);
                 resultadoConsultaDiv.style.display = "block";
                 resultadoConsultaDiv.className = "resultado resultado-sucesso";
@@ -791,6 +726,38 @@
             }
         }
 
+        // Excluir rosto
+        async function excluirRosto(id, nome) {
+            try {
+                await facialCollection.doc(id).delete();
+                await carregarRostosCadastrados();
+                await exibirListaMembros();
+                mostrarToast(`✅ Rosto de "${nome}" excluído com sucesso!`);
+            } catch (error) {
+                console.error(error);
+                mostrarToast(`❌ Erro ao excluir: ${error.message}`, 'error');
+            }
+        }
+
+        function mostrarToast(msg, tipo = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${tipo === 'error' ? 'error' : ''}`;
+            toast.textContent = msg;
+            toast.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                background: ${tipo === 'error' ? '#e74c3c' : '#27ae60'};
+                color: white;
+                padding: 12px 24px;
+                border-radius: 8px;
+                z-index: 1000;
+                animation: fadeIn 0.3s ease;
+            `;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
         async function exibirListaMembros() {
             listaBody.innerHTML = '<div class="loading">Carregando membros...</div>';
             telaLista.classList.add('ativa');
@@ -805,7 +772,9 @@
             
             listaBody.innerHTML = '';
             for (const membro of membrosList) {
-                const temRosto = rostosCadastrados.some(r => r.membroId === membro.id);
+                const rosto = rostosCadastrados.find(r => r.membroId === membro.id);
+                const temRosto = !!rosto;
+                
                 const card = document.createElement('div');
                 card.className = 'membro-item';
                 card.innerHTML = `
@@ -813,12 +782,27 @@
                         <h4>👤 ${membro.nome}</h4>
                         <p>ID: ${membro.nomeId || membro.id}</p>
                     </div>
-                    <div class="facial-status ${temRosto ? 'facial-cadastrado' : ''}">
-                        ${temRosto ? '✅ Rosto cadastrado' : '⏳ Aguardando cadastro'}
+                    <div>
+                        <span class="facial-status ${temRosto ? 'facial-cadastrado' : ''}">
+                            ${temRosto ? '✅ Rosto cadastrado' : '⏳ Aguardando cadastro'}
+                        </span>
+                        ${temRosto ? `<button class="btn-excluir" data-id="${rosto.id}" data-nome="${membro.nome}">🗑️ Excluir</button>` : ''}
                     </div>
                 `;
                 listaBody.appendChild(card);
             }
+            
+            // Adicionar eventos de excluir
+            document.querySelectorAll('.btn-excluir').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const id = btn.getAttribute('data-id');
+                    const nome = btn.getAttribute('data-nome');
+                    excluirId = id;
+                    document.getElementById('modalMensagem').innerHTML = `Tem certeza que deseja excluir o rosto de <strong>${nome}</strong>?`;
+                    modalConfirm.style.display = 'flex';
+                });
+            });
         }
 
         async function abrirModo(modo) {
@@ -875,6 +859,22 @@
         btnFecharCamera.addEventListener('click', fecharCameraEVoltar);
         btnConfirmarCadastro.addEventListener('click', cadastrarRosto);
         btnBuscarFace.addEventListener('click', consultarAcesso);
+        
+        btnConfirmarExcluir.addEventListener('click', async () => {
+            if (excluirId) {
+                const rosto = rostosCadastrados.find(r => r.id === excluirId);
+                if (rosto) {
+                    await excluirRosto(excluirId, rosto.membroNome);
+                }
+                modalConfirm.style.display = 'none';
+                excluirId = null;
+            }
+        });
+        
+        btnCancelarExcluir.addEventListener('click', () => {
+            modalConfirm.style.display = 'none';
+            excluirId = null;
+        });
         
         nomeCadastroInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') cadastrarRosto();
