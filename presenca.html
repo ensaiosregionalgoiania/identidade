@@ -265,6 +265,33 @@
         option {
             padding: 8px;
         }
+#reader {
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+    background: #000;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+#reader video {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+#cameraContainer {
+    display: none;
+    margin-top: 20px;
+    text-align: center;
+}
+
+.leitor-status {
+    margin-top: 10px;
+    padding: 8px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
     </style>
 </head>
 <body>
@@ -1138,46 +1165,115 @@
             iniciarLeitor();
         }
 
-        async function iniciarLeitor() {
-            if (!eventoSelecionado) {
-                mostrarToast('⚠️ Selecione um evento primeiro!', 'warning');
-                return;
-            }
-            
-            const statusEvento = compararDatas(eventoSelecionado.data);
-            
-            if (statusEvento !== 'hoje') {
-                const mensagem = statusEvento === 'passado' ? 'Evento encerrado! Não é possível fazer leitura.' : 'Evento futuro! Operação não permitida.';
-                mostrarToast(`⚠️ ${mensagem}`, 'error');
-                atualizarStatusLeitor(`⛔ ${mensagem}`, 'warning');
-                return;
-            }
-            
-            if (!html5QrCode) {
-                html5QrCode = new Html5Qrcode("reader");
-            }
-            
+async function iniciarLeitor() {
+    if (!eventoSelecionado) {
+        mostrarToast('⚠️ Selecione um evento primeiro!', 'warning');
+        return;
+    }
+    
+    const statusEvento = compararDatas(eventoSelecionado.data);
+    
+    if (statusEvento !== 'hoje') {
+        const mensagem = statusEvento === 'passado' ? 'Evento encerrado! Não é possível fazer leitura.' : 'Evento futuro! Operação não permitida.';
+        mostrarToast(`⚠️ ${mensagem}`, 'error');
+        atualizarStatusLeitor(`⛔ ${mensagem}`, 'warning');
+        return;
+    }
+    
+    // IMPORTANTE: Mostrar o container da câmera ANTES de iniciar
+    const cameraContainer = document.getElementById('cameraContainer');
+    const readerDiv = document.getElementById('reader');
+    const btnIniciar = document.getElementById('btnIniciarLeitor');
+    
+    if (!readerDiv) {
+        console.error('Elemento reader não encontrado!');
+        atualizarStatusLeitor('❌ Erro: Elemento do leitor não encontrado', 'error');
+        return;
+    }
+    
+    // Limpar o conteúdo anterior do reader
+    readerDiv.innerHTML = '';
+    
+    // Mostrar o container da câmera
+    if (cameraContainer) {
+        cameraContainer.style.display = 'block';
+    }
+    
+    // Esconder o botão iniciar
+    if (btnIniciar) {
+        btnIniciar.style.display = 'none';
+    }
+    
+    // Aguardar um pequeno delay para o DOM renderizar
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    try {
+        // Criar nova instância do leitor
+        if (html5QrCode) {
             try {
-                await html5QrCode.start(
-                    { facingMode: "environment" },
-                    { fps: 10, qrbox: { width: 300, height: 300 } },
-                    (decodedText) => {
-                        processarQRCode(decodedText);
-                    },
-                    (errorMessage) => {}
-                );
-                leitorAtivo = true;
-                const btnIniciar = document.getElementById('btnIniciarLeitor');
-                const cameraContainer = document.getElementById('cameraContainer');
-                
-                if (btnIniciar) btnIniciar.style.display = 'none';
-                if (cameraContainer) cameraContainer.style.display = 'block';
-                atualizarStatusLeitor('📷 Câmera ativa. Aponte para o QR Code do membro.', 'success');
-            } catch(err) {
-                console.error("Erro ao iniciar câmera:", err);
-                atualizarStatusLeitor('❌ Erro ao acessar câmera: ' + err.message, 'error');
+                await html5QrCode.stop();
+            } catch(e) {
+                // Ignorar erro se não estava rodando
             }
         }
+        
+        html5QrCode = new Html5Qrcode("reader");
+        
+        // Configurações da câmera
+        const config = {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+            aspectRatio: 1.0
+        };
+        
+        // Tentar iniciar com a câmera traseira
+        await html5QrCode.start(
+            { facingMode: "environment" },  // Câmera traseira
+            config,
+            (decodedText) => {
+                processarQRCode(decodedText);
+            },
+            (errorMessage) => {
+                // Ignorar erros de scanning
+                console.debug('Scan error:', errorMessage);
+            }
+        );
+        
+        leitorAtivo = true;
+        atualizarStatusLeitor('📷 Câmera ativa. Aponte para o QR Code do membro.', 'success');
+        
+    } catch(err) {
+        console.error("Erro ao iniciar câmera:", err);
+        
+        // Tentar com a câmera frontal como fallback
+        try {
+            atualizarStatusLeitor('Tentando câmera frontal...', 'info');
+            await html5QrCode.start(
+                { facingMode: "user" },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                (decodedText) => {
+                    processarQRCode(decodedText);
+                },
+                (errorMessage) => {}
+            );
+            leitorAtivo = true;
+            atualizarStatusLeitor('📷 Câmera frontal ativa. Aponte para o QR Code.', 'success');
+        } catch(err2) {
+            console.error("Erro ao iniciar câmera frontal:", err2);
+            atualizarStatusLeitor('❌ Erro ao acessar câmera. Verifique as permissões.', 'error');
+            
+            // Restaurar botão
+            if (btnIniciar) {
+                btnIniciar.style.display = 'inline-block';
+            }
+            if (cameraContainer) {
+                cameraContainer.style.display = 'none';
+            }
+            
+            mostrarToast('❌ Não foi possível acessar a câmera. Verifique as permissões do navegador.', 'error');
+        }
+    }
+}
 
         async function pararLeitor() {
             if (html5QrCode && leitorAtivo) {

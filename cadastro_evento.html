@@ -1243,70 +1243,72 @@ async function gerarRelatorio(eventoId, eventoNome, eventoData, congregacaoNome,
             trocarAba('lista');
         }
 
-        async function carregarListaEventos() {
-            const container = document.getElementById('listaEventos');
-            container.innerHTML = '<div class="loading">Carregando eventos...</div>';
-            
-            try {
-                const snapshot = await eventosCollection.orderBy('data', 'desc').get();
-                
-                if (snapshot.empty) {
-                    container.innerHTML = '<div class="loading">Nenhum evento cadastrado</div>';
-                    return;
-                }
-                
-                let html = '';
-                for (const doc of snapshot.docs) {
-                    const evento = { id: doc.id, ...doc.data() };
-                    const dataFormatada = new Date(evento.data).toLocaleDateString('pt-BR');
-                    
-                    const congregacao = congregacoes.find(c => c.id === evento.congregacaoId);
-                    const congregacaoNome = congregacao ? congregacao.nome : 'Desconhecida';
-                    const congregacaoCidade = congregacao?.cidade ? ` (${congregacao.cidade})` : '';
-                    
-                    const tipoEvento = tiposEvento.find(t => t.id === evento.tipoEventoId);
-                    const tipoEventoNome = tipoEvento ? tipoEvento.nome : 'Desconhecido';
-                    
-                    let resumo = '';
-                    if (evento.cargoMinisterio || evento.cargoAtendimento) {
-                        resumo = '<div class="info-extra">';
-                        if (evento.cargoMinisterio) {
-                            resumo += `👥 ${evento.cargoMinisterio}`;
-                            if (evento.nomeMinisterio) resumo += `: ${evento.nomeMinisterio}`;
-                        }
-                        if (evento.cargoAtendimento) {
-                            if (evento.cargoMinisterio) resumo += ' | ';
-                            resumo += `🎯 ${evento.cargoAtendimento}`;
-                            if (evento.nomeAtendimento) resumo += `: ${evento.nomeAtendimento}`;
-                        }
-                        if (evento.hinosTocados) {
-                            resumo += ` | 🎵 Hinos: ${evento.hinosTocados.substring(0, 50)}${evento.hinosTocados.length > 50 ? '...' : ''}`;
-                        }
-                        resumo += '</div>';
-                    } else if (evento.hinosTocados) {
-                        resumo = `<div class="info-extra">🎵 Hinos: ${evento.hinosTocados.substring(0, 50)}${evento.hinosTocados.length > 50 ? '...' : ''}</div>`;
-                    }
-                    
-                    html += `
-                        <div class="evento-item">
-                            <div class="evento-data">📅 ${dataFormatada}</div>
-                            <div><strong>${tipoEventoNome}</strong></div>
-                            <div class="evento-nome">📍 ${congregacaoNome}${congregacaoCidade}</div>
-                            ${resumo}
-                            <div class="evento-actions">
-                                <button class="btn-editar" onclick="editarEvento('${evento.id}')">✏️ Editar</button>
-                                <button class="btn-relatorio" onclick="gerarRelatorio('${evento.id}', '${tipoEventoNome.replace(/'/g, "\\'")}', '${evento.data}', '${congregacaoNome.replace(/'/g, "\\'")}', '${congregacaoCidade.replace(/'/g, "\\'")}')">📄 Relatório</button>
-                                <button class="btn-danger" onclick="abrirModalExcluirEvento('${evento.id}', '${tipoEventoNome} - ${dataFormatada}')">🗑️ Excluir</button>
-                            </div>
-                        </div>
-                    `;
-                }
-                container.innerHTML = html;
-            } catch(error) {
-                container.innerHTML = `<div class="loading">❌ Erro: ${error.message}</div>`;
-            }
+async function carregarListaEventos() {
+    const container = document.getElementById('listaEventos');
+    container.innerHTML = '<div class="loading">Carregando eventos...</div>';
+    
+    try {
+        const snapshot = await eventosCollection.orderBy('data', 'desc').get();
+        
+        if (snapshot.empty) {
+            container.innerHTML = '<div class="loading">Nenhum evento cadastrado</div>';
+            return;
         }
-
+        
+        let html = '';
+        for (const doc of snapshot.docs) {
+            const evento = { id: doc.id, ...doc.data() };
+            
+            // CORREÇÃO: Formata a data sem problemas de fuso horário
+            const partesData = evento.data.split('-');
+            const dataFormatada = `${partesData[2]}/${partesData[1]}/${partesData[0]}`;
+            
+            const congregacao = congregacoes.find(c => c.id === evento.congregacaoId);
+            const congregacaoNome = congregacao ? congregacao.nome : 'Desconhecida';
+            const congregacaoCidade = congregacao?.cidade ? ` (${congregacao.cidade})` : '';
+            
+            const tipoEvento = tiposEvento.find(t => t.id === evento.tipoEventoId);
+            const tipoEventoNome = tipoEvento ? tipoEvento.nome : 'Desconhecido';
+            
+            let resumo = '';
+            if (evento.cargoMinisterio || evento.cargoAtendimento) {
+                resumo = '<div class="info-extra">';
+                if (evento.cargoMinisterio) {
+                    resumo += `👥 ${evento.cargoMinisterio}`;
+                    if (evento.nomeMinisterio) resumo += `: ${evento.nomeMinisterio}`;
+                }
+                if (evento.cargoAtendimento) {
+                    if (evento.cargoMinisterio) resumo += ' | ';
+                    resumo += `🎯 ${evento.cargoAtendimento}`;
+                    if (evento.nomeAtendimento) resumo += `: ${evento.nomeAtendimento}`;
+                }
+                if (evento.hinosTocados) {
+                    resumo += ` | 🎵 Hinos: ${evento.hinosTocados.substring(0, 50)}${evento.hinosTocados.length > 50 ? '...' : ''}`;
+                }
+                resumo += '</div>';
+            } else if (evento.hinosTocados) {
+                resumo = `<div class="info-extra">🎵 Hinos: ${evento.hinosTocados.substring(0, 50)}${evento.hinosTocados.length > 50 ? '...' : ''}</div>`;
+            }
+            
+            html += `
+                <div class="evento-item">
+                    <div class="evento-data">📅 ${dataFormatada}</div>
+                    <div><strong>${tipoEventoNome}</strong></div>
+                    <div class="evento-nome">📍 ${congregacaoNome}${congregacaoCidade}</div>
+                    ${resumo}
+                    <div class="evento-actions">
+                        <button class="btn-editar" onclick="editarEvento('${evento.id}')">✏️ Editar</button>
+                        <button class="btn-relatorio" onclick="gerarRelatorio('${evento.id}', '${tipoEventoNome.replace(/'/g, "\\'")}', '${evento.data}', '${congregacaoNome.replace(/'/g, "\\'")}', '${congregacaoCidade.replace(/'/g, "\\'")}')">📄 Relatório</button>
+                        <button class="btn-danger" onclick="abrirModalExcluirEvento('${evento.id}', '${tipoEventoNome} - ${dataFormatada}')">🗑️ Excluir</button>
+                    </div>
+                </div>
+            `;
+        }
+        container.innerHTML = html;
+    } catch(error) {
+        container.innerHTML = `<div class="loading">❌ Erro: ${error.message}</div>`;
+    }
+}
         async function carregarListaTiposEvento() {
             const container = document.getElementById('listaTiposEvento');
             container.innerHTML = '<div class="loading">Carregando tipos de evento...</div>';
