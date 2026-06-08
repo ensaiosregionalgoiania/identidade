@@ -152,6 +152,19 @@
             border-radius: 5px;
         }
 
+        .atendimento-group {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 4px solid #3498db;
+        }
+        .atendimento-group h4 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+        }
+
         /* Estilos do Relatório para PDF */
         .relatorio-container {
             padding: 40px;
@@ -247,7 +260,7 @@
             <button class="tab-btn" onclick="trocarAba('tipos')">🎯 Tipos de Evento</button>
         </div>
 
-        <!-- Aba Lista de Eventos (agora como padrão) -->
+        <!-- Aba Lista de Eventos -->
         <div id="abaLista" class="tab-content active">
             <div class="card">
                 <div class="card-header"><h2>📋 Eventos Cadastrados</h2></div>
@@ -310,25 +323,52 @@
                         </div>
                     </div>
 
-                    <!-- Seção Atendimento -->
+                    <!-- Seção Atendimento 1 -->
                     <div class="secao-detalhes">
-                        <h3>🎯 Atendimento</h3>
-                        <div class="form-group">
-                            <label>Nome do Membro do Atendimento:</label>
-                            <input type="text" id="nomeAtendimento" placeholder="Digite o nome do membro...">
+                        <h3>🎯 Atendimento 1</h3>
+                        <div class="atendimento-group">
+                            <div class="form-group">
+                                <label>Nome do Membro do Atendimento 1:</label>
+                                <input type="text" id="nomeAtendimento1" placeholder="Digite o nome do membro...">
+                            </div>
+                            <div class="radio-group">
+                                <div class="radio-opcao">
+                                    <input type="radio" name="atendimentoRadio1" id="atendimento1Regional" value="Encarregado Regional">
+                                    <label for="atendimento1Regional">Encarregado Regional</label>
+                                </div>
+                                <div class="radio-opcao">
+                                    <input type="radio" name="atendimentoRadio1" id="atendimento1Local" value="Encarregado Local">
+                                    <label for="atendimento1Local">Encarregado Local</label>
+                                </div>
+                                <div class="radio-opcao">
+                                    <input type="radio" name="atendimentoRadio1" id="atendimento1Instrutor" value="Instrutor">
+                                    <label for="atendimento1Instrutor">Instrutor</label>
+                                </div>
+                            </div>
                         </div>
-                        <div class="radio-group">
-                            <div class="radio-opcao">
-                                <input type="radio" name="atendimentoRadio" id="atendimentoRegional" value="Encarregado Regional">
-                                <label for="atendimentoRegional">Encarregado Regional</label>
+                    </div>
+
+                    <!-- Seção Atendimento 2 -->
+                    <div class="secao-detalhes">
+                        <h3>🎯 Atendimento 2</h3>
+                        <div class="atendimento-group">
+                            <div class="form-group">
+                                <label>Nome do Membro do Atendimento 2:</label>
+                                <input type="text" id="nomeAtendimento2" placeholder="Digite o nome do membro...">
                             </div>
-                            <div class="radio-opcao">
-                                <input type="radio" name="atendimentoRadio" id="atendimentoLocal" value="Encarregado Local">
-                                <label for="atendimentoLocal">Encarregado Local</label>
-                            </div>
-                            <div class="radio-opcao">
-                                <input type="radio" name="atendimentoRadio" id="atendimentoInstrutor" value="Instrutor">
-                                <label for="atendimentoInstrutor">Instrutor</label>
+                            <div class="radio-group">
+                                <div class="radio-opcao">
+                                    <input type="radio" name="atendimentoRadio2" id="atendimento2Regional" value="Encarregado Regional">
+                                    <label for="atendimento2Regional">Encarregado Regional</label>
+                                </div>
+                                <div class="radio-opcao">
+                                    <input type="radio" name="atendimentoRadio2" id="atendimento2Local" value="Encarregado Local">
+                                    <label for="atendimento2Local">Encarregado Local</label>
+                                </div>
+                                <div class="radio-opcao">
+                                    <input type="radio" name="atendimentoRadio2" id="atendimento2Instrutor" value="Instrutor">
+                                    <label for="atendimento2Instrutor">Instrutor</label>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -352,7 +392,7 @@
         <!-- Aba Tipos de Evento -->
         <div id="abaTipos" class="tab-content">
             <div class="card">
-                <div class="card-header"><h2>🎯 Tipos de Evento 2</h2></div>
+                <div class="card-header"><h2>🎯 Tipos de Evento</h2></div>
                 <div id="listaTiposEvento">
                     <div class="loading">Carregando tipos de evento...</div>
                 </div>
@@ -464,16 +504,31 @@
             });
         }
 
-        function obterAtendimentoSelecionado() {
-            const radios = document.querySelectorAll('input[name="atendimentoRadio"]');
+        function obterAtendimento1Selecionado() {
+            const radios = document.querySelectorAll('input[name="atendimentoRadio1"]');
             for (const radio of radios) {
                 if (radio.checked) return radio.value;
             }
             return '';
         }
 
-        function setarAtendimentoRadio(valor) {
-            const radios = document.querySelectorAll('input[name="atendimentoRadio"]');
+        function setarAtendimentoRadio1(valor) {
+            const radios = document.querySelectorAll('input[name="atendimentoRadio1"]');
+            radios.forEach(radio => {
+                radio.checked = radio.value === valor;
+            });
+        }
+
+        function obterAtendimento2Selecionado() {
+            const radios = document.querySelectorAll('input[name="atendimentoRadio2"]');
+            for (const radio of radios) {
+                if (radio.checked) return radio.value;
+            }
+            return '';
+        }
+
+        function setarAtendimentoRadio2(valor) {
+            const radios = document.querySelectorAll('input[name="atendimentoRadio2"]');
             radios.forEach(radio => {
                 radio.checked = radio.value === valor;
             });
@@ -736,8 +791,10 @@
             
             const nomeMinisterio = document.getElementById('nomeMinisterio').value;
             const cargoMinisterio = obterMinisterioSelecionado();
-            const nomeAtendimento = document.getElementById('nomeAtendimento').value;
-            const cargoAtendimento = obterAtendimentoSelecionado();
+            const nomeAtendimento1 = document.getElementById('nomeAtendimento1').value;
+            const cargoAtendimento1 = obterAtendimento1Selecionado();
+            const nomeAtendimento2 = document.getElementById('nomeAtendimento2').value;
+            const cargoAtendimento2 = obterAtendimento2Selecionado();
             const hinosTocados = document.getElementById('hinosEnsaiados').value;
             
             const dadosEvento = {
@@ -746,8 +803,10 @@
                 tipoEventoId: tipoEventoId,
                 nomeMinisterio: nomeMinisterio,
                 cargoMinisterio: cargoMinisterio,
-                nomeAtendimento: nomeAtendimento,
-                cargoAtendimento: cargoAtendimento,
+                nomeAtendimento1: nomeAtendimento1,
+                cargoAtendimento1: cargoAtendimento1,
+                nomeAtendimento2: nomeAtendimento2,
+                cargoAtendimento2: cargoAtendimento2,
                 hinosTocados: hinosTocados,
                 atualizadoEm: new Date().toISOString()
             };
@@ -788,8 +847,10 @@
                 document.getElementById('tipoEventoSelect').value = evento.tipoEventoId;
                 document.getElementById('nomeMinisterio').value = evento.nomeMinisterio || '';
                 setarMinisterioRadio(evento.cargoMinisterio || '');
-                document.getElementById('nomeAtendimento').value = evento.nomeAtendimento || '';
-                setarAtendimentoRadio(evento.cargoAtendimento || '');
+                document.getElementById('nomeAtendimento1').value = evento.nomeAtendimento1 || '';
+                setarAtendimentoRadio1(evento.cargoAtendimento1 || '');
+                document.getElementById('nomeAtendimento2').value = evento.nomeAtendimento2 || '';
+                setarAtendimentoRadio2(evento.cargoAtendimento2 || '');
                 document.getElementById('hinosEnsaiados').value = evento.hinosTocados || '';
                 
                 trocarAba('novo');
@@ -799,7 +860,7 @@
             }
         }
 
-// Função para gerar relatório (VERSÃO CORRIGIDA - TIPO "encarregado")
+// Função para gerar relatório (oculta ministério e atendimento quando vazios)
 async function gerarRelatorio(eventoId, eventoNome, eventoData, congregacaoNome, congregacaoCidade) {
     try {
         console.log('🚀 Iniciando geração do relatório para evento:', eventoId);
@@ -849,23 +910,16 @@ async function gerarRelatorio(eventoId, eventoNome, eventoData, congregacaoNome,
         let quantidadeOrganistas = 0;
         
         for (const membro of membrosPresentes) {
-            // Verificar por instrumento
             const instrumento = instrumentos.find(i => i.id === membro.instrumentoId);
             if (instrumento && instrumento.nome.toLowerCase() === 'organista') {
                 quantidadeOrganistas++;
-                console.log('Organista encontrado (instrumento):', membro.nome);
                 continue;
             }
-            
-            // Verificar por cargo
             const cargo = todosCargosTemp.find(c => c.id === membro.cargoId);
             if (cargo && cargo.nome.toLowerCase() === 'organista') {
                 quantidadeOrganistas++;
-                console.log('Organista encontrado (cargo):', membro.nome);
             }
         }
-        
-        console.log('Total organistas:', quantidadeOrganistas);
         
         // ========== 4. BUSCAR VISITANTES POR INSTRUMENTO ==========
         const visitantesInstrumentosSnapshot = await visitantesInstrumentoCollection
@@ -878,207 +932,186 @@ async function gerarRelatorio(eventoId, eventoNome, eventoData, congregacaoNome,
             visitantesPorInstrumento[data.instrumentoId] = data.quantidade || 0;
         }
         
-        // ========== 5. LISTAR INSTRUMENTOS (EXCETO ORGANISTA) ==========
+        // ========== 5. LISTAR INSTRUMENTOS ==========
         const instrumentosFiltrados = instrumentos.filter(inst => {
             const nomeLower = inst.nome.toLowerCase();
-            return nomeLower !== 'orgão' && 
-                   nomeLower !== 'órgão' && 
-                   nomeLower !== 'organista' &&
-                   nomeLower !== 'não tem' &&
-                   nomeLower !== 'nao tem';
+            return nomeLower !== 'orgão' && nomeLower !== 'órgão' && 
+                   nomeLower !== 'organista' && nomeLower !== 'não tem' && nomeLower !== 'nao tem';
         });
-        
         instrumentosFiltrados.sort((a, b) => a.id - b.id);
         
         const musicosPorInstrumento = [];
         let totalMusicos = 0;
         
         for (const instrumento of instrumentosFiltrados) {
-            // Contar membros
             const musicosDoInstrumento = membrosPresentes.filter(membro => {
                 const instMembro = instrumentos.find(i => i.id === membro.instrumentoId);
                 return instMembro && instMembro.nome.toLowerCase() === instrumento.nome.toLowerCase();
             });
-            
             const quantidadeMembros = musicosDoInstrumento.length;
             const quantidadeVisitantes = visitantesPorInstrumento[instrumento.id] || 0;
             const quantidadeTotal = quantidadeMembros + quantidadeVisitantes;
-            
-            musicosPorInstrumento.push({
-                nome: instrumento.nome,
-                quantidadeTotal: quantidadeTotal
-            });
-            
+            musicosPorInstrumento.push({ nome: instrumento.nome, quantidadeTotal: quantidadeTotal });
             totalMusicos += quantidadeTotal;
         }
         
-        // ========== 6. BUSCAR CARGOS DO MINISTÉRIO (tipo = "ministerio") ==========
+        // ========== 6. CARGOS DO MINISTÉRIO ==========
         const cargosMinisterio = [];
-        
         for (const cargo of todosCargosTemp) {
-            const tipoCargo = cargo.tipo || '';
-            if (tipoCargo.toLowerCase() === 'ministerio') {
-                cargosMinisterio.push({
-                    id: cargo.id,
-                    nome: cargo.nome
-                });
+            if ((cargo.tipo || '').toLowerCase() === 'ministerio') {
+                cargosMinisterio.push({ id: cargo.id, nome: cargo.nome });
             }
         }
-        
         cargosMinisterio.sort((a, b) => a.id - b.id);
-        console.log('Cargos do ministério:', cargosMinisterio.length);
         
-        // ========== 7. BUSCAR CARGOS DE ENCARREGADOS (tipo = "encarregado") ==========
+        // ========== 7. CARGOS DE ENCARREGADOS ==========
         const cargosEncarregados = [];
-        
         for (const cargo of todosCargosTemp) {
-            const tipoCargo = cargo.tipo || '';
-            if (tipoCargo.toLowerCase() === 'encarregado') {
-                cargosEncarregados.push({
-                    id: cargo.id,
-                    nome: cargo.nome
-                });
+            if ((cargo.tipo || '').toLowerCase() === 'encarregado') {
+                cargosEncarregados.push({ id: cargo.id, nome: cargo.nome });
             }
         }
-        
         cargosEncarregados.sort((a, b) => a.id - b.id);
-        console.log('Cargos de encarregados:', cargosEncarregados.length);
         
         // ========== 8. BUSCAR VISITANTES POR CARGO ==========
         const visitantesCargosSnapshot = await visitantesCargoCollection
             .where('eventoId', '==', eventoId)
             .get();
-        
         const visitantesPorCargo = {};
         for (const doc of visitantesCargosSnapshot.docs) {
-            const data = doc.data();
-            visitantesPorCargo[data.cargoId] = data.quantidade || 0;
+            visitantesPorCargo[doc.data().cargoId] = doc.data().quantidade || 0;
         }
         
-        // ========== 9. CONTAR MEMBROS POR CARGO (MINISTÉRIO) ==========
+        // ========== 9. CONTAGENS ==========
         const ministerioQuantidades = [];
-        let totalMinisterio = 0;
-        
         for (const cargo of cargosMinisterio) {
-            const membrosDoCargo = membrosPresentes.filter(membro => {
-                return String(membro.cargoId) === String(cargo.id);
-            });
-            
-            const quantidadeMembros = membrosDoCargo.length;
-            const quantidadeVisitantes = visitantesPorCargo[cargo.id] || 0;
-            const quantidadeTotal = quantidadeMembros + quantidadeVisitantes;
-            
-            ministerioQuantidades.push({
-                nome: cargo.nome,
-                quantidadeTotal: quantidadeTotal
-            });
-            
-            totalMinisterio += quantidadeTotal;
+            const membrosDoCargo = membrosPresentes.filter(m => String(m.cargoId) === String(cargo.id));
+            const quantidadeTotal = membrosDoCargo.length + (visitantesPorCargo[cargo.id] || 0);
+            ministerioQuantidades.push({ nome: cargo.nome, quantidadeTotal: quantidadeTotal });
         }
         
-        // ========== 10. CONTAR MEMBROS POR CARGO (ENCARREGADOS) ==========
         const encarregadosQuantidades = [];
-        
         for (const cargo of cargosEncarregados) {
-            const membrosDoCargo = membrosPresentes.filter(membro => {
-                return String(membro.cargoId) === String(cargo.id);
-            });
-            
-            const quantidadeMembros = membrosDoCargo.length;
-            const quantidadeVisitantes = visitantesPorCargo[cargo.id] || 0;
-            const quantidadeTotal = quantidadeMembros + quantidadeVisitantes;
-            
-            encarregadosQuantidades.push({
-                nome: cargo.nome,
-                quantidadeTotal: quantidadeTotal
-            });
+            const membrosDoCargo = membrosPresentes.filter(m => String(m.cargoId) === String(cargo.id));
+            const quantidadeTotal = membrosDoCargo.length + (visitantesPorCargo[cargo.id] || 0);
+            encarregadosQuantidades.push({ nome: cargo.nome, quantidadeTotal: quantidadeTotal });
         }
         
-        // ========== 11. TOTAIS ==========
         const totalGeral = totalMusicos + quantidadeOrganistas;
         
-        // Formatar data
-        const dataObj = new Date(evento.data);
-        const dataFormatada = dataObj.toLocaleDateString('pt-BR', {
-            day: '2-digit', month: 'long', year: 'numeric'
-        });
+        // ========== FORMATAÇÃO DA DATA CORRIGIDA ==========
+        // Formatar data CORRETAMENTE (sem problema de fuso horário)
+        const partesData = evento.data.split('-');
+        const ano = parseInt(partesData[0]);
+        const mes = parseInt(partesData[1]) - 1;
+        const dia = parseInt(partesData[2]);
+        const dataObj = new Date(ano, mes, dia);
+        const dataFormatada = dataObj.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
         
-        // Cidade sem parênteses
         const cidadeSemParenteses = (congregacaoCidade || '').replace(/[()]/g, '');
         
-        // Cargos de atendimento do evento
-        const cargoAtendimentoDisplay = evento.cargoAtendimento || 'Cargo não informado';
-        const nomeAtendimentoDisplay = evento.nomeAtendimento || 'Não informado';
-        const cargoMinisterioDisplay = evento.cargoMinisterio || 'Cargo não informado';
-        const nomeMinisterioDisplay = evento.nomeMinisterio || 'Não informado';
+        // VERIFICAR SE TEM CONTEÚDO NOS BLOCOS
+        const temMinisterio = (evento.cargoMinisterio && evento.nomeMinisterio);
+        const temAtendimento1 = (evento.cargoAtendimento1 && evento.nomeAtendimento1);
+        const temAtendimento2 = (evento.cargoAtendimento2 && evento.nomeAtendimento2);
+        const temAtendimento = temAtendimento1 || temAtendimento2;
         
-        // Construir HTML da tabela de instrumentos
+        // Construir texto do atendimento
+        let atendimentoText = '';
+        if (temAtendimento1) {
+            atendimentoText = `${evento.cargoAtendimento1}: ${evento.nomeAtendimento1}`;
+            if (temAtendimento2) {
+                atendimentoText += `<br>${evento.cargoAtendimento2}: ${evento.nomeAtendimento2}`;
+            }
+        } else if (temAtendimento2) {
+            atendimentoText = `${evento.cargoAtendimento2}: ${evento.nomeAtendimento2}`;
+        }
+        
+        // ... continua o resto da função igual ...        
+        // Construir HTML das tabelas
         let instrumentosHtml = '';
         for (const item of musicosPorInstrumento) {
-            instrumentosHtml += `
-                <tr>
-                    <td style="padding: 4px 6px; font-size: 10px; border-bottom: 1px dotted #ccc;">${item.nome}</td>
-                    <td style="text-align: center; padding: 4px 6px; font-size: 10px; border-bottom: 1px dotted #ccc;">
-                        ${item.quantidadeTotal > 0 ? item.quantidadeTotal : '--'}
-                    </td>
-                </tr>
-            `;
+            instrumentosHtml += `<tr><td style="padding: 4px 6px; font-size: 10px; border-bottom: 1px dotted #ccc;">${item.nome}</td><td style="text-align: center; padding: 4px 6px; font-size: 10px; border-bottom: 1px dotted #ccc;">${item.quantidadeTotal > 0 ? item.quantidadeTotal : '--'}</td></tr>`;
         }
-        
         if (instrumentosHtml === '') {
-            instrumentosHtml = `
-                <tr>
-                    <td style="padding: 4px 6px; font-size: 10px;">Nenhum instrumento cadastrado</td>
-                    <td style="text-align: center; padding: 4px 6px; font-size: 10px;">--</td>
-                </tr>
-            `;
+            instrumentosHtml = `<tr><td style="padding: 4px 6px; font-size: 10px;">Nenhum instrumento cadastrado</td><td style="text-align: center; padding: 4px 6px; font-size: 10px;">--</td></tr>`;
         }
         
-        // Construir HTML da tabela de ministério
         let ministerioHtml = '';
         for (const item of ministerioQuantidades) {
-            ministerioHtml += `
-                <tr>
-                    <td style="padding: 4px 6px; font-size: 10px; border-bottom: 1px dotted #ccc;">${item.nome}</td>
-                    <td style="text-align: center; padding: 4px 6px; font-size: 10px; border-bottom: 1px dotted #ccc;">
-                        ${item.quantidadeTotal > 0 ? item.quantidadeTotal : '--'}
-                    </td>
-                </tr>
-            `;
+            ministerioHtml += `<tr><td style="padding: 4px 6px; font-size: 10px; border-bottom: 1px dotted #ccc;">${item.nome}</td><td style="text-align: center; padding: 4px 6px; font-size: 10px; border-bottom: 1px dotted #ccc;">${item.quantidadeTotal > 0 ? item.quantidadeTotal : '--'}</td></tr>`;
         }
-        
         if (ministerioQuantidades.length === 0) {
-            ministerioHtml = `
-                <tr>
-                    <td style="padding: 4px 6px; font-size: 10px;">Nenhum cargo do ministério cadastrado</td>
-                    <td style="text-align: center; padding: 4px 6px; font-size: 10px;">--</td>
-                </tr>
-            `;
+            ministerioHtml = `<tr><td style="padding: 4px 6px; font-size: 10px;">Nenhum cargo do ministério cadastrado</td><td style="text-align: center; padding: 4px 6px; font-size: 10px;">--</td></tr>`;
         }
         
-        // Construir HTML da tabela de encarregados
         let encarregadosHtml = '';
         for (const item of encarregadosQuantidades) {
-            encarregadosHtml += `
+            encarregadosHtml += `<tr><td style="padding: 4px 6px; font-size: 10px; border-bottom: 1px dotted #ccc;">${item.nome}</td><td style="text-align: center; padding: 4px 6px; font-size: 10px; border-bottom: 1px dotted #ccc;">${item.quantidadeTotal > 0 ? item.quantidadeTotal : '--'}</td></tr>`;
+        }
+        if (encarregadosQuantidades.length === 0) {
+            encarregadosHtml = `<tr><td style="padding: 4px 6px; font-size: 10px;">Nenhum cargo de encarregado cadastrado</td><td style="text-align: center; padding: 4px 6px; font-size: 10px;">--</td></tr>`;
+        }
+        
+        // Construir o HTML - ocultando os blocos quando vazios
+        const blocoMinisterio = temMinisterio ? `
+            <div style="font-weight: bold; background-color: #f0f0f0; padding: 10px; margin-bottom: 15px; text-align: left; border-radius: 5px;">
+                ${evento.cargoMinisterio}: ${evento.nomeMinisterio}
+            </div>
+        ` : '';
+        
+        const blocoAtendimento = temAtendimento ? `
+            <div style="font-weight: bold; background-color: #f0f0f0; padding: 10px; margin-bottom: 15px; text-align: left; border-radius: 5px; line-height: 1.3;">
+                ${atendimentoText}
+            </div>
+        ` : '';
+        
+        // Montar a tabela principal
+        const tabelaPrincipalHtml = `
+            <table style="width: 100%; border-collapse: collapse;">
                 <tr>
-                    <td style="padding: 4px 6px; font-size: 10px; border-bottom: 1px dotted #ccc;">${item.nome}</td>
-                    <td style="text-align: center; padding: 4px 6px; font-size: 10px; border-bottom: 1px dotted #ccc;">
-                        ${item.quantidadeTotal > 0 ? item.quantidadeTotal : '--'}
+                    <td style="width: 50%; vertical-align: top; border-right: 2px solid #ddd; padding-right: 15px;">
+                        ${blocoMinisterio}
+                        
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                            <thead><tr style="background-color: #e0e0e0;"><th style="text-align: left; padding: 6px; font-size: 11px;">INSTRUMENTO</th><th style="text-align: center; padding: 6px; font-size: 11px; width: 80px;">QUANTIDADE</th></tr></thead>
+                            <tbody>${instrumentosHtml}</tbody>
+                            <tfoot><tr style="border-top: 2px solid #333; background-color: #d4d4d4;"><td style="padding: 6px; font-weight: bold; font-size: 11px;">SUBTOTAL</td><td style="text-align: center; padding: 6px; font-weight: bold; font-size: 11px;">${totalMusicos}</td></tr></tfoot>
+                        </table>
+                        
+                        <div style="margin-top: 10px;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tbody><tr><td style="padding: 4px 6px; font-size: 10px;">Organistas</td><td style="text-align: center; padding: 4px 6px; font-size: 10px;">${quantidadeOrganistas > 0 ? quantidadeOrganistas : '--'}</td></tr></tbody>
+                                <tfoot><tr style="border-top: 2px solid #333; background-color: #d4d4d4;"><td style="padding: 6px; font-weight: bold; font-size: 11px;">TOTAL GERAL</td><td style="text-align: center; padding: 6px; font-weight: bold; font-size: 11px;">${totalGeral}</td></tr></tfoot>
+                            </table>
+                        </div>
+                        ${totalMusicos > 10 ? '<div style="margin-top: 10px; font-style: italic; color: #27ae60; font-size: 11px;">✅ Muitos músicos participaram do ensaio!</div>' : ''}
+                    </td>
+                    <td style="width: 50%; vertical-align: top; padding-left: 15px;">
+                        ${blocoAtendimento}
+                        
+                        <div style="font-weight: bold; background-color: #d4d4d4; padding: 6px; margin: 10px 0; text-align: center; font-size: 12px; border-radius: 5px;">MINISTÉRIO</div>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead><tr style="background-color: #e0e0e0;"><th style="text-align: left; padding: 6px; font-size: 11px;">MINISTÉRIO</th><th style="text-align: center; padding: 6px; font-size: 11px; width: 80px;">QUANTIDADE</th></tr></thead>
+                            <tbody>${ministerioHtml}</tbody>
+                        </table>
+                        
+                        <div style="font-weight: bold; background-color: #d4d4d4; padding: 6px; margin: 20px 0 10px 0; text-align: center; font-size: 12px; border-radius: 5px;">ENCARREGADOS</div>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead><tr style="background-color: #e0e0e0;"><th style="text-align: left; padding: 6px; font-size: 11px;">ENCARREGADOS</th><th style="text-align: center; padding: 6px; font-size: 11px; width: 80px;">QUANTIDADE</th></tr></thead>
+                            <tbody>${encarregadosHtml}</tbody>
+                        </table>
+                        
+                        <div style="margin-top: 20px; padding: 10px; background: #f8f9fa; border-radius: 8px;">
+                            <strong style="font-size: 11px;">🎵 HINOS ENSAIADOS/TOCADOS:</strong><br>
+                            <div style="font-size: 10px; margin-top: 5px;">${evento.hinosTocados ? evento.hinosTocados.replace(/\n/g, '<br>') : ''}</div>
+                        </div>
                     </td>
                 </tr>
-            `;
-        }
+            </table>
+        `;
         
-        if (encarregadosQuantidades.length === 0) {
-            encarregadosHtml = `
-                <tr>
-                    <td style="padding: 4px 6px; font-size: 10px;">Nenhum cargo de encarregado cadastrado</td>
-                    <td style="text-align: center; padding: 4px 6px; font-size: 10px;">--</td>
-                </tr>
-            `;
-        }
-        
-        // Criar o HTML completo do relatório
+        // HTML completo do relatório
         const relatorioHTML = `
             <div style="padding: 40px; font-family: 'Times New Roman', Arial, sans-serif; max-width: 1000px; margin: 0 auto;">
                 <div style="text-align: center; margin-bottom: 30px;">
@@ -1087,100 +1120,7 @@ async function gerarRelatorio(eventoId, eventoNome, eventoData, congregacaoNome,
                     <h3 style="font-size: 12px; font-weight: normal; color: #555;">${cidadeSemParenteses}, ${dataFormatada}</h3>
                 </div>
                 
-                <table style="width: 100%; border-collapse: collapse;">
-                    <tr>
-                        <td style="width: 50%; vertical-align: top; border-right: 2px solid #ddd; padding-right: 15px;">
-                            <!-- CARGO DO MINISTÉRIO -->
-                            <div style="font-weight: bold; background-color: #f0f0f0; padding: 10px; margin-bottom: 15px; text-align: left; border-radius: 5px;">
-                                ${cargoMinisterioDisplay}: ${nomeMinisterioDisplay}
-                            </div>
-                            
-                            <!-- TABELA DE INSTRUMENTOS -->
-                            <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-                                <thead>
-                                    <tr style="background-color: #e0e0e0;">
-                                        <th style="text-align: left; padding: 6px; font-size: 11px;">INSTRUMENTO</th>
-                                        <th style="text-align: center; padding: 6px; font-size: 11px; width: 80px;">QUANTIDADE</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${instrumentosHtml}
-                                </tbody>
-                                <tfoot>
-                                    <tr style="border-top: 2px solid #333; background-color: #d4d4d4;">
-                                        <td style="padding: 6px; font-weight: bold; font-size: 11px;">SUBTOTAL</td>
-                                        <td style="text-align: center; padding: 6px; font-weight: bold; font-size: 11px;">${totalMusicos}</td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                            
-                            <!-- ORGANISTAS -->
-                            <div style="margin-top: 10px;">
-                                <table style="width: 100%; border-collapse: collapse;">
-                                    <tbody>
-                                        <tr>
-                                            <td style="padding: 4px 6px; font-size: 10px;">Organistas</td>
-                                            <td style="text-align: center; padding: 4px 6px; font-size: 10px;">
-                                                ${quantidadeOrganistas > 0 ? quantidadeOrganistas : '--'}
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                    <tfoot>
-                                        <tr style="border-top: 2px solid #333; background-color: #d4d4d4;">
-                                            <td style="padding: 6px; font-weight: bold; font-size: 11px;">TOTAL GERAL</td>
-                                            <td style="text-align: center; padding: 6px; font-weight: bold; font-size: 11px;">${totalGeral}</td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
-                            </div>
-                            
-                            ${totalMusicos > 10 ? '<div style="margin-top: 10px; font-style: italic; color: #27ae60; font-size: 11px;">✅ Muitos músicos participaram do ensaio!</div>' : ''}
-                        </td>
-                        
-                        <td style="width: 50%; vertical-align: top; padding-left: 15px;">
-                            <!-- CARGO DO ATENDIMENTO -->
-                            <div style="font-weight: bold; background-color: #f0f0f0; padding: 10px; margin-bottom: 15px; text-align: left; border-radius: 5px;">
-                                ${cargoAtendimentoDisplay}: ${nomeAtendimentoDisplay}
-                            </div>
-                            
-                            <!-- TABELA MINISTÉRIO -->
-                            <div style="font-weight: bold; background-color: #d4d4d4; padding: 6px; margin: 10px 0; text-align: center; font-size: 12px; border-radius: 5px;">MINISTÉRIO</div>
-                            <table style="width: 100%; border-collapse: collapse;">
-                                <thead>
-                                    <tr style="background-color: #e0e0e0;">
-                                        <th style="text-align: left; padding: 6px; font-size: 11px;">MINISTÉRIO</th>
-                                        <th style="text-align: center; padding: 6px; font-size: 11px; width: 80px;">QUANTIDADE</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${ministerioHtml}
-                                </tbody>
-                              </table>
-                            
-                            <!-- TABELA ENCARREGADOS -->
-                            <div style="font-weight: bold; background-color: #d4d4d4; padding: 6px; margin: 20px 0 10px 0; text-align: center; font-size: 12px; border-radius: 5px;">ENCARREGADOS</div>
-                            <table style="width: 100%; border-collapse: collapse;">
-                                <thead>
-                                    <tr style="background-color: #e0e0e0;">
-                                        <th style="text-align: left; padding: 6px; font-size: 11px;">ENCARREGADOS</th>
-                                        <th style="text-align: center; padding: 6px; font-size: 11px; width: 80px;">QUANTIDADE</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${encarregadosHtml}
-                                </tbody>
-                              </table>
-                            
-                            <!-- HINOS TOCADOS -->
-                            ${evento.hinosTocados ? `
-                            <div style="margin-top: 20px; padding: 10px; background: #f8f9fa; border-radius: 8px;">
-                                <strong style="font-size: 11px;">🎵 HINOS ENSAIADOS/TOCADOS:</strong><br>
-                                <div style="font-size: 10px; margin-top: 5px;">${evento.hinosTocados.replace(/\n/g, '<br>')}</div>
-                            </div>
-                            ` : ''}
-                        </td>
-                    </tr>
-                </table>
+                ${tabelaPrincipalHtml}
                 
                 <div style="margin-top: 30px; font-size: 10px; text-align: center; color: #666;">
                     Relatório gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}<br>
@@ -1189,7 +1129,7 @@ async function gerarRelatorio(eventoId, eventoNome, eventoData, congregacaoNome,
             </div>
         `;
         
-        // Criar uma nova janela para exibir o relatório
+        // Abrir janela
         const printWindow = window.open('', '_blank');
         if (!printWindow) {
             mostrarToast('❌ Popup bloqueado! Permita popups para este site.', 'error');
@@ -1205,10 +1145,7 @@ async function gerarRelatorio(eventoId, eventoNome, eventoData, congregacaoNome,
                 <style>
                     * { margin: 0; padding: 0; box-sizing: border-box; }
                     body { font-family: 'Times New Roman', Arial, sans-serif; padding: 20px; background: white; }
-                    @media print {
-                        body { padding: 0; margin: 0; }
-                        .no-print { display: none; }
-                    }
+                    @media print { body { padding: 0; margin: 0; } .no-print { display: none; } }
                 </style>
             </head>
             <body>
@@ -1236,79 +1173,82 @@ async function gerarRelatorio(eventoId, eventoNome, eventoData, congregacaoNome,
             document.getElementById('formEvento').reset();
             document.getElementById('dataEvento').valueAsDate = new Date();
             document.getElementById('nomeMinisterio').value = '';
-            document.getElementById('nomeAtendimento').value = '';
+            document.getElementById('nomeAtendimento1').value = '';
+            document.getElementById('nomeAtendimento2').value = '';
             document.getElementById('hinosEnsaiados').value = '';
             setarMinisterioRadio('');
-            setarAtendimentoRadio('');
+            setarAtendimentoRadio1('');
+            setarAtendimentoRadio2('');
             trocarAba('lista');
         }
 
-async function carregarListaEventos() {
-    const container = document.getElementById('listaEventos');
-    container.innerHTML = '<div class="loading">Carregando eventos...</div>';
-    
-    try {
-        const snapshot = await eventosCollection.orderBy('data', 'desc').get();
-        
-        if (snapshot.empty) {
-            container.innerHTML = '<div class="loading">Nenhum evento cadastrado</div>';
-            return;
-        }
-        
-        let html = '';
-        for (const doc of snapshot.docs) {
-            const evento = { id: doc.id, ...doc.data() };
+        async function carregarListaEventos() {
+            const container = document.getElementById('listaEventos');
+            container.innerHTML = '<div class="loading">Carregando eventos...</div>';
             
-            // CORREÇÃO: Formata a data sem problemas de fuso horário
-            const partesData = evento.data.split('-');
-            const dataFormatada = `${partesData[2]}/${partesData[1]}/${partesData[0]}`;
-            
-            const congregacao = congregacoes.find(c => c.id === evento.congregacaoId);
-            const congregacaoNome = congregacao ? congregacao.nome : 'Desconhecida';
-            const congregacaoCidade = congregacao?.cidade ? ` (${congregacao.cidade})` : '';
-            
-            const tipoEvento = tiposEvento.find(t => t.id === evento.tipoEventoId);
-            const tipoEventoNome = tipoEvento ? tipoEvento.nome : 'Desconhecido';
-            
-            let resumo = '';
-            if (evento.cargoMinisterio || evento.cargoAtendimento) {
-                resumo = '<div class="info-extra">';
-                if (evento.cargoMinisterio) {
-                    resumo += `👥 ${evento.cargoMinisterio}`;
-                    if (evento.nomeMinisterio) resumo += `: ${evento.nomeMinisterio}`;
+            try {
+                const snapshot = await eventosCollection.orderBy('data', 'desc').get();
+                
+                if (snapshot.empty) {
+                    container.innerHTML = '<div class="loading">Nenhum evento cadastrado</div>';
+                    return;
                 }
-                if (evento.cargoAtendimento) {
-                    if (evento.cargoMinisterio) resumo += ' | ';
-                    resumo += `🎯 ${evento.cargoAtendimento}`;
-                    if (evento.nomeAtendimento) resumo += `: ${evento.nomeAtendimento}`;
+                
+                let html = '';
+                for (const doc of snapshot.docs) {
+                    const evento = { id: doc.id, ...doc.data() };
+                    
+                    // Formata a data sem problemas de fuso horário
+                    const partesData = evento.data.split('-');
+                    const dataFormatada = `${partesData[2]}/${partesData[1]}/${partesData[0]}`;
+                    
+                    const congregacao = congregacoes.find(c => c.id === evento.congregacaoId);
+                    const congregacaoNome = congregacao ? congregacao.nome : 'Desconhecida';
+                    const congregacaoCidade = congregacao?.cidade ? ` (${congregacao.cidade})` : '';
+                    
+                    const tipoEvento = tiposEvento.find(t => t.id === evento.tipoEventoId);
+                    const tipoEventoNome = tipoEvento ? tipoEvento.nome : 'Desconhecido';
+                    
+                    let resumo = '<div class="info-extra">';
+                    if (evento.cargoMinisterio) {
+                        resumo += `👥 ${evento.cargoMinisterio}`;
+                        if (evento.nomeMinisterio) resumo += `: ${evento.nomeMinisterio}`;
+                    }
+                    if (evento.cargoAtendimento1) {
+                        if (evento.cargoMinisterio) resumo += ' | ';
+                        resumo += `🎯1 ${evento.cargoAtendimento1}`;
+                        if (evento.nomeAtendimento1) resumo += `: ${evento.nomeAtendimento1}`;
+                    }
+                    if (evento.cargoAtendimento2) {
+                        if (evento.cargoMinisterio || evento.cargoAtendimento1) resumo += ' | ';
+                        resumo += `🎯2 ${evento.cargoAtendimento2}`;
+                        if (evento.nomeAtendimento2) resumo += `: ${evento.nomeAtendimento2}`;
+                    }
+                    if (evento.hinosTocados) {
+                        resumo += ` | 🎵 Hinos: ${evento.hinosTocados.substring(0, 50)}${evento.hinosTocados.length > 50 ? '...' : ''}`;
+                    }
+                    resumo += '</div>';
+                    
+                    html += `
+                        <div class="evento-item">
+                            <div class="evento-data">📅 ${dataFormatada}</div>
+                            <div><strong>${tipoEventoNome}</strong></div>
+                            <div class="evento-nome">📍 ${congregacaoNome}${congregacaoCidade}</div>
+                            ${resumo}
+                            <div class="evento-actions">
+                                <button class="btn-editar" onclick="editarEvento('${evento.id}')">✏️ Editar</button>
+                                <button class="btn-relatorio" onclick="gerarRelatorio('${evento.id}', '${tipoEventoNome.replace(/'/g, "\\'")}', '${evento.data}', '${congregacaoNome.replace(/'/g, "\\'")}', '${congregacaoCidade.replace(/'/g, "\\'")}')">📄 Relatório</button>
+                                <button class="btn-danger" onclick="abrirModalExcluirEvento('${evento.id}', '${tipoEventoNome} - ${dataFormatada}')">🗑️ Excluir</button>
+                            </div>
+                        </div>
+                    `;
                 }
-                if (evento.hinosTocados) {
-                    resumo += ` | 🎵 Hinos: ${evento.hinosTocados.substring(0, 50)}${evento.hinosTocados.length > 50 ? '...' : ''}`;
-                }
-                resumo += '</div>';
-            } else if (evento.hinosTocados) {
-                resumo = `<div class="info-extra">🎵 Hinos: ${evento.hinosTocados.substring(0, 50)}${evento.hinosTocados.length > 50 ? '...' : ''}</div>`;
+                container.innerHTML = html;
+            } catch(error) {
+                container.innerHTML = `<div class="loading">❌ Erro: ${error.message}</div>`;
             }
-            
-            html += `
-                <div class="evento-item">
-                    <div class="evento-data">📅 ${dataFormatada}</div>
-                    <div><strong>${tipoEventoNome}</strong></div>
-                    <div class="evento-nome">📍 ${congregacaoNome}${congregacaoCidade}</div>
-                    ${resumo}
-                    <div class="evento-actions">
-                        <button class="btn-editar" onclick="editarEvento('${evento.id}')">✏️ Editar</button>
-                        <button class="btn-relatorio" onclick="gerarRelatorio('${evento.id}', '${tipoEventoNome.replace(/'/g, "\\'")}', '${evento.data}', '${congregacaoNome.replace(/'/g, "\\'")}', '${congregacaoCidade.replace(/'/g, "\\'")}')">📄 Relatório</button>
-                        <button class="btn-danger" onclick="abrirModalExcluirEvento('${evento.id}', '${tipoEventoNome} - ${dataFormatada}')">🗑️ Excluir</button>
-                    </div>
-                </div>
-            `;
         }
-        container.innerHTML = html;
-    } catch(error) {
-        container.innerHTML = `<div class="loading">❌ Erro: ${error.message}</div>`;
-    }
-}
+
         async function carregarListaTiposEvento() {
             const container = document.getElementById('listaTiposEvento');
             container.innerHTML = '<div class="loading">Carregando tipos de evento...</div>';

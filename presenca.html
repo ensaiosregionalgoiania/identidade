@@ -6,7 +6,7 @@
     <title>Controle de Presença - Identidade Ministerial</title>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.4/html5-qrcode.min.js"></script>
     
     <script>
         const firebaseConfig = {
@@ -113,15 +113,15 @@
         .aviso-data.futuro { background: #d1ecf1; color: #0c5460; }
         
         .camera-area { text-align: center; margin-top: 20px; }
-        #reader { width: 100%; max-width: 500px; margin: 0 auto; }
+        #reader { width: 100%; max-width: 500px; margin: 0 auto; background: #000; border-radius: 10px; overflow: hidden; }
+        #reader video { width: 100%; height: auto; display: block; }
+        #cameraContainer { display: none; margin-top: 20px; text-align: center; }
+        
         .btn-camera { background: #9b59b6; margin-top: 15px; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; color: white; font-weight: bold; }
         .btn-camera:hover { background: #8e44ad; }
         .btn-camera:disabled { background: #95a5a6; cursor: not-allowed; }
-        .btn-stop { background: #e74c3c; }
-        .btn-stop:hover { background: #c0392b; }
         .btn-visitantes { background: #f39c12; }
         .btn-visitantes:hover { background: #e67e22; }
-        .btn-leitura-facial { background: #95a5a6; cursor: not-allowed; opacity: 0.6; }
         
         .leitor-status { text-align: center; margin-top: 10px; padding: 10px; border-radius: 8px; }
         .leitor-status.success { background: #d5f4e6; color: #27ae60; }
@@ -265,33 +265,6 @@
         option {
             padding: 8px;
         }
-#reader {
-    width: 100%;
-    max-width: 500px;
-    margin: 0 auto;
-    background: #000;
-    border-radius: 10px;
-    overflow: hidden;
-}
-
-#reader video {
-    width: 100%;
-    height: auto;
-    display: block;
-}
-
-#cameraContainer {
-    display: none;
-    margin-top: 20px;
-    text-align: center;
-}
-
-.leitor-status {
-    margin-top: 10px;
-    padding: 8px;
-    border-radius: 8px;
-    font-size: 0.9rem;
-}
     </style>
 </head>
 <body>
@@ -330,10 +303,9 @@
             </div>
             <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
                 <button id="btnIniciarLeitor" class="btn-camera">📱 Iniciar Leitura QR Code</button>
-                <button id="btnLeituraFacial" class="btn-camera btn-leitura-facial" disabled>👤 Leitura Facial (Em Breve)</button>
                 <button id="btnVisitantes" class="btn-camera btn-visitantes">👥 Visitantes</button>
             </div>
-            <div id="cameraContainer" style="display: none;">
+            <div id="cameraContainer">
                 <div id="reader"></div>
                 <div id="leitorStatus" class="leitor-status info">Aguardando início da leitura...</div>
             </div>
@@ -395,7 +367,6 @@
         <div class="modal-visitantes-content">
             <h3>👥 Registro de Visitantes</h3>
             
-            <!-- Instrumento -->
             <div class="secao-visitante">
                 <h4>🎵 Instrumento</h4>
                 <div class="campo-visitante">
@@ -412,7 +383,6 @@
                 <div id="infoInstrumentoSalvo" class="info-salvo"></div>
             </div>
 
-            <!-- Cargo -->
             <div class="secao-visitante">
                 <h4>⭐ Cargo</h4>
                 <div class="campo-visitante">
@@ -446,8 +416,6 @@
         const niveisCollection = db.collection("niveis");
         const congregacoesCollection = db.collection("congregacoes");
         const presencasCollection = db.collection("presencas");
-        
-        // Novas coleções para visitantes
         const visitantesInstrumentoCollection = db.collection("visitantes_instrumento");
         const visitantesCargoCollection = db.collection("visitantes_cargo");
 
@@ -472,29 +440,11 @@
         let quantidadeInstrumento = 0;
         let quantidadeCargo = 0;
 
-        // Lista de cargos a serem excluídos
-        const cargosExcluir = [
-            'Músico', 'musico', 'MUSICO', 'MÚSICO',
-            'SECRETÁRIO DO GEM', 'Secretário do GEM', 'secretario do gem',
-            'SECRETÁRIO (A) DA MÚSICA', 'Secretário(a) da Música', 'secretario da musica',
-            'ORGANISTA', 'Organista', 'organista'
-        ];
-
-        function deveriaExcluirCargo(nome) {
-            return cargosExcluir.some(excluir => 
-                nome.toLowerCase() === excluir.toLowerCase()
-            );
-        }
-
         function formatarDataLocal(dataISO) {
             if (!dataISO) return '';
             const partes = dataISO.split('-');
             if (partes.length < 3) return dataISO;
-            const ano = parseInt(partes[0]);
-            const mes = parseInt(partes[1]) - 1;
-            const dia = parseInt(partes[2]);
-            const dataLocal = new Date(ano, mes, dia);
-            return dataLocal.toLocaleDateString('pt-BR');
+            return `${partes[2]}/${partes[1]}/${partes[0]}`;
         }
 
         function mostrarToast(msg, tipo = 'success') {
@@ -520,15 +470,10 @@
             return 'futuro';
         }
 
-        function getStatusEventoTexto(status) {
-            if (status === 'hoje') return '🟢 HOJE';
-            if (status === 'passado') return '🔒 ENCERRADO';
-            return '🔮 FUTURO';
-        }
-
         function getNome(lista, id, tipo) {
+            if (!id) return `${tipo} não informado`;
             const item = lista.find(i => String(i.id) === String(id));
-            return item ? item.nome : `${tipo} ${id || '?'}`;
+            return item ? item.nome : `${tipo} não encontrado`;
         }
 
         async function carregarDados() {
@@ -544,10 +489,7 @@
                 const cargoSnapshot = await cargosCollection.get();
                 todosCargos = [];
                 cargoSnapshot.forEach(doc => {
-                    const nomeCargo = doc.data().nome;
-                    if (!deveriaExcluirCargo(nomeCargo)) {
-                        todosCargos.push({ id: doc.data().id, nome: nomeCargo });
-                    }
+                    todosCargos.push({ id: doc.data().id, nome: doc.data().nome });
                 });
                 todosCargos.sort((a, b) => a.id - b.id);
                 console.log('✅ Cargos carregados:', todosCargos.length);
@@ -622,115 +564,15 @@
             for (const evento of eventos) {
                 const dataFormatada = formatarDataLocal(evento.data);
                 const status = compararDatas(evento.data);
-                const statusTexto = getStatusEventoTexto(status);
+                let statusTexto = '';
+                if (status === 'hoje') statusTexto = '🟢 HOJE';
+                else if (status === 'passado') statusTexto = '🔒 ENCERRADO';
+                else statusTexto = '🔮 FUTURO';
                 
                 const option = document.createElement('option');
                 option.value = evento.id;
                 option.innerHTML = `${statusTexto} ${dataFormatada} - ${evento.tipoEventoNome} - ${evento.congregacaoNome}`;
-                option.style.padding = '8px';
-                option.style.borderLeft = `4px solid ${status === 'hoje' ? '#27ae60' : (status === 'passado' ? '#e74c3c' : '#3498db')}`;
-                
                 select.appendChild(option);
-            }
-        }
-
-        function popularSelectsVisitantes() {
-            const selectInst = document.getElementById('selectInstrumento');
-            selectInst.innerHTML = '<option value="">Selecione um instrumento...</option>';
-            for (const inst of todosInstrumentos) {
-                const option = document.createElement('option');
-                option.value = inst.id;
-                option.textContent = inst.nome;
-                selectInst.appendChild(option);
-            }
-            
-            const selectCargo = document.getElementById('selectCargo');
-            selectCargo.innerHTML = '<option value="">Selecione um cargo...</option>';
-            for (const cargo of todosCargos) {
-                const option = document.createElement('option');
-                option.value = cargo.id;
-                option.textContent = cargo.nome;
-                selectCargo.appendChild(option);
-            }
-        }
-
-        async function consultarQuantidadeInstrumento() {
-            if (!eventoSelecionado) {
-                mostrarToast('⚠️ Selecione um evento primeiro!', 'warning');
-                return;
-            }
-            
-            const selectInst = document.getElementById('selectInstrumento');
-            const instId = selectInst.value;
-            
-            if (!instId) {
-                mostrarToast('⚠️ Selecione um instrumento!', 'warning');
-                return;
-            }
-            
-            const instNome = selectInst.options[selectInst.selectedIndex]?.text;
-            
-            try {
-                const snapshot = await visitantesInstrumentoCollection
-                    .where('eventoId', '==', eventoSelecionado.id)
-                    .where('instrumentoId', '==', instId)
-                    .get();
-                
-                if (!snapshot.empty) {
-                    const data = snapshot.docs[0].data();
-                    quantidadeInstrumento = data.quantidade || 0;
-                    document.getElementById('instrumentoQuantidade').textContent = quantidadeInstrumento;
-                    document.getElementById('infoInstrumentoSalvo').innerHTML = `📌 Quantidade salva para "${instNome}": ${quantidadeInstrumento}`;
-                    mostrarToast(`✅ Quantidade carregada: ${quantidadeInstrumento}`, 'success');
-                } else {
-                    quantidadeInstrumento = 0;
-                    document.getElementById('instrumentoQuantidade').textContent = '0';
-                    document.getElementById('infoInstrumentoSalvo').innerHTML = `📌 Nenhum registro encontrado para "${instNome}"`;
-                    mostrarToast(`ℹ️ Nenhum registro encontrado para "${instNome}"`, 'info');
-                }
-            } catch(error) {
-                console.error('Erro ao consultar:', error);
-                mostrarToast('❌ Erro ao consultar: ' + error.message, 'error');
-            }
-        }
-
-        async function consultarQuantidadeCargo() {
-            if (!eventoSelecionado) {
-                mostrarToast('⚠️ Selecione um evento primeiro!', 'warning');
-                return;
-            }
-            
-            const selectCargo = document.getElementById('selectCargo');
-            const cargoId = selectCargo.value;
-            
-            if (!cargoId) {
-                mostrarToast('⚠️ Selecione um cargo!', 'warning');
-                return;
-            }
-            
-            const cargoNome = selectCargo.options[selectCargo.selectedIndex]?.text;
-            
-            try {
-                const snapshot = await visitantesCargoCollection
-                    .where('eventoId', '==', eventoSelecionado.id)
-                    .where('cargoId', '==', cargoId)
-                    .get();
-                
-                if (!snapshot.empty) {
-                    const data = snapshot.docs[0].data();
-                    quantidadeCargo = data.quantidade || 0;
-                    document.getElementById('cargoQuantidade').textContent = quantidadeCargo;
-                    document.getElementById('infoCargoSalvo').innerHTML = `📌 Quantidade salva para "${cargoNome}": ${quantidadeCargo}`;
-                    mostrarToast(`✅ Quantidade carregada: ${quantidadeCargo}`, 'success');
-                } else {
-                    quantidadeCargo = 0;
-                    document.getElementById('cargoQuantidade').textContent = '0';
-                    document.getElementById('infoCargoSalvo').innerHTML = `📌 Nenhum registro encontrado para "${cargoNome}"`;
-                    mostrarToast(`ℹ️ Nenhum registro encontrado para "${cargoNome}"`, 'info');
-                }
-            } catch(error) {
-                console.error('Erro ao consultar:', error);
-                mostrarToast('❌ Erro ao consultar: ' + error.message, 'error');
             }
         }
 
@@ -923,10 +765,7 @@
                 const isAutorizado = isMembroAutorizado(m);
                 const foiLidoSemPermissao = !isAutorizado && estaPresente;
                 
-                const linhaClasse = foiLidoSemPermissao ? 'lido-sem-permissao' : '';
-                
-                // CORREÇÃO AQUI: usar as variáveis corretas
-                const instrumentoNome = getNome(todosInstrumentos, m.instrumentoId, 'Inst');
+                const instrumentoNome = getNome(todosInstrumentos, m.instrumentoId, 'Instrumento');
                 const cargoNome = getNome(todosCargos, m.cargoId, 'Cargo');
                 const nivelNome = getNome(niveis, m.nivelId, 'Nível');
                 
@@ -954,6 +793,7 @@
                 }
                 
                 const badgeLido = foiLidoSemPermissao ? '<span class="badge-lido">📷 Lido sem permissão</span>' : '';
+                const linhaClasse = foiLidoSemPermissao ? 'lido-sem-permissao' : '';
                 
                 html += `<tr class="${linhaClasse}">
                     <td><strong>${m.nome}</strong> ${badgeLido}</td>
@@ -968,144 +808,142 @@
             console.log('Lista renderizada com sucesso, total:', listaFinal.length);
         }
 
-        function carregarModalVisitantes() {
-            quantidadeInstrumento = 0;
-            quantidadeCargo = 0;
-            
-            document.getElementById('selectInstrumento').value = '';
-            document.getElementById('selectCargo').value = '';
-            document.getElementById('instrumentoQuantidade').textContent = '0';
-            document.getElementById('cargoQuantidade').textContent = '0';
-            document.getElementById('infoInstrumentoSalvo').innerHTML = '';
-            document.getElementById('infoCargoSalvo').innerHTML = '';
-        }
-        
-        async function salvarVisitantes() {
+        async function iniciarLeitor() {
             if (!eventoSelecionado) {
                 mostrarToast('⚠️ Selecione um evento primeiro!', 'warning');
                 return;
             }
             
-            const selectInst = document.getElementById('selectInstrumento');
-            const instId = selectInst.value;
+            const statusEvento = compararDatas(eventoSelecionado.data);
             
-            const selectCargoEl = document.getElementById('selectCargo');
-            const cargoId = selectCargoEl.value;
-            
-            let salvou = false;
-            let total = 0;
-            
-            // Salvar visitante instrumento
-            if (instId && quantidadeInstrumento > 0) {
-                try {
-                    const snapshot = await visitantesInstrumentoCollection
-                        .where('eventoId', '==', eventoSelecionado.id)
-                        .where('instrumentoId', '==', instId)
-                        .get();
-                    
-                    if (!snapshot.empty) {
-                        const doc = snapshot.docs[0];
-                        await doc.ref.update({
-                            quantidade: quantidadeInstrumento,
-                            atualizadoEm: new Date().toISOString()
-                        });
-                    } else {
-                        await visitantesInstrumentoCollection.add({
-                            eventoId: eventoSelecionado.id,
-                            instrumentoId: instId,
-                            quantidade: quantidadeInstrumento,
-                            dataRegistro: new Date().toISOString(),
-                            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                    }
-                    total += quantidadeInstrumento;
-                    salvou = true;
-                    console.log(`✅ Visitante instrumento salvo: ${instId} - ${quantidadeInstrumento}`);
-                } catch(error) {
-                    console.error('Erro ao salvar visitante instrumento:', error);
-                    mostrarToast('❌ Erro ao salvar instrumento: ' + error.message, 'error');
-                }
-            } else if (instId && quantidadeInstrumento === 0) {
-                // Se quantidade for 0, remover o registro se existir
-                try {
-                    const snapshot = await visitantesInstrumentoCollection
-                        .where('eventoId', '==', eventoSelecionado.id)
-                        .where('instrumentoId', '==', instId)
-                        .get();
-                    
-                    if (!snapshot.empty) {
-                        await snapshot.docs[0].ref.delete();
-                        console.log(`✅ Registro de instrumento removido: ${instId}`);
-                    }
-                } catch(error) {
-                    console.error('Erro ao remover registro de instrumento:', error);
-                }
+            if (statusEvento !== 'hoje') {
+                const mensagem = statusEvento === 'passado' ? 'Evento encerrado! Não é possível fazer leitura.' : 'Evento futuro! Operação não permitida.';
+                mostrarToast(`⚠️ ${mensagem}`, 'error');
+                atualizarStatusLeitor(`⛔ ${mensagem}`, 'warning');
+                return;
             }
             
-            // Salvar visitante cargo
-            if (cargoId && quantidadeCargo > 0) {
-                try {
-                    const snapshot = await visitantesCargoCollection
-                        .where('eventoId', '==', eventoSelecionado.id)
-                        .where('cargoId', '==', cargoId)
-                        .get();
-                    
-                    if (!snapshot.empty) {
-                        const doc = snapshot.docs[0];
-                        await doc.ref.update({
-                            quantidade: quantidadeCargo,
-                            atualizadoEm: new Date().toISOString()
-                        });
-                    } else {
-                        await visitantesCargoCollection.add({
-                            eventoId: eventoSelecionado.id,
-                            cargoId: cargoId,
-                            quantidade: quantidadeCargo,
-                            dataRegistro: new Date().toISOString(),
-                            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                    }
-                    total += quantidadeCargo;
-                    salvou = true;
-                    console.log(`✅ Visitante cargo salvo: ${cargoId} - ${quantidadeCargo}`);
-                } catch(error) {
-                    console.error('Erro ao salvar visitante cargo:', error);
-                    mostrarToast('❌ Erro ao salvar cargo: ' + error.message, 'error');
-                }
-            } else if (cargoId && quantidadeCargo === 0) {
-                // Se quantidade for 0, remover o registro se existir
-                try {
-                    const snapshot = await visitantesCargoCollection
-                        .where('eventoId', '==', eventoSelecionado.id)
-                        .where('cargoId', '==', cargoId)
-                        .get();
-                    
-                    if (!snapshot.empty) {
-                        await snapshot.docs[0].ref.delete();
-                        console.log(`✅ Registro de cargo removido: ${cargoId}`);
-                    }
-                } catch(error) {
-                    console.error('Erro ao remover registro de cargo:', error);
-                }
+            const cameraContainer = document.getElementById('cameraContainer');
+            const readerDiv = document.getElementById('reader');
+            const btnIniciar = document.getElementById('btnIniciarLeitor');
+            
+            if (!readerDiv) {
+                console.error('Elemento reader não encontrado!');
+                atualizarStatusLeitor('❌ Erro: Elemento do leitor não encontrado', 'error');
+                return;
             }
             
-            if (salvou) {
-                mostrarToast(`✅ ${total} visitante(s) registrado(s) com sucesso!`);
-                document.getElementById('modalVisitantes').style.display = 'none';
-            } else if ((!instId || quantidadeInstrumento === 0) && (!cargoId || quantidadeCargo === 0)) {
-                mostrarToast('⚠️ Selecione um instrumento ou cargo com quantidade maior que zero!', 'warning');
+            readerDiv.innerHTML = '';
+            cameraContainer.style.display = 'block';
+            
+            if (btnIniciar) {
+                btnIniciar.style.display = 'none';
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            try {
+                if (html5QrCode) {
+                    try {
+                        await html5QrCode.stop();
+                    } catch(e) {}
+                }
+                
+                html5QrCode = new Html5Qrcode("reader");
+                
+                await html5QrCode.start(
+                    { facingMode: "environment" },
+                    { fps: 10, qrbox: { width: 250, height: 250 } },
+                    (decodedText) => {
+                        processarQRCode(decodedText);
+                    },
+                    (errorMessage) => {}
+                );
+                
+                leitorAtivo = true;
+                atualizarStatusLeitor('📷 Câmera ativa. Aponte para o QR Code do membro.', 'success');
+                
+            } catch(err) {
+                console.error("Erro ao iniciar câmera:", err);
+                atualizarStatusLeitor('❌ Erro ao acessar câmera. Verifique as permissões.', 'error');
+                
+                if (btnIniciar) {
+                    btnIniciar.style.display = 'inline-block';
+                }
+                cameraContainer.style.display = 'none';
+                mostrarToast('❌ Não foi possível acessar a câmera. Verifique as permissões do navegador.', 'error');
             }
         }
 
-        function abrirModalVisitantes() {
+        async function pararLeitor() {
+            if (html5QrCode && leitorAtivo) {
+                try {
+                    await html5QrCode.stop();
+                    leitorAtivo = false;
+                } catch(err) {
+                    console.error("Erro ao parar leitor:", err);
+                }
+            }
+            
+            const cameraContainer = document.getElementById('cameraContainer');
+            const btnIniciar = document.getElementById('btnIniciarLeitor');
+            
+            cameraContainer.style.display = 'none';
+            if (btnIniciar) {
+                btnIniciar.style.display = 'inline-block';
+            }
+            
+            atualizarStatusLeitor('⏹️ Leitor parado.', 'info');
+        }
+
+        function atualizarStatusLeitor(mensagem, tipo) {
+            const statusDiv = document.getElementById('leitorStatus');
+            if (statusDiv) {
+                statusDiv.textContent = mensagem;
+                statusDiv.className = `leitor-status ${tipo}`;
+            }
+        }
+
+        function processarQRCode(decodedText) {
             if (!eventoSelecionado) {
-                mostrarToast('⚠️ Selecione um evento primeiro!', 'warning');
+                atualizarStatusLeitor('❌ Nenhum evento selecionado', 'error');
                 return;
             }
             
-            popularSelectsVisitantes();
-            carregarModalVisitantes();
-            document.getElementById('modalVisitantes').style.display = 'flex';
+            const statusEvento = compararDatas(eventoSelecionado.data);
+            
+            if (statusEvento !== 'hoje') {
+                const mensagem = statusEvento === 'passado' ? 'Evento encerrado! Não é possível registrar presença.' : 'Evento futuro! Operação não permitida.';
+                atualizarStatusLeitor(`⛔ ${mensagem}`, 'warning');
+                mostrarToast(`⚠️ ${mensagem}`, 'error');
+                return;
+            }
+            
+            try {
+                const dados = JSON.parse(decodedText);
+                const membroId = dados.id;
+                
+                const membro = todosMembros.find(m => String(m.nomeId) === String(membroId) || String(m.id) === String(membroId));
+                
+                if (!membro) {
+                    atualizarStatusLeitor(`❌ Membro com ID ${membroId} não encontrado`, 'error');
+                    return;
+                }
+                
+                const isAutorizado = isMembroAutorizado(membro);
+                
+                if (!isAutorizado) {
+                    atualizarStatusLeitor(`⚠️ ${membro.nome} não está autorizado para este evento.`, 'warning');
+                    mostrarModalConfirmacao(membro, true);
+                } else {
+                    atualizarStatusLeitor(`✅ ${membro.nome} autorizado. Confirmar presença.`, 'success');
+                    mostrarModalConfirmacao(membro, false);
+                }
+                
+            } catch(error) {
+                console.error('❌ Erro ao processar QR Code:', error);
+                atualizarStatusLeitor('❌ QR Code inválido', 'error');
+            }
         }
 
         function mostrarModalConfirmacao(membro, naoAutorizado = false) {
@@ -1165,187 +1003,160 @@
             iniciarLeitor();
         }
 
-async function iniciarLeitor() {
-    if (!eventoSelecionado) {
-        mostrarToast('⚠️ Selecione um evento primeiro!', 'warning');
-        return;
-    }
-    
-    const statusEvento = compararDatas(eventoSelecionado.data);
-    
-    if (statusEvento !== 'hoje') {
-        const mensagem = statusEvento === 'passado' ? 'Evento encerrado! Não é possível fazer leitura.' : 'Evento futuro! Operação não permitida.';
-        mostrarToast(`⚠️ ${mensagem}`, 'error');
-        atualizarStatusLeitor(`⛔ ${mensagem}`, 'warning');
-        return;
-    }
-    
-    // IMPORTANTE: Mostrar o container da câmera ANTES de iniciar
-    const cameraContainer = document.getElementById('cameraContainer');
-    const readerDiv = document.getElementById('reader');
-    const btnIniciar = document.getElementById('btnIniciarLeitor');
-    
-    if (!readerDiv) {
-        console.error('Elemento reader não encontrado!');
-        atualizarStatusLeitor('❌ Erro: Elemento do leitor não encontrado', 'error');
-        return;
-    }
-    
-    // Limpar o conteúdo anterior do reader
-    readerDiv.innerHTML = '';
-    
-    // Mostrar o container da câmera
-    if (cameraContainer) {
-        cameraContainer.style.display = 'block';
-    }
-    
-    // Esconder o botão iniciar
-    if (btnIniciar) {
-        btnIniciar.style.display = 'none';
-    }
-    
-    // Aguardar um pequeno delay para o DOM renderizar
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    try {
-        // Criar nova instância do leitor
-        if (html5QrCode) {
-            try {
-                await html5QrCode.stop();
-            } catch(e) {
-                // Ignorar erro se não estava rodando
-            }
-        }
-        
-        html5QrCode = new Html5Qrcode("reader");
-        
-        // Configurações da câmera
-        const config = {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
-            aspectRatio: 1.0
-        };
-        
-        // Tentar iniciar com a câmera traseira
-        await html5QrCode.start(
-            { facingMode: "environment" },  // Câmera traseira
-            config,
-            (decodedText) => {
-                processarQRCode(decodedText);
-            },
-            (errorMessage) => {
-                // Ignorar erros de scanning
-                console.debug('Scan error:', errorMessage);
-            }
-        );
-        
-        leitorAtivo = true;
-        atualizarStatusLeitor('📷 Câmera ativa. Aponte para o QR Code do membro.', 'success');
-        
-    } catch(err) {
-        console.error("Erro ao iniciar câmera:", err);
-        
-        // Tentar com a câmera frontal como fallback
-        try {
-            atualizarStatusLeitor('Tentando câmera frontal...', 'info');
-            await html5QrCode.start(
-                { facingMode: "user" },
-                { fps: 10, qrbox: { width: 250, height: 250 } },
-                (decodedText) => {
-                    processarQRCode(decodedText);
-                },
-                (errorMessage) => {}
-            );
-            leitorAtivo = true;
-            atualizarStatusLeitor('📷 Câmera frontal ativa. Aponte para o QR Code.', 'success');
-        } catch(err2) {
-            console.error("Erro ao iniciar câmera frontal:", err2);
-            atualizarStatusLeitor('❌ Erro ao acessar câmera. Verifique as permissões.', 'error');
-            
-            // Restaurar botão
-            if (btnIniciar) {
-                btnIniciar.style.display = 'inline-block';
-            }
-            if (cameraContainer) {
-                cameraContainer.style.display = 'none';
+        function popularSelectsVisitantes() {
+            const selectInst = document.getElementById('selectInstrumento');
+            selectInst.innerHTML = '<option value="">Selecione um instrumento...</option>';
+            for (const inst of todosInstrumentos) {
+                const option = document.createElement('option');
+                option.value = inst.id;
+                option.textContent = inst.nome;
+                selectInst.appendChild(option);
             }
             
-            mostrarToast('❌ Não foi possível acessar a câmera. Verifique as permissões do navegador.', 'error');
-        }
-    }
-}
-
-        async function pararLeitor() {
-            if (html5QrCode && leitorAtivo) {
-                try {
-                    await html5QrCode.stop();
-                    leitorAtivo = false;
-                    const btnIniciar = document.getElementById('btnIniciarLeitor');
-                    const cameraContainer = document.getElementById('cameraContainer');
-                    
-                    if (btnIniciar) btnIniciar.style.display = 'inline-block';
-                    if (cameraContainer) cameraContainer.style.display = 'none';
-                    atualizarStatusLeitor('⏹️ Leitor parado.', 'info');
-                } catch(err) {
-                    console.error("Erro ao parar leitor:", err);
-                }
+            const selectCargo = document.getElementById('selectCargo');
+            selectCargo.innerHTML = '<option value="">Selecione um cargo...</option>';
+            for (const cargo of todosCargos) {
+                const option = document.createElement('option');
+                option.value = cargo.id;
+                option.textContent = cargo.nome;
+                selectCargo.appendChild(option);
             }
         }
 
-        function atualizarStatusLeitor(mensagem, tipo) {
-            const statusDiv = document.getElementById('leitorStatus');
-            if (statusDiv) {
-                statusDiv.textContent = mensagem;
-                statusDiv.className = `leitor-status ${tipo}`;
-            }
+        function carregarModalVisitantes() {
+            quantidadeInstrumento = 0;
+            quantidadeCargo = 0;
+            document.getElementById('instrumentoQuantidade').textContent = '0';
+            document.getElementById('cargoQuantidade').textContent = '0';
+            document.getElementById('infoInstrumentoSalvo').innerHTML = '';
+            document.getElementById('infoCargoSalvo').innerHTML = '';
         }
 
-        function processarQRCode(decodedText) {
+        async function consultarQuantidadeInstrumento() {
             if (!eventoSelecionado) {
-                atualizarStatusLeitor('❌ Nenhum evento selecionado', 'error');
+                mostrarToast('⚠️ Selecione um evento primeiro!', 'warning');
+                return;
+            }
+            const instId = document.getElementById('selectInstrumento').value;
+            if (!instId) {
+                mostrarToast('⚠️ Selecione um instrumento!', 'warning');
                 return;
             }
             
-            const statusEvento = compararDatas(eventoSelecionado.data);
+            const snapshot = await visitantesInstrumentoCollection
+                .where('eventoId', '==', eventoSelecionado.id)
+                .where('instrumentoId', '==', instId)
+                .get();
             
-            if (statusEvento !== 'hoje') {
-                const mensagem = statusEvento === 'passado' ? 'Evento encerrado! Não é possível registrar presença.' : 'Evento futuro! Operação não permitida.';
-                atualizarStatusLeitor(`⛔ ${mensagem}`, 'warning');
-                mostrarToast(`⚠️ ${mensagem}`, 'error');
+            if (!snapshot.empty) {
+                quantidadeInstrumento = snapshot.docs[0].data().quantidade || 0;
+                document.getElementById('instrumentoQuantidade').textContent = quantidadeInstrumento;
+                document.getElementById('infoInstrumentoSalvo').innerHTML = `📌 Quantidade salva: ${quantidadeInstrumento}`;
+            } else {
+                quantidadeInstrumento = 0;
+                document.getElementById('instrumentoQuantidade').textContent = '0';
+                document.getElementById('infoInstrumentoSalvo').innerHTML = '📌 Nenhum registro encontrado';
+            }
+        }
+
+        async function consultarQuantidadeCargo() {
+            if (!eventoSelecionado) {
+                mostrarToast('⚠️ Selecione um evento primeiro!', 'warning');
+                return;
+            }
+            const cargoId = document.getElementById('selectCargo').value;
+            if (!cargoId) {
+                mostrarToast('⚠️ Selecione um cargo!', 'warning');
                 return;
             }
             
-            try {
-                const dados = JSON.parse(decodedText);
-                const membroId = dados.id;
+            const snapshot = await visitantesCargoCollection
+                .where('eventoId', '==', eventoSelecionado.id)
+                .where('cargoId', '==', cargoId)
+                .get();
+            
+            if (!snapshot.empty) {
+                quantidadeCargo = snapshot.docs[0].data().quantidade || 0;
+                document.getElementById('cargoQuantidade').textContent = quantidadeCargo;
+                document.getElementById('infoCargoSalvo').innerHTML = `📌 Quantidade salva: ${quantidadeCargo}`;
+            } else {
+                quantidadeCargo = 0;
+                document.getElementById('cargoQuantidade').textContent = '0';
+                document.getElementById('infoCargoSalvo').innerHTML = '📌 Nenhum registro encontrado';
+            }
+        }
+
+        async function salvarVisitantes() {
+            if (!eventoSelecionado) {
+                mostrarToast('⚠️ Selecione um evento primeiro!', 'warning');
+                return;
+            }
+            
+            const instId = document.getElementById('selectInstrumento').value;
+            const cargoId = document.getElementById('selectCargo').value;
+            
+            let salvou = false;
+            let total = 0;
+            
+            if (instId && quantidadeInstrumento > 0) {
+                const snapshot = await visitantesInstrumentoCollection
+                    .where('eventoId', '==', eventoSelecionado.id)
+                    .where('instrumentoId', '==', instId)
+                    .get();
                 
-                const membro = todosMembros.find(m => String(m.nomeId) === String(membroId) || String(m.id) === String(membroId));
-                
-                if (!membro) {
-                    atualizarStatusLeitor(`❌ Membro com ID ${membroId} não encontrado`, 'error');
-                    return;
-                }
-                
-                const isAutorizado = isMembroAutorizado(membro);
-                
-                if (!isAutorizado) {
-                    atualizarStatusLeitor(`⚠️ ${membro.nome} não está autorizado para este evento.`, 'warning');
-                    mostrarModalConfirmacao(membro, true);
+                if (!snapshot.empty) {
+                    await snapshot.docs[0].ref.update({ quantidade: quantidadeInstrumento });
                 } else {
-                    atualizarStatusLeitor(`✅ ${membro.nome} autorizado. Confirmar presença.`, 'success');
-                    mostrarModalConfirmacao(membro, false);
+                    await visitantesInstrumentoCollection.add({
+                        eventoId: eventoSelecionado.id,
+                        instrumentoId: instId,
+                        quantidade: quantidadeInstrumento
+                    });
                 }
-                
-            } catch(error) {
-                console.error('❌ Erro ao processar QR Code:', error);
-                atualizarStatusLeitor('❌ QR Code inválido', 'error');
+                total += quantidadeInstrumento;
+                salvou = true;
             }
+            
+            if (cargoId && quantidadeCargo > 0) {
+                const snapshot = await visitantesCargoCollection
+                    .where('eventoId', '==', eventoSelecionado.id)
+                    .where('cargoId', '==', cargoId)
+                    .get();
+                
+                if (!snapshot.empty) {
+                    await snapshot.docs[0].ref.update({ quantidade: quantidadeCargo });
+                } else {
+                    await visitantesCargoCollection.add({
+                        eventoId: eventoSelecionado.id,
+                        cargoId: cargoId,
+                        quantidade: quantidadeCargo
+                    });
+                }
+                total += quantidadeCargo;
+                salvou = true;
+            }
+            
+            if (salvou) {
+                mostrarToast(`✅ ${total} visitante(s) registrado(s) com sucesso!`);
+                document.getElementById('modalVisitantes').style.display = 'none';
+            } else {
+                mostrarToast('⚠️ Selecione um instrumento ou cargo com quantidade maior que zero!', 'warning');
+            }
+        }
+
+        function abrirModalVisitantes() {
+            if (!eventoSelecionado) {
+                mostrarToast('⚠️ Selecione um evento primeiro!', 'warning');
+                return;
+            }
+            popularSelectsVisitantes();
+            carregarModalVisitantes();
+            document.getElementById('modalVisitantes').style.display = 'flex';
         }
 
         document.addEventListener('DOMContentLoaded', () => {
             const eventoSelect = document.getElementById('eventoSelect');
             const btnIniciarLeitor = document.getElementById('btnIniciarLeitor');
-            const btnLeituraFacial = document.getElementById('btnLeituraFacial');
             const btnVisitantes = document.getElementById('btnVisitantes');
             const btnConfirmarPresenca = document.getElementById('btnConfirmarPresenca');
             const btnCancelarPresenca = document.getElementById('btnCancelarPresenca');
@@ -1356,7 +1167,6 @@ async function iniciarLeitor() {
             const buscaMembros = document.getElementById('buscaMembros');
             const statCards = document.querySelectorAll('.stat-card');
             
-            // Controles de quantidade do instrumento
             document.getElementById('instrumentoMinus')?.addEventListener('click', () => {
                 quantidadeInstrumento = Math.max(0, quantidadeInstrumento - 1);
                 document.getElementById('instrumentoQuantidade').textContent = quantidadeInstrumento;
@@ -1365,8 +1175,6 @@ async function iniciarLeitor() {
                 quantidadeInstrumento++;
                 document.getElementById('instrumentoQuantidade').textContent = quantidadeInstrumento;
             });
-            
-            // Controles de quantidade do cargo
             document.getElementById('cargoMinus')?.addEventListener('click', () => {
                 quantidadeCargo = Math.max(0, quantidadeCargo - 1);
                 document.getElementById('cargoQuantidade').textContent = quantidadeCargo;
@@ -1376,7 +1184,6 @@ async function iniciarLeitor() {
                 document.getElementById('cargoQuantidade').textContent = quantidadeCargo;
             });
             
-            // Botões de consulta
             if (btnConsultarInstrumento) btnConsultarInstrumento.addEventListener('click', consultarQuantidadeInstrumento);
             if (btnConsultarCargo) btnConsultarCargo.addEventListener('click', consultarQuantidadeCargo);
             
@@ -1429,11 +1236,6 @@ async function iniciarLeitor() {
                         
                         if (btnIniciarLeitor) {
                             btnIniciarLeitor.disabled = statusEvento !== 'hoje';
-                            if (statusEvento !== 'hoje') {
-                                atualizarStatusLeitor(`⛔ ${statusEvento === 'passado' ? 'Evento encerrado' : 'Evento futuro'} - Leitura não permitida`, 'warning');
-                            } else {
-                                atualizarStatusLeitor('✅ Evento ativo - Leitor disponível', 'success');
-                            }
                         }
                         
                         await renderizarListaMembros();
@@ -1442,11 +1244,6 @@ async function iniciarLeitor() {
             }
             
             if (btnIniciarLeitor) btnIniciarLeitor.addEventListener('click', iniciarLeitor);
-            if (btnLeituraFacial) {
-                btnLeituraFacial.addEventListener('click', () => {
-                    mostrarToast('👤 Leitura facial será implementada em breve!', 'info');
-                });
-            }
             if (btnVisitantes) btnVisitantes.addEventListener('click', abrirModalVisitantes);
             if (btnConfirmarPresenca) btnConfirmarPresenca.addEventListener('click', confirmarPresenca);
             if (btnCancelarPresenca) btnCancelarPresenca.addEventListener('click', cancelarPresenca);
