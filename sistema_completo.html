@@ -88,6 +88,25 @@
             color: #7f8c8d;
             display: block;
         }
+
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .status-ativo { background: #27ae60; color: white; }
+        .status-inativo { background: #e74c3c; color: white; }
+        
+        .contador {
+            background: #3498db;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 14px;
+            margin-left: 10px;
+        }
     </style>
 </head>
 <body>
@@ -106,13 +125,27 @@
 
         <!-- Lista de Membros -->
         <div class="card" id="cardLista">
-            <div class="card-header"><h2>📋 Membros Cadastrados</h2></div>
+            <div class="card-header">
+                <h2>📋 Membros Cadastrados <span id="contadorMembros" class="contador">0</span></h2>
+                <button onclick="carregarMembros()" style="background:#3498db; margin:0;">🔄 Atualizar</button>
+            </div>
             <input type="text" id="busca" class="search-box" placeholder="🔍 Buscar por nome..." onkeyup="filtrarMembros()">
             <div class="table-container">
                 <table id="tabelaMembros">
-                    <thead><tr><th>Nome</th><th>Instrumento</th><th>Congregação</th><th>Cargo</th><th>Nível</th><th>Ações</th></tr></thead>
-                    <tbody id="corpoTabela"><tr><td colspan="6" class="loading">Carregando...</td></tr>
-                </tbody>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nome</th>
+                            <th>Instrumento</th>
+                            <th>Congregação</th>
+                            <th>Cargo</th>
+                            <th>Nível</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="corpoTabela">
+                        <tr><td colspan="7" class="loading">🔄 Carregando membros...</td></tr>
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -216,14 +249,33 @@
             return primeiro;
         }
 
-        function getNomeComCidade(lista, id) {
-            if (!id) return '?';
-            const item = lista.find(i => i.id == id);
-            if (!item) return '?';
-            if (item.cidade) {
-                return `${item.nome} <span class="cidade-info">(${item.cidade})</span>`;
+        function formatarInstrumento(nomeInstrumento) {
+            if (!nomeInstrumento) return null;
+            
+            const nomeOriginal = nomeInstrumento.trim();
+            const nomeLower = nomeOriginal.toLowerCase();
+            
+            // Não mostrar se for "orgao" ou "não tem" ou variantes
+            if (nomeLower === 'orgao' || 
+                nomeLower === 'órgão' || 
+                nomeLower === 'nao tem' || 
+                nomeLower === 'não tem' || 
+                nomeLower === 'nenhum' ||
+                nomeLower === '') {
+                return null;
             }
-            return item.nome;
+            
+            // Substituir APENAS a palavra "saxofone" por "sax", mantendo o resto
+            let nomeFormatado = nomeOriginal;
+            
+            // Substituir independente de maiúsculas/minúsculas
+            nomeFormatado = nomeFormatado.replace(/saxofone/gi, function(match) {
+                if (match === 'Saxofone') return 'Sax';
+                if (match === 'SAXOFONE') return 'SAX';
+                return 'sax';
+            });
+            
+            return nomeFormatado;
         }
 
         function getNome(lista, id) {
@@ -232,107 +284,119 @@
             return item ? item.nome : '?';
         }
 
-        // Função para migrar congregações antigas (sem campo cidade)
-        async function migrarCongregacoes() {
-            console.log("Verificando congregações para migração...");
-            const snapshot = await congregacoesCollection.get();
-            let migradas = 0;
-            
-            for (const doc of snapshot.docs) {
-                const data = doc.data();
-                // Se não tem campo cidade, adiciona com valor padrão
-                if (!data.cidade) {
-                    await congregacoesCollection.doc(doc.id).update({
-                        cidade: data.cidade || "Cidade não informada",
-                        atualizadoEm: new Date().toISOString()
-                    });
-                    migradas++;
-                    console.log(`Migrada: ${data.nome} - cidade adicionada`);
-                }
-            }
-            
-            if (migradas > 0) {
-                console.log(`${migradas} congregações migradas com sucesso!`);
-            }
-            return migradas;
+        function getInstrumentoFormatado(id) {
+            if (!id) return '?';
+            const item = instrumentos.find(i => i.id == id);
+            const nomeFormatado = formatarInstrumento(item ? item.nome : null);
+            return nomeFormatado || '?';
         }
 
         async function carregarDados() {
-            console.log("Carregando dados...");
+            console.log("Carregando dados do Firebase...");
             
-            // Primeiro, migrar as congregações existentes
-            await migrarCongregacoes();
-            
-            const instSnap = await instrumentosCollection.get();
-            instrumentos = [];
-            instSnap.forEach(doc => {
-                const data = doc.data();
-                instrumentos.push({ id: data.id, nome: data.nome });
-            });
-            instrumentos.sort((a, b) => a.id - b.id);
-            console.log("Instrumentos:", instrumentos.length);
-
-            const congSnap = await congregacoesCollection.get();
-            congregacoes = [];
-            congSnap.forEach(doc => {
-                const data = doc.data();
-                congregacoes.push({ 
-                    id: doc.id, 
-                    nome: data.nome,
-                    cidade: data.cidade || "Cidade não informada"
+            try {
+                // Carregar instrumentos
+                const instSnap = await instrumentosCollection.get();
+                instrumentos = [];
+                instSnap.forEach(doc => {
+                    const data = doc.data();
+                    instrumentos.push({ id: data.id, nome: data.nome });
                 });
-            });
-            console.log("Congregações carregadas:", congregacoes.length);
+                instrumentos.sort((a, b) => a.id - b.id);
+                console.log("Instrumentos carregados:", instrumentos.length);
 
-            const cargoSnap = await cargosCollection.get();
-            cargos = [];
-            cargoSnap.forEach(doc => {
-                const data = doc.data();
-                cargos.push({ id: data.id, nome: data.nome });
-            });
-            cargos.sort((a, b) => a.id - b.id);
-            console.log("Cargos:", cargos.length);
+                // Carregar congregações
+                const congSnap = await congregacoesCollection.get();
+                congregacoes = [];
+                congSnap.forEach(doc => {
+                    const data = doc.data();
+                    congregacoes.push({ 
+                        id: doc.id, 
+                        nome: data.nome,
+                        cidade: data.cidade || "Cidade não informada"
+                    });
+                });
+                console.log("Congregações carregadas:", congregacoes.length);
 
-            const nivelSnap = await niveisCollection.get();
-            niveis = [];
-            nivelSnap.forEach(doc => {
-                const data = doc.data();
-                niveis.push({ id: data.id, nome: data.nome });
-            });
-            niveis.sort((a, b) => a.id - b.id);
-            console.log("Níveis:", niveis.length);
+                // Carregar cargos
+                const cargoSnap = await cargosCollection.get();
+                cargos = [];
+                cargoSnap.forEach(doc => {
+                    const data = doc.data();
+                    cargos.push({ id: data.id, nome: data.nome });
+                });
+                cargos.sort((a, b) => a.id - b.id);
+                console.log("Cargos carregados:", cargos.length);
 
-            await carregarMembros();
+                // Carregar níveis
+                const nivelSnap = await niveisCollection.get();
+                niveis = [];
+                nivelSnap.forEach(doc => {
+                    const data = doc.data();
+                    niveis.push({ id: data.id, nome: data.nome });
+                });
+                niveis.sort((a, b) => a.id - b.id);
+                console.log("Níveis carregados:", niveis.length);
+
+                // Carregar membros
+                await carregarMembros();
+                
+            } catch(error) {
+                console.error("Erro ao carregar dados:", error);
+                mostrarToast("Erro ao carregar dados: " + error.message, "error");
+                document.getElementById('corpoTabela').innerHTML = '<tr><td colspan="7" class="loading">❌ Erro ao carregar membros: ' + error.message + '</td></tr>';
+            }
         }
 
         async function carregarMembros() {
-            const snap = await membrosCollection.get();
-            membros = [];
-            snap.forEach(doc => {
-                const data = doc.data();
-                if (data.nome) {
-                    membros.push({
-                        docId: doc.id,
-                        nomeId: data.id,
-                        nome: data.nome || '',
-                        instrumentoId: data.instrumentoId || 0,
-                        congregacaoId: data.congregacaoId || '',
-                        cargoId: data.cargoId || 0,
-                        nivelId: data.nivelId || 0
-                    });
+            console.log("Carregando membros...");
+            
+            try {
+                const snap = await membrosCollection.get();
+                membros = [];
+                
+                snap.forEach(doc => {
+                    const data = doc.data();
+                    console.log("Documento encontrado:", doc.id, data);
+                    
+                    if (data.nome) {
+                        membros.push({
+                            docId: doc.id,
+                            nomeId: data.id,
+                            nome: data.nome || '',
+                            instrumentoId: data.instrumentoId || data.instrumento || 0,
+                            congregacaoId: data.congregacaoId || data.congregacao || '',
+                            cargoId: data.cargoId || data.cargo || 0,
+                            nivelId: data.nivelId || data.nivel || 0
+                        });
+                    }
+                });
+                
+                console.log("Total de membros carregados:", membros.length);
+                
+                // Atualizar contador
+                const contadorSpan = document.getElementById('contadorMembros');
+                if (contadorSpan) contadorSpan.textContent = membros.length;
+                
+                if (membros.length === 0) {
+                    document.getElementById('corpoTabela').innerHTML = '<tr><td colspan="7" class="loading">📭 Nenhum membro cadastrado ainda. Clique em "Novo Membro" para adicionar.</td></tr>';
+                } else {
+                    renderizarTabela();
                 }
-            });
-            renderizarTabela();
+                
+            } catch(error) {
+                console.error("Erro ao carregar membros:", error);
+                document.getElementById('corpoTabela').innerHTML = '<tr><td colspan="7" class="loading">❌ Erro ao carregar membros: ' + error.message + '</td></tr>';
+            }
         }
 
         function popularSelects() {
-            console.log("Popular selects - iniciando...");
-            
             const instSelect = document.getElementById('instrumentoId');
             if (instSelect) {
                 instSelect.innerHTML = '<option value="">Selecione...</option>';
                 for (let i = 0; i < instrumentos.length; i++) {
-                    instSelect.innerHTML += '<option value="' + instrumentos[i].id + '">' + instrumentos[i].nome + '</option>';
+                    const nomeFormatado = formatarInstrumento(instrumentos[i].nome);
+                    instSelect.innerHTML += '<option value="' + instrumentos[i].id + '">' + (nomeFormatado || instrumentos[i].nome) + '</option>';
                 }
             }
 
@@ -368,7 +432,7 @@
             const tbody = document.getElementById('corpoTabela');
             
             if (filtrados.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="loading">Nenhum membro encontrado</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="loading">🔍 Nenhum membro encontrado com este nome</td></tr>';
                 return;
             }
             
@@ -377,10 +441,12 @@
                 const m = filtrados[i];
                 const congregacao = congregacoes.find(c => c.id == m.congregacaoId);
                 const congregacaoTexto = congregacao ? `${congregacao.nome}${congregacao.cidade ? ` (${congregacao.cidade})` : ''}` : '?';
+                const instrumentoFormatado = getInstrumentoFormatado(m.instrumentoId);
                 
                 html += '<tr>';
+                html += '<td>' + (m.nomeId || m.docId.substring(0, 8)) + '</td>';
                 html += '<td><strong>' + m.nome + '</strong></td>';
-                html += '<td>' + getNome(instrumentos, m.instrumentoId) + '</td>';
+                html += '<td>' + instrumentoFormatado + '</td>';
                 html += '<td>' + congregacaoTexto + '</td>';
                 html += '<td>' + getNome(cargos, m.cargoId) + '</td>';
                 html += '<td>' + getNome(niveis, m.nivelId) + '</td>';
@@ -393,7 +459,7 @@
             tbody.innerHTML = html;
         }
 
-        function gerarQRCodeIndividual(membroId, membroNome, membroNomeId) {
+        function gerarQRCodeIndividual(membroId, membroNome, membroNomeId, instrumentoNome) {
             return new Promise((resolve) => {
                 const container = document.createElement('div');
                 container.style.width = '150px';
@@ -419,7 +485,12 @@
                             
                             const qrSize = 150;
                             const padding = 10;
-                            const alturaTexto = 40;
+                            let alturaTexto = 40;
+                            
+                            const instrumentoFormatado = formatarInstrumento(instrumentoNome);
+                            if (instrumentoFormatado) {
+                                alturaTexto = 60;
+                            }
                             
                             finalCanvas.width = qrSize + (padding * 2);
                             finalCanvas.height = qrSize + (padding * 2) + alturaTexto;
@@ -433,7 +504,15 @@
                             ctx.font = 'bold 14px "Segoe UI", Arial';
                             ctx.fillStyle = '#2c3e50';
                             ctx.textAlign = 'center';
-                            ctx.fillText(nomeExibido, finalCanvas.width / 2, qrSize + padding + 28);
+                            ctx.fillText(nomeExibido, finalCanvas.width / 2, qrSize + padding + 25);
+                            
+                            let yOffset = qrSize + padding + 40;
+                            
+                            if (instrumentoFormatado) {
+                                ctx.font = 'italic 11px "Segoe UI", Arial';
+                                ctx.fillStyle = '#27ae60';
+                                ctx.fillText(`🎵 ${instrumentoFormatado}`, finalCanvas.width / 2, yOffset);
+                            }
                             
                             resolve(finalCanvas.toDataURL('image/png'));
                         } else {
@@ -454,10 +533,13 @@
                 return;
             }
             
+            const instrumento = instrumentos.find(i => i.id == membro.instrumentoId);
+            const instrumentoNome = instrumento ? instrumento.nome : null;
+            
             document.getElementById('qrArea').style.display = 'block';
             document.getElementById('qrCodeImage').innerHTML = '<div class="loading">Gerando QR Code...</div>';
             
-            const imgData = await gerarQRCodeIndividual(membro.docId, membro.nome, membro.nomeId || membro.docId);
+            const imgData = await gerarQRCodeIndividual(membro.docId, membro.nome, membro.nomeId || membro.docId, instrumentoNome);
             
             if (imgData) {
                 document.getElementById('qrCodeImage').innerHTML = '<img src="' + imgData + '" style="max-width:200px;">';
@@ -540,7 +622,8 @@
                 instrumentoId: parseInt(document.getElementById('instrumentoId').value),
                 congregacaoId: document.getElementById('congregacaoId').value,
                 cargoId: parseInt(document.getElementById('cargoId').value),
-                nivelId: parseInt(document.getElementById('nivelId').value)
+                nivelId: parseInt(document.getElementById('nivelId').value),
+                atualizadoEm: new Date().toISOString()
             };
             
             try {
@@ -548,7 +631,7 @@
                     await membrosCollection.doc(docId).update(dados);
                     mostrarToast('✅ Membro atualizado!');
                 } else {
-                    await membrosCollection.add(dados);
+                    const newDoc = await membrosCollection.add(dados);
                     mostrarToast('✅ Membro adicionado!');
                 }
                 cancelarEdicao();
@@ -581,6 +664,7 @@
 
         function filtrarMembros() { renderizarTabela(); }
 
+        // Iniciar carregamento
         carregarDados();
     </script>
 </body>
