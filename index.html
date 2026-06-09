@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Identidade Ministerial - Manutenção</title>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <style>
@@ -30,12 +31,20 @@
             box-shadow: 0 5px 20px rgba(0,0,0,0.2);
         }
         .logo h1 { color: #2c3e50; font-size: 1.3rem; }
+        .admin-info {
+            background: #667eea;
+            padding: 5px 15px;
+            border-radius: 20px;
+            color: white;
+            font-size: 0.9rem;
+        }
         .top-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
         .btn-evento { background: #f39c12; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; }
         .btn-presenca { background: #9b59b6; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; }
         .btn-congregacao { background: #1abc9c; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; }
         .btn-novo { background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
         .btn-qrcode { background: #f39c12; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-left: 10px; }
+        .btn-sair { background: #e74c3c; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
         
         .card { background: white; border-radius: 20px; padding: 25px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
         .card-header { border-bottom: 2px solid #e0e0e0; margin-bottom: 20px; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
@@ -107,19 +116,58 @@
             font-size: 14px;
             margin-left: 10px;
         }
+        
+        /* Tela de carregamento */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            flex-direction: column;
+        }
+        .loading-screen .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .loading-screen p {
+            color: white;
+            margin-top: 20px;
+            font-size: 1.2rem;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
+    <!-- Tela de carregamento inicial -->
+    <div id="loadingScreen" class="loading-screen">
+        <div class="spinner"></div>
+        <p>🔐 Verificando autenticação...</p>
+    </div>
+
+    <div class="container" id="mainContent" style="display: none;">
         <div class="top-bar">
             <div class="logo">
-                <h1>🎵 Identidade Ministerial</h1>
+                <h1>🎵 Identidade Ministerial CCB</h1>
             </div>
+            <div id="adminInfo" class="admin-info" style="display: none;"></div>
             <div class="top-buttons">
-                <a href="presenca.html" class="btn-presenca">✅ Presença</a>
+                <button class="btn-presenca" onclick="window.location.href='presenca.html'">✅ Presença</button>
                 <button class="btn-evento" onclick="window.location.href='cadastro_evento.html'">🎉 Cadastrar Evento</button>
                 <button class="btn-congregacao" onclick="window.location.href='cadastro_congregacao.html'">🏛️ Cadastrar Congregação</button>
                 <button class="btn-novo" onclick="abrirFormularioNovo()">➕ Novo Membro</button>
+                <button class="btn-sair" onclick="logout()">🚪 Sair</button>
             </div>
         </div>
 
@@ -143,7 +191,7 @@
                         </tr>
                     </thead>
                     <tbody id="corpoTabela">
-                        <tr><td colspan="6" class="loading">🔄 Carregando membros...</td><tr>
+                        <tr><td colspan="6" class="loading">🔄 Carregando membros...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -191,6 +239,7 @@
     </div>
 
     <script>
+        // ========== CONFIGURAÇÃO DO FIREBASE ==========
         const firebaseConfig = {
             apiKey: "AIzaSyA4COgeJSENsHrQHDx39gpZvif3zVrGjYE",
             authDomain: "identidadeccb.firebaseapp.com",
@@ -200,15 +249,94 @@
             appId: "1:385467794937:web:d2eb32429586f018e2a928"
         };
 
-        firebase.initializeApp(firebaseConfig);
+        // Inicializar Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        
+        const auth = firebase.auth();
         const db = firebase.firestore();
 
+        // ========== VERIFICAÇÃO DE LOGIN ==========
+        // Aguarda o Firebase Auth carregar completamente
+        auth.onAuthStateChanged(async (user) => {
+            console.log("Auth state changed. User:", user ? user.email : "null");
+            
+            if (!user) {
+                // Não está logado, redireciona para o login
+                console.log("Usuário não logado. Redirecionando para login.html");
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            // Usuário está logado, verificar se é admin
+            try {
+                console.log("Verificando se é admin. UID:", user.uid);
+                const adminDoc = await db.collection("administradores").doc(user.uid).get();
+                
+                if (!adminDoc.exists) {
+                    console.log("Não é admin. Deslogando...");
+                    await auth.signOut();
+                    sessionStorage.removeItem('adminLogado');
+                    window.location.href = 'login.html';
+                    return;
+                }
+                
+                if (!adminDoc.data().ativo) {
+                    console.log("Admin desativado. Deslogando...");
+                    await auth.signOut();
+                    sessionStorage.removeItem('adminLogado');
+                    window.location.href = 'login.html';
+                    return;
+                }
+                
+                // É administrador! Libera o acesso
+                console.log("Admin verificado com sucesso!");
+                const adminData = {
+                    uid: user.uid,
+                    email: user.email,
+                    nome: adminDoc.data().nome || 'Administrador'
+                };
+                sessionStorage.setItem('adminLogado', JSON.stringify(adminData));
+                
+                // Mostrar nome do admin na tela
+                const adminInfoDiv = document.getElementById('adminInfo');
+                adminInfoDiv.style.display = 'inline-block';
+                adminInfoDiv.innerHTML = `👤 ${adminData.nome} (${adminData.email})`;
+                
+                // Esconder tela de loading e mostrar conteúdo
+                document.getElementById('loadingScreen').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+                
+                // Carregar os dados do sistema
+                carregarDados();
+                
+            } catch(error) {
+                console.error('Erro ao verificar admin:', error);
+                window.location.href = 'login.html';
+            }
+        });
+
+        // ========== FUNÇÃO DE LOGOUT ==========
+        async function logout() {
+            try {
+                await auth.signOut();
+                sessionStorage.removeItem('adminLogado');
+                window.location.href = 'login.html';
+            } catch(error) {
+                console.error('Erro ao sair:', error);
+                mostrarToast('Erro ao sair: ' + error.message, 'error');
+            }
+        }
+
+        // ========== REFERÊNCIAS DAS COLEÇÕES ==========
         const membrosCollection = db.collection("membros");
         const instrumentosCollection = db.collection("instrumentos");
         const congregacoesCollection = db.collection("congregacoes");
         const cargosCollection = db.collection("cargos");
         const niveisCollection = db.collection("niveis");
 
+        // ========== VARIÁVEIS GLOBAIS ==========
         let instrumentos = [];
         let congregacoes = [];
         let cargos = [];
@@ -216,6 +344,7 @@
         let membros = [];
         let membroParaExcluir = null;
 
+        // ========== UTILITÁRIOS ==========
         function mostrarToast(msg, tipo = 'success') {
             const toast = document.createElement('div');
             toast.className = `toast ${tipo === 'error' ? 'error' : ''}`;
@@ -248,13 +377,19 @@
             return primeiro;
         }
 
-        // Função SEM filtro - mostra todos os instrumentos como estão no banco
         function getInstrumentoNome(id) {
             if (!id) return '?';
             const item = instrumentos.find(i => i.id == id);
             return item ? item.nome : '?';
         }
 
+        function getNome(lista, id) {
+            if (!id) return '?';
+            const item = lista.find(i => i.id == id);
+            return item ? item.nome : '?';
+        }
+
+        // ========== CARREGAR DADOS ==========
         async function carregarDados() {
             console.log("Carregando dados do Firebase...");
             
@@ -305,6 +440,9 @@
                 // Carregar membros
                 await carregarMembros();
                 
+                // Popular os selects
+                popularSelects();
+                
             } catch(error) {
                 console.error("Erro ao carregar dados:", error);
                 mostrarToast("Erro ao carregar dados: " + error.message, "error");
@@ -321,8 +459,6 @@
                 
                 snap.forEach(doc => {
                     const data = doc.data();
-                    console.log("Documento encontrado:", doc.id, data);
-                    
                     if (data.nome) {
                         membros.push({
                             docId: doc.id,
@@ -338,7 +474,6 @@
                 
                 console.log("Total de membros carregados:", membros.length);
                 
-                // Atualizar contador
                 const contadorSpan = document.getElementById('contadorMembros');
                 if (contadorSpan) contadorSpan.textContent = membros.length;
                 
@@ -404,7 +539,6 @@
                 const m = filtrados[i];
                 const congregacao = congregacoes.find(c => c.id == m.congregacaoId);
                 const congregacaoTexto = congregacao ? `${congregacao.nome}${congregacao.cidade ? ` (${congregacao.cidade})` : ''}` : '?';
-                // Mostra o nome do instrumento EXATAMENTE como está no banco (incluindo "órgão", "não tem", etc)
                 const instrumentoTexto = getInstrumentoNome(m.instrumentoId);
                 
                 html += '<tr>';
@@ -422,12 +556,56 @@
             tbody.innerHTML = html;
         }
 
-        function getNome(lista, id) {
-            if (!id) return '?';
-            const item = lista.find(i => i.id == id);
-            return item ? item.nome : '?';
+        // ========== FUNÇÕES DE FORMULÁRIO ==========
+        function abrirFormularioNovo() {
+            document.getElementById('formTitle').innerHTML = '➕ Adicionar Membro';
+            document.getElementById('membroDocId').value = '';
+            document.getElementById('nome').value = '';
+            document.getElementById('instrumentoId').value = '';
+            document.getElementById('congregacaoId').value = '';
+            document.getElementById('cargoId').value = '';
+            document.getElementById('nivelId').value = '';
+            document.getElementById('qrArea').style.display = 'none';
+            document.getElementById('btnGerarQRCode').style.display = 'none';
+            document.getElementById('cardLista').style.display = 'none';
+            document.getElementById('cardFormulario').style.display = 'block';
         }
 
+        function cancelarEdicao() {
+            document.getElementById('cardLista').style.display = 'block';
+            document.getElementById('cardFormulario').style.display = 'none';
+            carregarMembros();
+        }
+
+        function editarMembro(docId) {
+            const membro = membros.find(m => m.docId === docId);
+            if (membro) {
+                document.getElementById('formTitle').innerHTML = '✏️ Editar Membro';
+                document.getElementById('membroDocId').value = membro.docId;
+                document.getElementById('nome').value = membro.nome;
+                document.getElementById('qrArea').style.display = 'none';
+                document.getElementById('btnGerarQRCode').style.display = 'inline-block';
+                document.getElementById('cardLista').style.display = 'none';
+                document.getElementById('cardFormulario').style.display = 'block';
+                
+                setTimeout(function() {
+                    document.getElementById('instrumentoId').value = membro.instrumentoId;
+                    document.getElementById('congregacaoId').value = membro.congregacaoId;
+                    document.getElementById('cargoId').value = membro.cargoId;
+                    document.getElementById('nivelId').value = membro.nivelId;
+                }, 100);
+                
+                const btnGerar = document.getElementById('btnGerarQRCode');
+                const novoBtn = btnGerar.cloneNode(true);
+                btnGerar.parentNode.replaceChild(novoBtn, btnGerar);
+                novoBtn.style.display = 'inline-block';
+                novoBtn.onclick = function() { mostrarQRCode(membro.docId); };
+            } else {
+                mostrarToast('❌ Membro não encontrado!');
+            }
+        }
+
+        // ========== QR CODE ==========
         function gerarQRCodeIndividual(membroId, membroNome, membroNomeId, instrumentoNome) {
             return new Promise((resolve) => {
                 const container = document.createElement('div');
@@ -456,7 +634,6 @@
                             const padding = 10;
                             let alturaTexto = 40;
                             
-                            // Para o QR code, ainda podemos formatar para ficar bonito, mas mantendo o sentido
                             let instrumentoExibicao = instrumentoNome;
                             if (instrumentoExibicao && instrumentoExibicao.toLowerCase() === 'orgao') {
                                 instrumentoExibicao = 'Órgão';
@@ -537,57 +714,7 @@
             }
         }
 
-        function abrirFormularioNovo() {
-            document.getElementById('formTitle').innerHTML = '➕ Adicionar Membro';
-            document.getElementById('membroDocId').value = '';
-            document.getElementById('nome').value = '';
-            document.getElementById('instrumentoId').value = '';
-            document.getElementById('congregacaoId').value = '';
-            document.getElementById('cargoId').value = '';
-            document.getElementById('nivelId').value = '';
-            document.getElementById('qrArea').style.display = 'none';
-            document.getElementById('btnGerarQRCode').style.display = 'none';
-            document.getElementById('cardLista').style.display = 'none';
-            document.getElementById('cardFormulario').style.display = 'block';
-            popularSelects();
-        }
-
-        function cancelarEdicao() {
-            document.getElementById('cardLista').style.display = 'block';
-            document.getElementById('cardFormulario').style.display = 'none';
-            carregarMembros();
-        }
-
-        function editarMembro(docId) {
-            const membro = membros.find(m => m.docId === docId);
-            if (membro) {
-                document.getElementById('formTitle').innerHTML = '✏️ Editar Membro';
-                document.getElementById('membroDocId').value = membro.docId;
-                document.getElementById('nome').value = membro.nome;
-                document.getElementById('qrArea').style.display = 'none';
-                document.getElementById('btnGerarQRCode').style.display = 'inline-block';
-                document.getElementById('cardLista').style.display = 'none';
-                document.getElementById('cardFormulario').style.display = 'block';
-                
-                popularSelects();
-                
-                setTimeout(function() {
-                    document.getElementById('instrumentoId').value = membro.instrumentoId;
-                    document.getElementById('congregacaoId').value = membro.congregacaoId;
-                    document.getElementById('cargoId').value = membro.cargoId;
-                    document.getElementById('nivelId').value = membro.nivelId;
-                }, 100);
-                
-                const btnGerar = document.getElementById('btnGerarQRCode');
-                const novoBtn = btnGerar.cloneNode(true);
-                btnGerar.parentNode.replaceChild(novoBtn, btnGerar);
-                novoBtn.style.display = 'inline-block';
-                novoBtn.onclick = function() { mostrarQRCode(membro.docId); };
-            } else {
-                mostrarToast('❌ Membro não encontrado!');
-            }
-        }
-
+        // ========== SALVAR MEMBRO ==========
         document.getElementById('formMembro').addEventListener('submit', async (e) => {
             e.preventDefault();
             const docId = document.getElementById('membroDocId').value;
@@ -605,7 +732,7 @@
                     await membrosCollection.doc(docId).update(dados);
                     mostrarToast('✅ Membro atualizado!');
                 } else {
-                    const newDoc = await membrosCollection.add(dados);
+                    await membrosCollection.add(dados);
                     mostrarToast('✅ Membro adicionado!');
                 }
                 cancelarEdicao();
@@ -616,6 +743,7 @@
 
         document.getElementById('btnBaixarQRCode').addEventListener('click', baixarQRCode);
 
+        // ========== EXCLUIR MEMBRO ==========
         function abrirModalExcluir(docId, nome) {
             membroParaExcluir = docId;
             document.getElementById('modalMsg').innerHTML = 'Excluir <strong>' + nome + '</strong>?';
@@ -637,9 +765,6 @@
         }
 
         function filtrarMembros() { renderizarTabela(); }
-
-        // Iniciar carregamento
-        carregarDados();
     </script>
 </body>
 </html>
