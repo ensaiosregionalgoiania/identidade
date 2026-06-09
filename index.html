@@ -3,369 +3,643 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lista de Membros - Identidade Ministerial</title>
+    <title>Identidade Ministerial - Manutenção</title>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
         }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        /* Header */
-        .header {
+        .container { max-width: 1200px; margin: 0 auto; }
+        
+        .top-bar {
             background: white;
             border-radius: 15px;
-            padding: 20px;
+            padding: 15px 20px;
             margin-bottom: 20px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
             gap: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
         }
-
-        .header h1 {
-            color: #2c3e50;
-            font-size: 1.5rem;
-        }
-
-        .header h1 i {
-            color: #3498db;
-            margin-right: 10px;
-        }
-
-        .btn-novo {
-            background: #27ae60;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 1rem;
-            cursor: pointer;
-            font-weight: bold;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .btn-novo:hover {
-            background: #219a52;
-            transform: translateY(-2px);
-        }
-
-        /* Barra de busca */
-        .search-bar {
-            background: white;
-            border-radius: 15px;
-            padding: 15px 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-        }
-
-        .search-bar input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .search-bar input:focus {
-            outline: none;
-            border-color: #3498db;
-        }
-
-        /* Tabela */
-        .table-container {
-            background: white;
-            border-radius: 15px;
-            overflow-x: auto;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        thead {
-            background: #2c3e50;
-            color: white;
-        }
-
-        th, td {
-            padding: 12px 15px;
-            text-align: left;
-            border-bottom: 1px solid #ecf0f1;
-        }
-
-        tr:hover {
+        .logo h1 { color: #2c3e50; font-size: 1.3rem; }
+        .top-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn-evento { background: #f39c12; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; }
+        .btn-presenca { background: #9b59b6; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; }
+        .btn-congregacao { background: #1abc9c; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; }
+        .btn-novo { background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .btn-qrcode { background: #f39c12; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-left: 10px; }
+        
+        .card { background: white; border-radius: 20px; padding: 25px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .card-header { border-bottom: 2px solid #e0e0e0; margin-bottom: 20px; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        .card-header h2 { color: #2c3e50; }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; color: #555; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; }
+        
+        button { background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        button:hover { background: #219a52; }
+        .btn-danger { background: #e74c3c; }
+        .btn-edit { background: #3498db; }
+        
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e0e0e0; }
+        thead { background: #2c3e50; color: white; }
+        tr:hover { background: #f8f9fa; }
+        
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; border-radius: 15px; padding: 25px; width: 90%; max-width: 500px; text-align: center; }
+        .modal-buttons { margin-top: 20px; display: flex; gap: 10px; justify-content: center; }
+        
+        .search-box { width: 100%; padding: 10px; margin-bottom: 20px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; }
+        
+        .toast { position: fixed; bottom: 20px; right: 20px; background: #27ae60; color: white; padding: 12px 24px; border-radius: 8px; z-index: 1000; animation: fadeIn 0.3s ease; }
+        .toast.error { background: #e74c3c; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .loading { text-align: center; padding: 20px; color: #999; }
+        
+        .qr-area {
+            text-align: center;
+            margin-top: 20px;
+            padding: 15px;
             background: #f8f9fa;
+            border-radius: 10px;
         }
-
-        .btn-editar, .btn-excluir, .btn-qrcode {
-            padding: 6px 12px;
-            margin: 0 3px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
+        .qr-area img {
+            max-width: 200px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 10px;
+            background: white;
+        }
+        
+        .cidade-info {
             font-size: 0.8rem;
-            transition: all 0.3s ease;
+            color: #7f8c8d;
+            display: block;
         }
 
-        .btn-editar {
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .status-ativo { background: #27ae60; color: white; }
+        .status-inativo { background: #e74c3c; color: white; }
+        
+        .contador {
             background: #3498db;
             color: white;
-        }
-
-        .btn-editar:hover {
-            background: #2980b9;
-        }
-
-        .btn-excluir {
-            background: #e74c3c;
-            color: white;
-        }
-
-        .btn-excluir:hover {
-            background: #c0392b;
-        }
-
-        .btn-qrcode {
-            background: #9b59b6;
-            color: white;
-        }
-
-        .btn-qrcode:hover {
-            background: #8e44ad;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 4px 12px;
+            padding: 5px 10px;
             border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: bold;
-        }
-
-        .badge-oficializado { background: #27ae60; color: white; }
-        .badge-rjm { background: #f39c12; color: white; }
-        .badge-culte { background: #3498db; color: white; }
-        .badge-meia { background: #95a5a6; color: white; }
-
-        .empty-row td {
-            text-align: center;
-            padding: 40px;
-            color: #999;
-        }
-
-        /* Modal de confirmação */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-
-        .modal-content {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            max-width: 400px;
-            text-align: center;
-        }
-
-        .modal-buttons {
-            margin-top: 20px;
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-        }
-
-        .modal-buttons button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        .btn-confirmar {
-            background: #e74c3c;
-            color: white;
-        }
-
-        .btn-cancelar {
-            background: #95a5a6;
-            color: white;
+            font-size: 14px;
+            margin-left: 10px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1><i class="fas fa-church"></i> Identidade Ministerial</h1>
-            <a href="editar.html" class="btn-novo">+ Novo Membro</a>
+        <div class="top-bar">
+            <div class="logo">
+                <h1>🎵 Identidade Ministerial</h1>
+            </div>
+            <div class="top-buttons">
+                <a href="presenca.html" class="btn-presenca">✅ Presença</a>
+                <button class="btn-evento" onclick="window.location.href='cadastro_evento.html'">🎉 Cadastrar Evento</button>
+                <button class="btn-congregacao" onclick="window.location.href='cadastro_congregacao.html'">🏛️ Cadastrar Congregação</button>
+                <button class="btn-novo" onclick="abrirFormularioNovo()">➕ Novo Membro</button>
+            </div>
         </div>
 
-        <div class="search-bar">
-            <input type="text" id="searchInput" placeholder="🔍 Buscar por nome..." onkeyup="buscarMembros()">
+        <!-- Lista de Membros -->
+        <div class="card" id="cardLista">
+            <div class="card-header">
+                <h2>📋 Membros Cadastrados <span id="contadorMembros" class="contador">0</span></h2>
+                <button onclick="carregarMembros()" style="background:#3498db; margin:0;">🔄 Atualizar</button>
+            </div>
+            <input type="text" id="busca" class="search-box" placeholder="🔍 Buscar por nome..." onkeyup="filtrarMembros()">
+            <div class="table-container">
+                <table id="tabelaMembros">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Instrumento</th>
+                            <th>Congregação</th>
+                            <th>Cargo</th>
+                            <th>Nível</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="corpoTabela">
+                        <tr><td colspan="6" class="loading">🔄 Carregando membros...</td><tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
-        <div class="table-container">
-            <table id="tabelaMembros">
-                <thead>
-                    <tr>
-                        <th>Nome</th>
-                        <th>Instrumento</th>
-                        <th>Congregação</th>
-                        <th>Cargo</th>
-                        <th>Nível</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="corpoTabela">
-                    <tr class="empty-row">
-                        <td colspan="6">Carregando membros...</td>
-                    </tr>
-                </tbody>
-            </table>
+        <!-- Formulário de Adicionar/Editar -->
+        <div class="card" id="cardFormulario" style="display: none;">
+            <div class="card-header"><h2 id="formTitle">➕ Adicionar Membro</h2></div>
+            <form id="formMembro">
+                <input type="hidden" id="membroDocId">
+                <div class="form-group"><label>Nome Completo *</label><input type="text" id="nome" required></div>
+                <div class="form-group"><label>Instrumento *</label><select id="instrumentoId" required></select></div>
+                <div class="form-group">
+                    <label>Congregação *</label>
+                    <select id="congregacaoId" required></select>
+                </div>
+                <div class="form-group"><label>Cargo *</label><select id="cargoId" required></select></div>
+                <div class="form-group"><label>Nível *</label><select id="nivelId" required></select></div>
+                
+                <div style="display: flex; gap: 10px; align-items: center; justify-content: space-between;">
+                    <button type="submit">💾 Salvar</button>
+                    <button type="button" id="btnGerarQRCode" class="btn-qrcode" style="display: none;">📱 Gerar QR Code</button>
+                </div>
+                <button type="button" class="btn-danger" onclick="cancelarEdicao()" style="margin-top: 10px;">❌ Cancelar</button>
+                
+                <div id="qrArea" class="qr-area" style="display: none;">
+                    <h3>📱 QR Code do Membro</h3>
+                    <div id="qrCodeImage"></div>
+                    <button type="button" id="btnBaixarQRCode" style="background: #9b59b6;">💾 Baixar QR Code (PNG)</button>
+                </div>
+            </form>
         </div>
     </div>
 
-    <!-- Modal de confirmação -->
-    <div id="modal" class="modal">
+    <!-- Modal Excluir -->
+    <div id="modalExcluir" class="modal">
         <div class="modal-content">
             <h3>Confirmar exclusão</h3>
-            <p>Tem certeza que deseja excluir <strong id="nomeExcluir"></strong>?</p>
+            <p id="modalMsg"></p>
             <div class="modal-buttons">
-                <button class="btn-cancelar" onclick="fecharModal()">Cancelar</button>
-                <button class="btn-confirmar" onclick="confirmarExclusao()">Excluir</button>
+                <button onclick="confirmarExclusao()">Excluir</button>
+                <button onclick="fecharModalExcluir()" style="background:#95a5a6;">Cancelar</button>
             </div>
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
-    <script src="dados.js"></script>
     <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyA4COgeJSENsHrQHDx39gpZvif3zVrGjYE",
+            authDomain: "identidadeccb.firebaseapp.com",
+            projectId: "identidadeccb",
+            storageBucket: "identidadeccb.firebasestorage.app",
+            messagingSenderId: "385467794937",
+            appId: "1:385467794937:web:d2eb32429586f018e2a928"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        const membrosCollection = db.collection("membros");
+        const instrumentosCollection = db.collection("instrumentos");
+        const congregacoesCollection = db.collection("congregacoes");
+        const cargosCollection = db.collection("cargos");
+        const niveisCollection = db.collection("niveis");
+
+        let instrumentos = [];
+        let congregacoes = [];
+        let cargos = [];
+        let niveis = [];
+        let membros = [];
         let membroParaExcluir = null;
 
-        // Carregar membros ao iniciar
-        document.addEventListener('DOMContentLoaded', () => {
-            carregarTabela();
-        });
+        function mostrarToast(msg, tipo = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${tipo === 'error' ? 'error' : ''}`;
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
 
-        function carregarTabela(filtro = '') {
-            const tbody = document.getElementById('corpoTabela');
-            const membrosFiltrados = filtro === '' 
-                ? membros 
-                : membros.filter(m => m.nome.toLowerCase().includes(filtro.toLowerCase()));
+        function getPrimeiroNome(nomeCompleto) {
+            if (!nomeCompleto) return '';
+            const partes = nomeCompleto.trim().split(' ');
+            if (partes.length === 1) return partes[0];
             
-            if (membrosFiltrados.length === 0) {
-                tbody.innerHTML = '<tr class="empty-row"><td colspan="6">Nenhum membro encontrado</td></tr>';
+            const conectores = ['DA', 'DE', 'DO', 'DAS', 'DOS', 'E', 'A', 'O', 'AS', 'OS', 'COM', 'SEM', 'POR', 'PARA', 'PRA'];
+            
+            let primeiro = partes[0];
+            let segundo = null;
+            
+            for (let i = 1; i < partes.length; i++) {
+                const palavra = partes[i].toUpperCase();
+                if (!conectores.includes(palavra) && palavra.length > 2) {
+                    segundo = partes[i];
+                    break;
+                }
+            }
+            
+            if (segundo) {
+                return primeiro + ' ' + segundo;
+            }
+            return primeiro;
+        }
+
+        // Função SEM filtro - mostra todos os instrumentos como estão no banco
+        function getInstrumentoNome(id) {
+            if (!id) return '?';
+            const item = instrumentos.find(i => i.id == id);
+            return item ? item.nome : '?';
+        }
+
+        async function carregarDados() {
+            console.log("Carregando dados do Firebase...");
+            
+            try {
+                // Carregar instrumentos
+                const instSnap = await instrumentosCollection.get();
+                instrumentos = [];
+                instSnap.forEach(doc => {
+                    const data = doc.data();
+                    instrumentos.push({ id: data.id, nome: data.nome });
+                });
+                instrumentos.sort((a, b) => a.id - b.id);
+                console.log("Instrumentos carregados:", instrumentos.length);
+
+                // Carregar congregações
+                const congSnap = await congregacoesCollection.get();
+                congregacoes = [];
+                congSnap.forEach(doc => {
+                    const data = doc.data();
+                    congregacoes.push({ 
+                        id: doc.id, 
+                        nome: data.nome,
+                        cidade: data.cidade || "Cidade não informada"
+                    });
+                });
+                console.log("Congregações carregadas:", congregacoes.length);
+
+                // Carregar cargos
+                const cargoSnap = await cargosCollection.get();
+                cargos = [];
+                cargoSnap.forEach(doc => {
+                    const data = doc.data();
+                    cargos.push({ id: data.id, nome: data.nome });
+                });
+                cargos.sort((a, b) => a.id - b.id);
+                console.log("Cargos carregados:", cargos.length);
+
+                // Carregar níveis
+                const nivelSnap = await niveisCollection.get();
+                niveis = [];
+                nivelSnap.forEach(doc => {
+                    const data = doc.data();
+                    niveis.push({ id: data.id, nome: data.nome });
+                });
+                niveis.sort((a, b) => a.id - b.id);
+                console.log("Níveis carregados:", niveis.length);
+
+                // Carregar membros
+                await carregarMembros();
+                
+            } catch(error) {
+                console.error("Erro ao carregar dados:", error);
+                mostrarToast("Erro ao carregar dados: " + error.message, "error");
+                document.getElementById('corpoTabela').innerHTML = '<tr><td colspan="6" class="loading">❌ Erro ao carregar membros: ' + error.message + '</td></tr>';
+            }
+        }
+
+        async function carregarMembros() {
+            console.log("Carregando membros...");
+            
+            try {
+                const snap = await membrosCollection.get();
+                membros = [];
+                
+                snap.forEach(doc => {
+                    const data = doc.data();
+                    console.log("Documento encontrado:", doc.id, data);
+                    
+                    if (data.nome) {
+                        membros.push({
+                            docId: doc.id,
+                            nomeId: data.id,
+                            nome: data.nome || '',
+                            instrumentoId: data.instrumentoId || data.instrumento || 0,
+                            congregacaoId: data.congregacaoId || data.congregacao || '',
+                            cargoId: data.cargoId || data.cargo || 0,
+                            nivelId: data.nivelId || data.nivel || 0
+                        });
+                    }
+                });
+                
+                console.log("Total de membros carregados:", membros.length);
+                
+                // Atualizar contador
+                const contadorSpan = document.getElementById('contadorMembros');
+                if (contadorSpan) contadorSpan.textContent = membros.length;
+                
+                if (membros.length === 0) {
+                    document.getElementById('corpoTabela').innerHTML = '<tr><td colspan="6" class="loading">📭 Nenhum membro cadastrado ainda. Clique em "Novo Membro" para adicionar.</td></tr>';
+                } else {
+                    renderizarTabela();
+                }
+                
+            } catch(error) {
+                console.error("Erro ao carregar membros:", error);
+                document.getElementById('corpoTabela').innerHTML = '<tr><td colspan="6" class="loading">❌ Erro ao carregar membros: ' + error.message + '</td></tr>';
+            }
+        }
+
+        function popularSelects() {
+            const instSelect = document.getElementById('instrumentoId');
+            if (instSelect) {
+                instSelect.innerHTML = '<option value="">Selecione...</option>';
+                for (let i = 0; i < instrumentos.length; i++) {
+                    instSelect.innerHTML += '<option value="' + instrumentos[i].id + '">' + instrumentos[i].nome + '</option>';
+                }
+            }
+
+            const congSelect = document.getElementById('congregacaoId');
+            if (congSelect) {
+                congSelect.innerHTML = '<option value="">Selecione...</option>';
+                for (let i = 0; i < congregacoes.length; i++) {
+                    const cidadeTexto = congregacoes[i].cidade ? ` (${congregacoes[i].cidade})` : '';
+                    congSelect.innerHTML += '<option value="' + congregacoes[i].id + '">' + congregacoes[i].nome + cidadeTexto + '</option>';
+                }
+            }
+
+            const cargoSelect = document.getElementById('cargoId');
+            if (cargoSelect) {
+                cargoSelect.innerHTML = '<option value="">Selecione...</option>';
+                for (let i = 0; i < cargos.length; i++) {
+                    cargoSelect.innerHTML += '<option value="' + cargos[i].id + '">' + cargos[i].nome + '</option>';
+                }
+            }
+
+            const nivelSelect = document.getElementById('nivelId');
+            if (nivelSelect) {
+                nivelSelect.innerHTML = '<option value="">Selecione...</option>';
+                for (let i = 0; i < niveis.length; i++) {
+                    nivelSelect.innerHTML += '<option value="' + niveis[i].id + '">' + niveis[i].nome + '</option>';
+                }
+            }
+        }
+
+        function renderizarTabela() {
+            const busca = document.getElementById('busca').value.toLowerCase();
+            const filtrados = membros.filter(m => m.nome.toLowerCase().includes(busca));
+            const tbody = document.getElementById('corpoTabela');
+            
+            if (filtrados.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="loading">🔍 Nenhum membro encontrado com este nome</td></tr>';
                 return;
             }
             
             let html = '';
-            for (const m of membrosFiltrados) {
-                const membroCompleto = getMembroCompleto(m);
+            for (let i = 0; i < filtrados.length; i++) {
+                const m = filtrados[i];
+                const congregacao = congregacoes.find(c => c.id == m.congregacaoId);
+                const congregacaoTexto = congregacao ? `${congregacao.nome}${congregacao.cidade ? ` (${congregacao.cidade})` : ''}` : '?';
+                // Mostra o nome do instrumento EXATAMENTE como está no banco (incluindo "órgão", "não tem", etc)
+                const instrumentoTexto = getInstrumentoNome(m.instrumentoId);
                 
-                let badgeClass = '';
-                if (membroCompleto.nivel === 'OFICIALIZADO(A)') badgeClass = 'badge-oficializado';
-                else if (membroCompleto.nivel === 'RJM') badgeClass = 'badge-rjm';
-                else if (membroCompleto.nivel === 'CULTO OFICIAL') badgeClass = 'badge-culte';
-                else badgeClass = 'badge-meia';
-                
-                html += `<tr>
-                    <td><strong>${membroCompleto.nome}</strong></td>
-                    <td>${membroCompleto.instrumento}</td>
-                    <td>${membroCompleto.congregacao}</td>
-                    <td>${membroCompleto.cargo}</td>
-                    <td><span class="badge ${badgeClass}">${membroCompleto.nivel}</span></td>
-                    <td>
-                        <button class="btn-editar" onclick="editarMembro(${m.id})"><i class="fas fa-edit"></i> Editar</button>
-                        <button class="btn-qrcode" onclick="gerarQRCode(${m.id})"><i class="fas fa-qrcode"></i> QR</button>
-                        <button class="btn-excluir" onclick="abrirModalExcluir(${m.id}, '${m.nome.replace(/'/g, "\\'")}')"><i class="fas fa-trash"></i> Excluir</button>
-                    </td>
-                </tr>`;
+                html += '<tr>';
+                html += '<td><strong>' + m.nome + '</strong></td>';
+                html += '<td>' + instrumentoTexto + '</td>';
+                html += '<td>' + congregacaoTexto + '</td>';
+                html += '<td>' + getNome(cargos, m.cargoId) + '</td>';
+                html += '<td>' + getNome(niveis, m.nivelId) + '</td>';
+                html += '<td>';
+                html += '<button class="btn-edit" onclick="editarMembro(\'' + m.docId + '\')">✏️ Editar</button> ';
+                html += '<button class="btn-danger" onclick="abrirModalExcluir(\'' + m.docId + '\', \'' + m.nome.replace(/'/g, "\\'") + '\')">🗑️ Excluir</button>';
+                html += '</td>';
+                html += '</tr>';
             }
             tbody.innerHTML = html;
         }
 
-        function buscarMembros() {
-            const filtro = document.getElementById('searchInput').value;
-            carregarTabela(filtro);
+        function getNome(lista, id) {
+            if (!id) return '?';
+            const item = lista.find(i => i.id == id);
+            return item ? item.nome : '?';
         }
 
-        function editarMembro(id) {
-            window.location.href = `editar.html?id=${id}`;
+        function gerarQRCodeIndividual(membroId, membroNome, membroNomeId, instrumentoNome) {
+            return new Promise((resolve) => {
+                const container = document.createElement('div');
+                container.style.width = '150px';
+                container.style.height = '150px';
+                
+                const dadosQR = JSON.stringify({ id: membroNomeId });
+                
+                try {
+                    new QRCode(container, {
+                        text: dadosQR,
+                        width: 150,
+                        height: 150,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.M
+                    });
+                    
+                    setTimeout(() => {
+                        const canvas = container.querySelector('canvas');
+                        if (canvas) {
+                            const finalCanvas = document.createElement('canvas');
+                            const ctx = finalCanvas.getContext('2d');
+                            
+                            const qrSize = 150;
+                            const padding = 10;
+                            let alturaTexto = 40;
+                            
+                            // Para o QR code, ainda podemos formatar para ficar bonito, mas mantendo o sentido
+                            let instrumentoExibicao = instrumentoNome;
+                            if (instrumentoExibicao && instrumentoExibicao.toLowerCase() === 'orgao') {
+                                instrumentoExibicao = 'Órgão';
+                            }
+                            
+                            if (instrumentoExibicao && instrumentoExibicao.toLowerCase() !== 'nao tem' && instrumentoExibicao.toLowerCase() !== 'não tem') {
+                                alturaTexto = 60;
+                            }
+                            
+                            finalCanvas.width = qrSize + (padding * 2);
+                            finalCanvas.height = qrSize + (padding * 2) + alturaTexto;
+                            
+                            ctx.fillStyle = '#FFFFFF';
+                            ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+                            
+                            ctx.drawImage(canvas, padding, padding, qrSize, qrSize);
+                            
+                            const nomeExibido = getPrimeiroNome(membroNome);
+                            ctx.font = 'bold 14px "Segoe UI", Arial';
+                            ctx.fillStyle = '#2c3e50';
+                            ctx.textAlign = 'center';
+                            ctx.fillText(nomeExibido, finalCanvas.width / 2, qrSize + padding + 25);
+                            
+                            let yOffset = qrSize + padding + 40;
+                            
+                            if (instrumentoExibicao && instrumentoExibicao.toLowerCase() !== 'nao tem' && instrumentoExibicao.toLowerCase() !== 'não tem') {
+                                ctx.font = 'italic 11px "Segoe UI", Arial';
+                                ctx.fillStyle = '#27ae60';
+                                ctx.fillText(`🎵 ${instrumentoExibicao}`, finalCanvas.width / 2, yOffset);
+                            }
+                            
+                            resolve(finalCanvas.toDataURL('image/png'));
+                        } else {
+                            resolve(null);
+                        }
+                    }, 300);
+                } catch(error) {
+                    console.error('Erro ao gerar QR Code:', error);
+                    resolve(null);
+                }
+            });
         }
 
-        function gerarQRCode(id) {
-            window.location.href = `editar.html?id=${id}&qr=true`;
+        async function mostrarQRCode(membroDocId) {
+            const membro = membros.find(m => m.docId === membroDocId);
+            if (!membro) {
+                mostrarToast('❌ Membro não encontrado!');
+                return;
+            }
+            
+            const instrumento = instrumentos.find(i => i.id == membro.instrumentoId);
+            const instrumentoNome = instrumento ? instrumento.nome : null;
+            
+            document.getElementById('qrArea').style.display = 'block';
+            document.getElementById('qrCodeImage').innerHTML = '<div class="loading">Gerando QR Code...</div>';
+            
+            const imgData = await gerarQRCodeIndividual(membro.docId, membro.nome, membro.nomeId || membro.docId, instrumentoNome);
+            
+            if (imgData) {
+                document.getElementById('qrCodeImage').innerHTML = '<img src="' + imgData + '" style="max-width:200px;">';
+                window.qrCodeData = imgData;
+            } else {
+                document.getElementById('qrCodeImage').innerHTML = '<div class="loading">❌ Erro ao gerar QR Code</div>';
+            }
         }
 
-        function abrirModalExcluir(id, nome) {
-            membroParaExcluir = id;
-            document.getElementById('nomeExcluir').textContent = nome;
-            document.getElementById('modal').style.display = 'flex';
+        function baixarQRCode() {
+            if (window.qrCodeData) {
+                const link = document.createElement('a');
+                const membroNome = document.getElementById('nome').value;
+                const primeiroNome = getPrimeiroNome(membroNome);
+                link.download = 'qrcode_' + primeiroNome + '.png';
+                link.href = window.qrCodeData;
+                link.click();
+                mostrarToast('✅ QR Code baixado!');
+            } else {
+                mostrarToast('❌ Gere o QR Code primeiro');
+            }
         }
 
-        function fecharModal() {
-            document.getElementById('modal').style.display = 'none';
+        function abrirFormularioNovo() {
+            document.getElementById('formTitle').innerHTML = '➕ Adicionar Membro';
+            document.getElementById('membroDocId').value = '';
+            document.getElementById('nome').value = '';
+            document.getElementById('instrumentoId').value = '';
+            document.getElementById('congregacaoId').value = '';
+            document.getElementById('cargoId').value = '';
+            document.getElementById('nivelId').value = '';
+            document.getElementById('qrArea').style.display = 'none';
+            document.getElementById('btnGerarQRCode').style.display = 'none';
+            document.getElementById('cardLista').style.display = 'none';
+            document.getElementById('cardFormulario').style.display = 'block';
+            popularSelects();
+        }
+
+        function cancelarEdicao() {
+            document.getElementById('cardLista').style.display = 'block';
+            document.getElementById('cardFormulario').style.display = 'none';
+            carregarMembros();
+        }
+
+        function editarMembro(docId) {
+            const membro = membros.find(m => m.docId === docId);
+            if (membro) {
+                document.getElementById('formTitle').innerHTML = '✏️ Editar Membro';
+                document.getElementById('membroDocId').value = membro.docId;
+                document.getElementById('nome').value = membro.nome;
+                document.getElementById('qrArea').style.display = 'none';
+                document.getElementById('btnGerarQRCode').style.display = 'inline-block';
+                document.getElementById('cardLista').style.display = 'none';
+                document.getElementById('cardFormulario').style.display = 'block';
+                
+                popularSelects();
+                
+                setTimeout(function() {
+                    document.getElementById('instrumentoId').value = membro.instrumentoId;
+                    document.getElementById('congregacaoId').value = membro.congregacaoId;
+                    document.getElementById('cargoId').value = membro.cargoId;
+                    document.getElementById('nivelId').value = membro.nivelId;
+                }, 100);
+                
+                const btnGerar = document.getElementById('btnGerarQRCode');
+                const novoBtn = btnGerar.cloneNode(true);
+                btnGerar.parentNode.replaceChild(novoBtn, btnGerar);
+                novoBtn.style.display = 'inline-block';
+                novoBtn.onclick = function() { mostrarQRCode(membro.docId); };
+            } else {
+                mostrarToast('❌ Membro não encontrado!');
+            }
+        }
+
+        document.getElementById('formMembro').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const docId = document.getElementById('membroDocId').value;
+            const dados = {
+                nome: document.getElementById('nome').value,
+                instrumentoId: parseInt(document.getElementById('instrumentoId').value),
+                congregacaoId: document.getElementById('congregacaoId').value,
+                cargoId: parseInt(document.getElementById('cargoId').value),
+                nivelId: parseInt(document.getElementById('nivelId').value),
+                atualizadoEm: new Date().toISOString()
+            };
+            
+            try {
+                if (docId) {
+                    await membrosCollection.doc(docId).update(dados);
+                    mostrarToast('✅ Membro atualizado!');
+                } else {
+                    const newDoc = await membrosCollection.add(dados);
+                    mostrarToast('✅ Membro adicionado!');
+                }
+                cancelarEdicao();
+            } catch(error) {
+                mostrarToast('❌ Erro: ' + error.message, 'error');
+            }
+        });
+
+        document.getElementById('btnBaixarQRCode').addEventListener('click', baixarQRCode);
+
+        function abrirModalExcluir(docId, nome) {
+            membroParaExcluir = docId;
+            document.getElementById('modalMsg').innerHTML = 'Excluir <strong>' + nome + '</strong>?';
+            document.getElementById('modalExcluir').style.display = 'flex';
+        }
+        
+        function fecharModalExcluir() {
+            document.getElementById('modalExcluir').style.display = 'none';
             membroParaExcluir = null;
         }
-
-        function confirmarExclusao() {
-            if (membroParaExcluir !== null) {
-                excluirMembro(membroParaExcluir);
-                fecharModal();
+        
+        async function confirmarExclusao() {
+            if (membroParaExcluir) {
+                await membrosCollection.doc(membroParaExcluir).delete();
+                mostrarToast('✅ Membro excluído!');
+                fecharModalExcluir();
+                carregarMembros();
             }
         }
 
-        function excluirMembro(id) {
-            const index = membros.findIndex(m => m.id === id);
-            if (index !== -1) {
-                membros.splice(index, 1);
-                salvarDados();
-                carregarTabela(document.getElementById('searchInput').value);
-                mostrarToast('Membro excluído com sucesso!');
-            }
-        }
+        function filtrarMembros() { renderizarTabela(); }
 
-        function mostrarToast(mensagem) {
-            const toast = document.createElement('div');
-            toast.textContent = mensagem;
-            toast.style.position = 'fixed';
-            toast.style.bottom = '20px';
-            toast.style.right = '20px';
-            toast.style.background = '#27ae60';
-            toast.style.color = 'white';
-            toast.style.padding = '12px 24px';
-            toast.style.borderRadius = '8px';
-            toast.style.zIndex = '1000';
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
-        }
+        // Iniciar carregamento
+        carregarDados();
     </script>
 </body>
 </html>
