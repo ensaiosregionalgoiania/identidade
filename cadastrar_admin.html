@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastrar Administrador - CCB</title>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+        h1 { color: #2c3e50; margin-bottom: 10px; text-align: center; }
+        h2 { color: #667eea; font-size: 1rem; margin-bottom: 30px; text-align: center; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; color: #555; }
+        input, select { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; }
+        button { width: 100%; background: #27ae60; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        button:hover { background: #219a52; }
+        .btn-voltar { background: #3498db; }
+        .btn-voltar:hover { background: #2980b9; }
+        .mensagem { margin-top: 20px; padding: 12px; border-radius: 8px; font-size: 0.9rem; text-align: center; }
+        .erro { background: #fee; color: #c0392b; border-left: 4px solid #e74c3c; }
+        .sucesso { background: #efe; color: #27ae60; border-left: 4px solid #27ae60; }
+        .info { background: #e3f2fd; color: #2980b9; border-left: 4px solid #3498db; }
+        .aviso { background: #fff3cd; color: #856404; border-left: 4px solid #ffc107; }
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid white;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 Identidade Ministerial CCB</h1>
+        <h2 id="subtitle">➕ Cadastrar Administrador</h2>
+        
+        <div id="avisoArea"></div>
+        
+        <div class="form-group">
+            <label>👤 Nome completo</label>
+            <input type="text" id="nome" placeholder="Ex: José da Silva">
+        </div>
+        <div class="form-group">
+            <label>📧 E-mail (será o login)</label>
+            <input type="email" id="email" placeholder="admin@ccb.com">
+        </div>
+        <div class="form-group">
+            <label>🔑 Cargo/Papel</label>
+            <select id="papel">
+                <option value="administrador">Administrador</option>
+                <option value="secretario">Secretário</option>
+                <option value="obreiro">Obreiro</option>
+            </select>
+        </div>
+        
+        <div class="info" style="margin-bottom: 15px; padding: 10px;">
+            🔐 A senha temporária será: <strong>123456</strong><br>
+            O usuário será obrigado a trocar a senha no primeiro login.
+        </div>
+        
+        <button id="btnCadastrar" onclick="cadastrarAdmin()">✨ Cadastrar Administrador</button>
+        <button class="btn-voltar" onclick="voltar()">🔙 Voltar</button>
+        
+        <div id="mensagem"></div>
+    </div>
+
+    <script>
+        // Verificar se o Firebase já foi inicializado (evita erro de duplicidade)
+        let db, auth;
+        
+        try {
+            // Tenta pegar a instância existente do Firebase
+            if (firebase.apps.length === 0) {
+                // Se não existe, inicializa
+                const firebaseConfig = {
+                    apiKey: "AIzaSyA4COgeJSENsHrQHDx39gpZvif3zVrGjYE",
+                    authDomain: "identidadeccb.firebaseapp.com",
+                    projectId: "identidadeccb",
+                    storageBucket: "identidadeccb.firebasestorage.app",
+                    messagingSenderId: "385467794937",
+                    appId: "1:385467794937:web:d2eb32429586f018e2a928"
+                };
+                firebase.initializeApp(firebaseConfig);
+                console.log("Firebase inicializado nesta página");
+            } else {
+                console.log("Firebase já estava inicializado");
+            }
+            
+            auth = firebase.auth();
+            db = firebase.firestore();
+            
+        } catch(error) {
+            console.error("Erro ao inicializar Firebase:", error);
+            alert("Erro ao conectar com o Firebase. Recarregue a página.");
+        }
+
+        let podeCadastrar = true;
+        let ehPrimeiroAdmin = false;
+
+        async function inicializar() {
+            console.log("Inicializando página de cadastro...");
+            
+            try {
+                const admins = await db.collection("administradores").limit(1).get();
+                
+                if (admins.empty) {
+                    ehPrimeiroAdmin = true;
+                    podeCadastrar = true;
+                    document.getElementById('subtitle').innerHTML = '👑 Criar Primeiro Administrador';
+                    document.getElementById('avisoArea').innerHTML = `
+                        <div class="aviso" style="margin-bottom: 20px; padding: 12px;">
+                            ⚠️ <strong>Primeiro acesso ao sistema!</strong><br>
+                            Nenhum administrador foi encontrado. Você está criando o administrador principal.
+                        </div>
+                    `;
+                    document.getElementById('papel').disabled = true;
+                    document.getElementById('papel').value = 'administrador';
+                    return;
+                }
+                
+                const user = auth.currentUser;
+                
+                if (!user) {
+                    document.getElementById('avisoArea').innerHTML = `
+                        <div class="aviso" style="margin-bottom: 20px; padding: 12px;">
+                            ⚠️ Já existe um administrador no sistema.<br>
+                            Você precisa estar logado para cadastrar novos usuários.
+                        </div>
+                    `;
+                    document.getElementById('btnCadastrar').disabled = true;
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 3000);
+                    return;
+                }
+                
+                const adminDoc = await db.collection("administradores").doc(user.uid).get();
+                
+                if (!adminDoc.exists || !adminDoc.data().ativo) {
+                    document.getElementById('avisoArea').innerHTML = `
+                        <div class="erro" style="margin-bottom: 20px; padding: 12px;">
+                            ❌ Acesso negado! Apenas administradores podem cadastrar novos usuários.
+                        </div>
+                    `;
+                    document.getElementById('btnCadastrar').disabled = true;
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 3000);
+                    return;
+                }
+                
+                podeCadastrar = true;
+                document.getElementById('avisoArea').innerHTML = `
+                    <div class="info" style="margin-bottom: 20px; padding: 12px;">
+                        🔐 Logado como: <strong>${adminDoc.data().nome || user.email}</strong><br>
+                        Você pode criar novos usuários.
+                    </div>
+                `;
+                
+            } catch(error) {
+                console.error("Erro na inicialização:", error);
+                document.getElementById('avisoArea').innerHTML = `
+                    <div class="erro" style="margin-bottom: 20px; padding: 12px;">
+                        ❌ Erro: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        async function cadastrarAdmin() {
+            if (!podeCadastrar) {
+                alert("Você não tem permissão para cadastrar.");
+                return;
+            }
+            
+            const nome = document.getElementById('nome').value;
+            const email = document.getElementById('email').value;
+            const papel = document.getElementById('papel').value;
+            const senhaTemporaria = "123456";
+            const msgDiv = document.getElementById('mensagem');
+            const btn = document.getElementById('btnCadastrar');
+            
+            if (!nome || !email) {
+                msgDiv.innerHTML = '<div class="mensagem erro">❌ Preencha todos os campos</div>';
+                return;
+            }
+            
+            if (!email.includes('@')) {
+                msgDiv.innerHTML = '<div class="mensagem erro">❌ Digite um e-mail válido</div>';
+                return;
+            }
+            
+            msgDiv.innerHTML = '<div class="mensagem">🔄 Criando administrador...</div>';
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner"></span> Cadastrando...';
+            
+            try {
+                let uid;
+                
+                if (ehPrimeiroAdmin) {
+                    const userCredential = await auth.createUserWithEmailAndPassword(email, senhaTemporaria);
+                    uid = userCredential.user.uid;
+                    await auth.signOut();
+                } else {
+                    const userCredential = await auth.createUserWithEmailAndPassword(email, senhaTemporaria);
+                    uid = userCredential.user.uid;
+                }
+                
+                await db.collection("administradores").doc(uid).set({
+                    uid: uid,
+                    nome: nome,
+                    email: email,
+                    papel: papel,
+                    senhaTemporaria: true,
+                    ativo: true,
+                    criadoEm: new Date().toISOString(),
+                    criadoPor: ehPrimeiroAdmin ? 'primeiro_acesso' : (auth.currentUser ? auth.currentUser.email : 'sistema')
+                });
+                
+                let mensagemSucesso = `✅ Administrador cadastrado!<br><br>📧 ${email}<br>🔑 Senha: 123456`;
+                
+                if (ehPrimeiroAdmin) {
+                    mensagemSucesso += `<br><br>🔐 Agora faça login com esta senha.`;
+                    msgDiv.innerHTML = `<div class="mensagem sucesso">${mensagemSucesso}</div>`;
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 4000);
+                } else {
+                    msgDiv.innerHTML = `<div class="mensagem sucesso">${mensagemSucesso}<br>✅ O usuário precisará trocar a senha no primeiro acesso.</div>`;
+                    document.getElementById('nome').value = '';
+                    document.getElementById('email').value = '';
+                }
+                
+            } catch(error) {
+                console.error('Erro:', error);
+                
+                let mensagemErro = '';
+                if (error.code === 'auth/email-already-in-use') {
+                    mensagemErro = 'Este e-mail já está em uso.';
+                } else if (error.code === 'auth/operation-not-allowed') {
+                    mensagemErro = 'Authentication não está ativado! Ative no Firebase Console.';
+                } else {
+                    mensagemErro = error.message;
+                }
+                
+                msgDiv.innerHTML = `<div class="mensagem erro">❌ ${mensagemErro}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '✨ Cadastrar Administrador';
+            }
+        }
+        
+        function voltar() {
+            window.location.href = 'login.html';
+        }
+        
+        window.addEventListener('load', function() {
+            setTimeout(inicializar, 500);
+        });
+    </script>
+</body>
+</html>
