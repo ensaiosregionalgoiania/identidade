@@ -33,6 +33,7 @@
         input, select { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; }
         button { width: 100%; background: #27ae60; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 10px; }
         button:hover { background: #219a52; }
+        button:disabled { background: #95a5a6; cursor: not-allowed; }
         .btn-voltar { background: #3498db; }
         .btn-voltar:hover { background: #2980b9; }
         .mensagem { margin-top: 20px; padding: 12px; border-radius: 8px; font-size: 0.9rem; text-align: center; }
@@ -51,6 +52,7 @@
             margin-right: 8px;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
+        select[disabled] { background: #f0f0f0; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -67,6 +69,12 @@
         <div class="form-group">
             <label>📧 E-mail (será o login)</label>
             <input type="email" id="email" placeholder="admin@ccb.com">
+        </div>
+        <div class="form-group">
+            <label>📍 Congregação</label>
+            <select id="congregacaoSelect">
+                <option value="">Carregando congregações...</option>
+            </select>
         </div>
         <div class="form-group">
             <label>🔑 Cargo/Papel</label>
@@ -89,13 +97,14 @@
     </div>
 
     <script>
-        // Verificar se o Firebase já foi inicializado (evita erro de duplicidade)
+        // Verificar se o Firebase já foi inicializado
         let db, auth;
+        let congregacoes = [];
+        let usuarioLogado = null;
+        let congregacoesIdUsuario = null;
         
         try {
-            // Tenta pegar a instância existente do Firebase
             if (firebase.apps.length === 0) {
-                // Se não existe, inicializa
                 const firebaseConfig = {
                     apiKey: "AIzaSyA4COgeJSENsHrQHDx39gpZvif3zVrGjYE",
                     authDomain: "identidadeccb.firebaseapp.com",
@@ -121,15 +130,92 @@
         let podeCadastrar = true;
         let ehPrimeiroAdmin = false;
 
+        // Função para carregar congregações baseado no usuário logado
+        async function carregarCongregacoes() {
+            const congregacaoSelect = document.getElementById('congregacaoSelect');
+            congregacaoSelect.innerHTML = '<option value="">Carregando congregações...</option>';
+            congregacaoSelect.disabled = true;
+            
+            try {
+                // Buscar todas as congregações
+                const congregacoesSnapshot = await db.collection("congregacoes").orderBy('nome').get();
+                congregacoes = [];
+                congregacoesSnapshot.forEach(doc => {
+                    congregacoes.push({
+                        id: doc.id,
+                        nome: doc.data().nome,
+                        cidade: doc.data().cidade || ''
+                    });
+                });
+                
+                console.log("Congregações carregadas:", congregacoes.length);
+                console.log("congregacoesId do usuário:", congregacoesIdUsuario);
+                
+                // Filtrar congregações baseado no congregacoesId do usuário
+                let congregacoesFiltradas = [];
+                
+                if (congregacoesIdUsuario && congregacoesIdUsuario !== 0 && congregacoesIdUsuario !== '0') {
+                    // Usuário tem uma congregação específica - mostrar apenas essa
+                    console.log("Filtrando para mostrar apenas a congregação ID:", congregacoesIdUsuario);
+                    
+                    // Converter para número para comparação
+                    const idUsuarioNum = parseInt(congregacoesIdUsuario);
+                    
+                    congregacoesFiltradas = congregacoes.filter(c => {
+                        // Comparar o ID da congregação (que pode ser string ou número)
+                        const congregacaoIdNum = parseInt(c.id);
+                        return congregacaoIdNum === idUsuarioNum;
+                    });
+                    
+                    if (congregacoesFiltradas.length === 0) {
+                        console.warn("Nenhuma congregação encontrada com ID:", congregacoesIdUsuario);
+                        // Tentar buscar pelo ID como string
+                        congregacoesFiltradas = congregacoes.filter(c => String(c.id) === String(congregacoesIdUsuario));
+                    }
+                    
+                    console.log("Congregações filtradas:", congregacoesFiltradas.length);
+                } else {
+                    // Usuário pode ver todas as congregações (administrador geral)
+                    console.log("Usuário tem acesso a todas as congregações");
+                    congregacoesFiltradas = congregacoes;
+                }
+                
+                // Popular o select
+                congregacaoSelect.innerHTML = '<option value="">Selecione uma congregação...</option>';
+                
+                if (congregacoesFiltradas.length === 0) {
+                    congregacaoSelect.innerHTML = '<option value="">Nenhuma congregação disponível</option>';
+                    congregacaoSelect.disabled = true;
+                    console.error("Nenhuma congregação disponível para este usuário");
+                    return;
+                }
+                
+                for (const cong of congregacoesFiltradas) {
+                    const cidadeTexto = cong.cidade ? ` (${cong.cidade})` : '';
+                    congregacaoSelect.innerHTML += `<option value="${cong.id}">${cong.nome}${cidadeTexto}</option>`;
+                }
+                
+                congregacaoSelect.disabled = false;
+                console.log(`${congregacoesFiltradas.length} congregações carregadas no select`);
+                
+            } catch(error) {
+                console.error("Erro ao carregar congregações:", error);
+                congregacaoSelect.innerHTML = '<option value="">Erro ao carregar congregações</option>';
+                congregacaoSelect.disabled = true;
+            }
+        }
+
         async function inicializar() {
             console.log("Inicializando página de cadastro...");
             
             try {
+                // Verificar se existem administradores no sistema
                 const admins = await db.collection("administradores").limit(1).get();
                 
                 if (admins.empty) {
                     ehPrimeiroAdmin = true;
                     podeCadastrar = true;
+                    congregacoesIdUsuario = 0; // Primeiro admin pode ver todas
                     document.getElementById('subtitle').innerHTML = '👑 Criar Primeiro Administrador';
                     document.getElementById('avisoArea').innerHTML = `
                         <div class="aviso" style="margin-bottom: 20px; padding: 12px;">
@@ -139,9 +225,13 @@
                     `;
                     document.getElementById('papel').disabled = true;
                     document.getElementById('papel').value = 'administrador';
+                    
+                    // Carregar todas as congregações para o primeiro admin
+                    await carregarCongregacoes();
                     return;
                 }
                 
+                // Verificar usuário logado
                 const user = auth.currentUser;
                 
                 if (!user) {
@@ -152,12 +242,16 @@
                         </div>
                     `;
                     document.getElementById('btnCadastrar').disabled = true;
+                    document.getElementById('congregacaoSelect').disabled = true;
                     setTimeout(() => {
                         window.location.href = 'login.html';
                     }, 3000);
                     return;
                 }
                 
+                usuarioLogado = user;
+                
+                // Buscar dados do administrador logado
                 const adminDoc = await db.collection("administradores").doc(user.uid).get();
                 
                 if (!adminDoc.exists || !adminDoc.data().ativo) {
@@ -167,19 +261,39 @@
                         </div>
                     `;
                     document.getElementById('btnCadastrar').disabled = true;
+                    document.getElementById('congregacaoSelect').disabled = true;
                     setTimeout(() => {
                         window.location.href = 'login.html';
                     }, 3000);
                     return;
                 }
                 
+                const adminData = adminDoc.data();
+                congregacoesIdUsuario = adminData.congregacoes_id || 0;
+                
+                console.log("Usuário logado:", {
+                    nome: adminData.nome,
+                    email: user.email,
+                    congregacoes_id: congregacoesIdUsuario,
+                    papel: adminData.papel
+                });
+                
                 podeCadastrar = true;
-                document.getElementById('avisoArea').innerHTML = `
-                    <div class="info" style="margin-bottom: 20px; padding: 12px;">
-                        🔐 Logado como: <strong>${adminDoc.data().nome || user.email}</strong><br>
-                        Você pode criar novos usuários.
-                    </div>
-                `;
+                
+                let mensagemAcesso = `<div class="info" style="margin-bottom: 20px; padding: 12px;">
+                    🔐 Logado como: <strong>${adminData.nome || user.email}</strong><br>`;
+                
+                if (congregacoesIdUsuario && congregacoesIdUsuario !== 0 && congregacoesIdUsuario !== '0') {
+                    mensagemAcesso += `📍 Acesso restrito à congregação ID: ${congregacoesIdUsuario}<br>`;
+                } else {
+                    mensagemAcesso += `🌍 Acesso a todas as congregações<br>`;
+                }
+                
+                mensagemAcesso += `✅ Você pode criar novos usuários.</div>`;
+                document.getElementById('avisoArea').innerHTML = mensagemAcesso;
+                
+                // Carregar congregações baseado no congregacoes_id do usuário
+                await carregarCongregacoes();
                 
             } catch(error) {
                 console.error("Erro na inicialização:", error);
@@ -200,6 +314,7 @@
             const nome = document.getElementById('nome').value;
             const email = document.getElementById('email').value;
             const papel = document.getElementById('papel').value;
+            const congregacaoId = document.getElementById('congregacaoSelect').value;
             const senhaTemporaria = "123456";
             const msgDiv = document.getElementById('mensagem');
             const btn = document.getElementById('btnCadastrar');
@@ -212,6 +327,22 @@
             if (!email.includes('@')) {
                 msgDiv.innerHTML = '<div class="mensagem erro">❌ Digite um e-mail válido</div>';
                 return;
+            }
+            
+            if (!congregacaoId) {
+                msgDiv.innerHTML = '<div class="mensagem erro">❌ Selecione uma congregação</div>';
+                return;
+            }
+            
+            // Validar se o usuário tem permissão para cadastrar nesta congregação
+            if (congregacoesIdUsuario && congregacoesIdUsuario !== 0 && congregacoesIdUsuario !== '0') {
+                const idUsuarioNum = parseInt(congregacoesIdUsuario);
+                const idCongNum = parseInt(congregacaoId);
+                
+                if (idUsuarioNum !== idCongNum && String(congregacoesIdUsuario) !== String(congregacaoId)) {
+                    msgDiv.innerHTML = '<div class="mensagem erro">❌ Você não tem permissão para cadastrar usuários nesta congregação!</div>';
+                    return;
+                }
             }
             
             msgDiv.innerHTML = '<div class="mensagem">🔄 Criando administrador...</div>';
@@ -230,18 +361,24 @@
                     uid = userCredential.user.uid;
                 }
                 
+                // Buscar o nome da congregação selecionada
+                const congregacaoSelecionada = congregacoes.find(c => String(c.id) === String(congregacaoId));
+                const congregacaoNome = congregacaoSelecionada ? congregacaoSelecionada.nome : '';
+                
                 await db.collection("administradores").doc(uid).set({
                     uid: uid,
                     nome: nome,
                     email: email,
                     papel: papel,
+                    congregacao_id: congregacaoId,
+                    congregacao_nome: congregacaoNome,
                     senhaTemporaria: true,
                     ativo: true,
                     criadoEm: new Date().toISOString(),
                     criadoPor: ehPrimeiroAdmin ? 'primeiro_acesso' : (auth.currentUser ? auth.currentUser.email : 'sistema')
                 });
                 
-                let mensagemSucesso = `✅ Administrador cadastrado!<br><br>📧 ${email}<br>🔑 Senha: 123456`;
+                let mensagemSucesso = `✅ Administrador cadastrado!<br><br>📧 ${email}<br>🔑 Senha: 123456<br>📍 Congregação: ${congregacaoNome}`;
                 
                 if (ehPrimeiroAdmin) {
                     mensagemSucesso += `<br><br>🔐 Agora faça login com esta senha.`;
@@ -253,6 +390,7 @@
                     msgDiv.innerHTML = `<div class="mensagem sucesso">${mensagemSucesso}<br>✅ O usuário precisará trocar a senha no primeiro acesso.</div>`;
                     document.getElementById('nome').value = '';
                     document.getElementById('email').value = '';
+                    document.getElementById('congregacaoSelect').value = '';
                 }
                 
             } catch(error) {
