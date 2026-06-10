@@ -545,7 +545,7 @@
 
             const cargoSnapshot = await cargosCollection.orderBy('nome').get();
             cargos = [];
-            cargoSnapshot.forEach(doc => cargos.push({ id: doc.id, nome: doc.data().nome }));
+            cargoSnapshot.forEach(doc => cargos.push({ id: doc.id, nome: doc.data().nome, tipo: doc.data().tipo || '' }));
 
             const nivelSnapshot = await niveisCollection.orderBy('nome').get();
             niveis = [];
@@ -860,7 +860,7 @@
             }
         }
 
-// Função para gerar relatório (oculta ministério e atendimento quando vazios)
+// Função para gerar relatório (completa com logs detalhados)
 async function gerarRelatorio(eventoId, eventoNome, eventoData, congregacaoNome, congregacaoCidade) {
     try {
         console.log('🚀 Iniciando geração do relatório para evento:', eventoId);
@@ -892,36 +892,133 @@ async function gerarRelatorio(eventoId, eventoNome, eventoData, congregacaoNome,
             }
         }
         
-        console.log('Membros presentes:', membrosPresentes.length);
+        console.log('📊 TOTAL DE MEMBROS PRESENTES:', membrosPresentes.length);
         
         // ========== 2. BUSCAR TODOS OS CARGOS DO FIRESTORE ==========
         const cargosSnapshot = await db.collection("cargos").get();
         const todosCargosTemp = [];
+        console.log('\n========== LISTA COMPLETA DE CARGOS NO FIRESTORE ==========');
         for (const doc of cargosSnapshot.docs) {
-            todosCargosTemp.push({
-                id: doc.data().id,
-                nome: doc.data().nome,
-                tipo: doc.data().tipo || ''
+            const cargoData = doc.data();
+            const cargo = {
+                id: cargoData.id,
+                nome: cargoData.nome,
+                tipo: cargoData.tipo || ''
+            };
+            todosCargosTemp.push(cargo);
+            console.log(`Cargo ID: ${cargo.id} | Nome: "${cargo.nome}" | Tipo: "${cargo.tipo}"`);
+        }
+        
+        // Verificar especificamente por qualquer cargo que contenha "SECRET" no nome
+        console.log('\n========== BUSCA POR CARGOS RELACIONADOS A SECRETÁRIO ==========');
+        const cargosSecretario = todosCargosTemp.filter(c => 
+            c.nome.toUpperCase().includes('SECRET') || 
+            c.nome.toUpperCase().includes('SECRETA') ||
+            c.nome.toLowerCase().includes('secret')
+        );
+        
+        if (cargosSecretario.length > 0) {
+            console.log('✅ Cargos encontrados com "SECRET" no nome:');
+            cargosSecretario.forEach(c => {
+                console.log(`   - ID: ${c.id}, Nome: "${c.nome}", Tipo: "${c.tipo}"`);
+            });
+        } else {
+            console.log('❌ NENHUM cargo encontrado com "SECRET" no nome!');
+            console.log('Verifique se o cargo foi criado no Firestore. Os cargos disponíveis são:');
+            todosCargosTemp.forEach(c => {
+                console.log(`   - "${c.nome}"`);
             });
         }
-        console.log('Cargos carregados:', todosCargosTemp.length);
         
-        // ========== 3. CONTAR ORGANISTAS ==========
+        // ========== 3. LISTAR TODOS OS MEMBROS E SEUS CARGOS ==========
+        console.log('\n========== MEMBROS PRESENTES E SEUS RESPECTIVOS CARGOS ==========');
+        for (const membro of membrosPresentes) {
+            const cargoDoMembro = todosCargosTemp.find(c => String(c.id) === String(membro.cargoId));
+            console.log(`Membro: "${membro.nome}"`);
+            console.log(`   - cargoId no membro: ${membro.cargoId} (tipo: ${typeof membro.cargoId})`);
+            if (cargoDoMembro) {
+                console.log(`   - Cargo encontrado: ID ${cargoDoMembro.id} - "${cargoDoMembro.nome}" (tipo: ${typeof cargoDoMembro.id})`);
+            } else {
+                console.log(`   - ❌ NENHUM cargo encontrado com ID ${membro.cargoId}!`);
+                console.log(`   - IDs de cargos disponíveis: ${todosCargosTemp.map(c => `${c.id} (${c.nome})`).join(', ')}`);
+            }
+            console.log('---');
+        }
+        
+        // ========== 4. VERIFICAR CARGOS POR TIPO ==========
+        console.log('\n========== CLASSIFICAÇÃO DOS CARGOS ==========');
+        
+        const cargosMinisterio = [];
+        const cargosEncarregados = [];
+        
+        for (const cargo of todosCargosTemp) {
+            const tipoCargo = (cargo.tipo || '').toLowerCase();
+            const nomeCargo = cargo.nome.toLowerCase();
+            
+            console.log(`\nAnalisando cargo: "${cargo.nome}"`);
+            console.log(`   - ID: ${cargo.id}`);
+            console.log(`   - Tipo no Firestore: "${cargo.tipo}"`);
+            console.log(`   - Tipo em lower case: "${tipoCargo}"`);
+            console.log(`   - Nome em lower case: "${nomeCargo}"`);
+            
+            // Verificar se é ministério
+            if (tipoCargo === 'ministerio') {
+                cargosMinisterio.push({ id: cargo.id, nome: cargo.nome });
+                console.log(`   ✅ Adicionado ao MINISTÉRIO`);
+            }
+            
+            // Verificar se é encarregado (incluindo por nome)
+            const ehEncarregadoPorTipo = tipoCargo === 'encarregado';
+            const ehSecretarioMusica = nomeCargo === 'secretário(a) da música' || 
+                                       nomeCargo === 'secretario(a) da musica' ||
+                                       nomeCargo === 'secretário da música' ||
+                                       nomeCargo === 'secretario da musica';
+            
+            console.log(`   - ehEncarregadoPorTipo: ${ehEncarregadoPorTipo}`);
+            console.log(`   - ehSecretarioMusica: ${ehSecretarioMusica}`);
+            
+            if (ehEncarregadoPorTipo || ehSecretarioMusica) {
+                cargosEncarregados.push({ id: cargo.id, nome: cargo.nome });
+                console.log(`   ✅ Adicionado aos ENCARREGADOS${ehSecretarioMusica ? ' (por nome de secretário)' : ' (por tipo encarregado)'}`);
+            } else {
+                console.log(`   ❌ NÃO adicionado aos encarregados`);
+            }
+        }
+        
+        console.log('\n========== RESULTADO FINAL ==========');
+        console.log('Cargos de Ministério:', cargosMinisterio.map(c => `${c.nome} (ID:${c.id})`));
+        console.log('Cargos de Encarregados:', cargosEncarregados.map(c => `${c.nome} (ID:${c.id})`));
+        
+        // ========== 5. CONTAGEM POR CARGO ==========
+        console.log('\n========== CONTAGEM DE MEMBROS POR CARGO ==========');
+        for (const cargo of cargosEncarregados) {
+            const membrosDoCargo = membrosPresentes.filter(m => String(m.cargoId) === String(cargo.id));
+            console.log(`${cargo.nome} (ID:${cargo.id}): ${membrosDoCargo.length} membros`);
+            if (membrosDoCargo.length > 0) {
+                membrosDoCargo.forEach(m => console.log(`   - ${m.nome}`));
+            }
+        }
+        
+        // ========== 6. CONTAR ORGANISTAS ==========
         let quantidadeOrganistas = 0;
         
         for (const membro of membrosPresentes) {
             const instrumento = instrumentos.find(i => i.id === membro.instrumentoId);
             if (instrumento && instrumento.nome.toLowerCase() === 'organista') {
                 quantidadeOrganistas++;
+                console.log(`🎹 Organista encontrado (por instrumento): ${membro.nome}`);
                 continue;
             }
             const cargo = todosCargosTemp.find(c => c.id === membro.cargoId);
             if (cargo && cargo.nome.toLowerCase() === 'organista') {
                 quantidadeOrganistas++;
+                console.log(`🎹 Organista encontrado (por cargo): ${membro.nome}`);
             }
         }
         
-        // ========== 4. BUSCAR VISITANTES POR INSTRUMENTO ==========
+        console.log('📊 Quantidade de Organistas:', quantidadeOrganistas);
+        
+        // ========== 7. BUSCAR VISITANTES POR INSTRUMENTO ==========
         const visitantesInstrumentosSnapshot = await visitantesInstrumentoCollection
             .where('eventoId', '==', eventoId)
             .get();
@@ -931,8 +1028,9 @@ async function gerarRelatorio(eventoId, eventoNome, eventoData, congregacaoNome,
             const data = doc.data();
             visitantesPorInstrumento[data.instrumentoId] = data.quantidade || 0;
         }
+        console.log('📊 Visitantes por instrumento:', visitantesPorInstrumento);
         
-        // ========== 5. LISTAR INSTRUMENTOS ==========
+        // ========== 8. LISTAR INSTRUMENTOS ==========
         const instrumentosFiltrados = instrumentos.filter(inst => {
             const nomeLower = inst.nome.toLowerCase();
             return nomeLower !== 'orgão' && nomeLower !== 'órgão' && 
@@ -953,41 +1051,34 @@ async function gerarRelatorio(eventoId, eventoNome, eventoData, congregacaoNome,
             const quantidadeTotal = quantidadeMembros + quantidadeVisitantes;
             musicosPorInstrumento.push({ nome: instrumento.nome, quantidadeTotal: quantidadeTotal });
             totalMusicos += quantidadeTotal;
-        }
-        
-        // ========== 6. CARGOS DO MINISTÉRIO ==========
-        const cargosMinisterio = [];
-        for (const cargo of todosCargosTemp) {
-            if ((cargo.tipo || '').toLowerCase() === 'ministerio') {
-                cargosMinisterio.push({ id: cargo.id, nome: cargo.nome });
+            
+            if (quantidadeMembros > 0) {
+                console.log(`🎵 ${instrumento.nome}: ${quantidadeMembros} membros, ${quantidadeVisitantes} visitantes`);
             }
         }
-        cargosMinisterio.sort((a, b) => a.id - b.id);
         
-        // ========== 7. CARGOS DE ENCARREGADOS ==========
-        const cargosEncarregados = [];
-        for (const cargo of todosCargosTemp) {
-            if ((cargo.tipo || '').toLowerCase() === 'encarregado') {
-                cargosEncarregados.push({ id: cargo.id, nome: cargo.nome });
-            }
-        }
-        cargosEncarregados.sort((a, b) => a.id - b.id);
-        
-        // ========== 8. BUSCAR VISITANTES POR CARGO ==========
+        // ========== 9. BUSCAR VISITANTES POR CARGO ==========
         const visitantesCargosSnapshot = await visitantesCargoCollection
             .where('eventoId', '==', eventoId)
             .get();
         const visitantesPorCargo = {};
         for (const doc of visitantesCargosSnapshot.docs) {
-            visitantesPorCargo[doc.data().cargoId] = doc.data().quantidade || 0;
+            const data = doc.data();
+            visitantesPorCargo[data.cargoId] = data.quantidade || 0;
         }
+        console.log('📊 Visitantes por cargo:', visitantesPorCargo);
         
-        // ========== 9. CONTAGENS ==========
+        // ========== 10. CONTAGENS FINAIS ==========
         const ministerioQuantidades = [];
         for (const cargo of cargosMinisterio) {
             const membrosDoCargo = membrosPresentes.filter(m => String(m.cargoId) === String(cargo.id));
             const quantidadeTotal = membrosDoCargo.length + (visitantesPorCargo[cargo.id] || 0);
             ministerioQuantidades.push({ nome: cargo.nome, quantidadeTotal: quantidadeTotal });
+            
+            if (membrosDoCargo.length > 0) {
+                console.log(`📊 ${cargo.nome}: ${membrosDoCargo.length} membros, ${visitantesPorCargo[cargo.id] || 0} visitantes`);
+                membrosDoCargo.forEach(m => console.log(`   - ${m.nome}`));
+            }
         }
         
         const encarregadosQuantidades = [];
@@ -995,12 +1086,18 @@ async function gerarRelatorio(eventoId, eventoNome, eventoData, congregacaoNome,
             const membrosDoCargo = membrosPresentes.filter(m => String(m.cargoId) === String(cargo.id));
             const quantidadeTotal = membrosDoCargo.length + (visitantesPorCargo[cargo.id] || 0);
             encarregadosQuantidades.push({ nome: cargo.nome, quantidadeTotal: quantidadeTotal });
+            
+            if (membrosDoCargo.length > 0) {
+                console.log(`📊 ${cargo.nome}: ${membrosDoCargo.length} membros, ${visitantesPorCargo[cargo.id] || 0} visitantes`);
+                membrosDoCargo.forEach(m => console.log(`   - ${m.nome}`));
+            } else {
+                console.log(`⚠️ Nenhum membro encontrado com o cargo: ${cargo.nome} (ID: ${cargo.id})`);
+            }
         }
         
         const totalGeral = totalMusicos + quantidadeOrganistas;
         
-        // ========== FORMATAÇÃO DA DATA CORRIGIDA ==========
-        // Formatar data CORRETAMENTE (sem problema de fuso horário)
+        // ========== FORMATAÇÃO DA DATA ==========
         const partesData = evento.data.split('-');
         const ano = parseInt(partesData[0]);
         const mes = parseInt(partesData[1]) - 1;
@@ -1027,7 +1124,6 @@ async function gerarRelatorio(eventoId, eventoNome, eventoData, congregacaoNome,
             atendimentoText = `${evento.cargoAtendimento2}: ${evento.nomeAtendimento2}`;
         }
         
-        // ... continua o resto da função igual ...        
         // Construir HTML das tabelas
         let instrumentosHtml = '';
         for (const item of musicosPorInstrumento) {
@@ -1052,7 +1148,7 @@ async function gerarRelatorio(eventoId, eventoNome, eventoData, congregacaoNome,
         if (encarregadosQuantidades.length === 0) {
             encarregadosHtml = `<tr><td style="padding: 4px 6px; font-size: 10px;">Nenhum cargo de encarregado cadastrado</td><td style="text-align: center; padding: 4px 6px; font-size: 10px;">--</td></tr>`;
         }
-        
+        //console.log (encarregadosHtml)
         // Construir o HTML - ocultando os blocos quando vazios
         const blocoMinisterio = temMinisterio ? `
             <div style="font-weight: bold; background-color: #f0f0f0; padding: 10px; margin-bottom: 15px; text-align: left; border-radius: 5px;">
@@ -1166,6 +1262,7 @@ async function gerarRelatorio(eventoId, eventoNome, eventoData, congregacaoNome,
         mostrarToast('❌ Erro ao gerar relatório: ' + error.message, 'error');
     }
 }
+
 
         function cancelarEdicao() {
             document.getElementById('formTitle').innerHTML = '📅 Criar Novo Evento';
