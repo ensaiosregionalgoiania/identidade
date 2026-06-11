@@ -141,39 +141,50 @@
                 const congregacoesSnapshot = await db.collection("congregacoes").orderBy('nome').get();
                 congregacoes = [];
                 congregacoesSnapshot.forEach(doc => {
+                    const data = doc.data();
                     congregacoes.push({
-                        id: doc.id,
-                        nome: doc.data().nome,
-                        cidade: doc.data().cidade || ''
+                        docId: doc.id,           // ID do documento no Firestore
+                        id: data.id,             // Campo id dentro do documento
+                        nome: data.nome,
+                        cidade: data.cidade || ''
                     });
                 });
                 
                 console.log("Congregações carregadas:", congregacoes.length);
                 console.log("congregacoesId do usuário:", congregacoesIdUsuario);
+                console.log("Tipo do congregacoesIdUsuario:", typeof congregacoesIdUsuario);
                 
                 // Filtrar congregações baseado no congregacoesId do usuário
                 let congregacoesFiltradas = [];
                 
                 if (congregacoesIdUsuario && congregacoesIdUsuario !== 0 && congregacoesIdUsuario !== '0') {
                     // Usuário tem uma congregação específica - mostrar apenas essa
-                    console.log("Filtrando para mostrar apenas a congregação ID:", congregacoesIdUsuario);
+                    console.log("Filtrando para mostrar apenas a congregação com valor:", congregacoesIdUsuario);
                     
-                    // Converter para número para comparação
-                    const idUsuarioNum = parseInt(congregacoesIdUsuario);
+                    const idUsuarioStr = String(congregacoesIdUsuario);
                     
+                    // Procurar a congregação que corresponde ao ID (seja pelo docId ou pelo campo id)
                     congregacoesFiltradas = congregacoes.filter(c => {
-                        // Comparar o ID da congregação (que pode ser string ou número)
-                        const congregacaoIdNum = parseInt(c.id);
-                        return congregacaoIdNum === idUsuarioNum;
+                        // Verificar se o docId é igual (ex: "kpUJf9FKUMF2jxJSddCu")
+                        const matchDocId = String(c.docId) === idUsuarioStr;
+                        // Verificar se o campo id é igual (ex: 2)
+                        const matchCampoId = String(c.id) === idUsuarioStr;
+                        
+                        if (matchDocId || matchCampoId) {
+                            console.log(`✅ Congregação encontrada: ${c.nome} (docId: ${c.docId}, campoId: ${c.id})`);
+                        }
+                        return matchDocId || matchCampoId;
                     });
                     
-                    if (congregacoesFiltradas.length === 0) {
-                        console.warn("Nenhuma congregação encontrada com ID:", congregacoesIdUsuario);
-                        // Tentar buscar pelo ID como string
-                        congregacoesFiltradas = congregacoes.filter(c => String(c.id) === String(congregacoesIdUsuario));
-                    }
-                    
                     console.log("Congregações filtradas:", congregacoesFiltradas.length);
+                    
+                    if (congregacoesFiltradas.length === 0) {
+                        console.warn("Nenhuma congregação encontrada com o valor:", congregacoesIdUsuario);
+                        console.log("Congregações disponíveis:");
+                        congregacoes.forEach(c => {
+                            console.log(`  - ${c.nome}: docId="${c.docId}", campoId=${c.id}`);
+                        });
+                    }
                 } else {
                     // Usuário pode ver todas as congregações (administrador geral)
                     console.log("Usuário tem acesso a todas as congregações");
@@ -190,13 +201,23 @@
                     return;
                 }
                 
+                // Para usuário com restrição, pré-selecionar a única opção
+                let temOpcaoSelecionada = false;
+                
                 for (const cong of congregacoesFiltradas) {
                     const cidadeTexto = cong.cidade ? ` (${cong.cidade})` : '';
-                    congregacaoSelect.innerHTML += `<option value="${cong.id}">${cong.nome}${cidadeTexto}</option>`;
+                    const optionValue = cong.docId; // Usar o docId como value
+                    congregacaoSelect.innerHTML += `<option value="${optionValue}">${cong.nome}${cidadeTexto}</option>`;
                 }
                 
                 congregacaoSelect.disabled = false;
                 console.log(`${congregacoesFiltradas.length} congregações carregadas no select`);
+                
+                // Se for acesso restrito e só tem uma opção, selecionar automaticamente
+                if (congregacoesFiltradas.length === 1 && congregacoesIdUsuario && congregacoesIdUsuario !== 0) {
+                    congregacaoSelect.selectedIndex = 1; // Seleciona a primeira opção (índice 0 é o placeholder)
+                    console.log("Opção única selecionada automaticamente");
+                }
                 
             } catch(error) {
                 console.error("Erro ao carregar congregações:", error);
@@ -284,7 +305,7 @@
                     🔐 Logado como: <strong>${adminData.nome || user.email}</strong><br>`;
                 
                 if (congregacoesIdUsuario && congregacoesIdUsuario !== 0 && congregacoesIdUsuario !== '0') {
-                    mensagemAcesso += `📍 Acesso restrito à congregação ID: ${congregacoesIdUsuario}<br>`;
+                    mensagemAcesso += `📍 Acesso restrito à congregação com ID: ${congregacoesIdUsuario}<br>`;
                 } else {
                     mensagemAcesso += `🌍 Acesso a todas as congregações<br>`;
                 }
@@ -336,10 +357,20 @@
             
             // Validar se o usuário tem permissão para cadastrar nesta congregação
             if (congregacoesIdUsuario && congregacoesIdUsuario !== 0 && congregacoesIdUsuario !== '0') {
-                const idUsuarioNum = parseInt(congregacoesIdUsuario);
-                const idCongNum = parseInt(congregacaoId);
+                const idUsuarioStr = String(congregacoesIdUsuario);
                 
-                if (idUsuarioNum !== idCongNum && String(congregacoesIdUsuario) !== String(congregacaoId)) {
+                // Buscar a congregação selecionada para verificar se corresponde
+                const congregacaoSelecionada = congregacoes.find(c => c.docId === congregacaoId);
+                
+                let temPermissao = false;
+                
+                if (congregacaoSelecionada) {
+                    // Verificar se o campo id da congregação corresponde ao ID do usuário
+                    temPermissao = String(congregacaoSelecionada.id) === idUsuarioStr ||
+                                   String(congregacaoSelecionada.docId) === idUsuarioStr;
+                }
+                
+                if (!temPermissao) {
                     msgDiv.innerHTML = '<div class="mensagem erro">❌ Você não tem permissão para cadastrar usuários nesta congregação!</div>';
                     return;
                 }
@@ -362,15 +393,17 @@
                 }
                 
                 // Buscar o nome da congregação selecionada
-                const congregacaoSelecionada = congregacoes.find(c => String(c.id) === String(congregacaoId));
+                const congregacaoSelecionada = congregacoes.find(c => c.docId === congregacaoId);
                 const congregacaoNome = congregacaoSelecionada ? congregacaoSelecionada.nome : '';
+                const congregacaoCampoId = congregacaoSelecionada ? congregacaoSelecionada.id : null;
                 
                 await db.collection("administradores").doc(uid).set({
                     uid: uid,
                     nome: nome,
                     email: email,
                     papel: papel,
-                    congregacao_id: congregacaoId,
+                    congregacao_id: congregacaoCampoId || congregacaoId,  // Salvar o campo id (número)
+                    congregacao_doc_id: congregacaoId,                    // Salvar o docId também
                     congregacao_nome: congregacaoNome,
                     senhaTemporaria: true,
                     ativo: true,
@@ -390,7 +423,7 @@
                     msgDiv.innerHTML = `<div class="mensagem sucesso">${mensagemSucesso}<br>✅ O usuário precisará trocar a senha no primeiro acesso.</div>`;
                     document.getElementById('nome').value = '';
                     document.getElementById('email').value = '';
-                    document.getElementById('congregacaoSelect').value = '';
+                    // Não resetar o select de congregação
                 }
                 
             } catch(error) {

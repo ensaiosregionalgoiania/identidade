@@ -5,26 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Controle de Presença - Identidade Ministerial</title>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.4/html5-qrcode.min.js"></script>
-    
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyA4COgeJSENsHrQHDx39gpZvif3zVrGjYE",
-            authDomain: "identidadeccb.firebaseapp.com",
-            projectId: "identidadeccb",
-            storageBucket: "identidadeccb.firebasestorage.app",
-            messagingSenderId: "385467794937",
-            appId: "1:385467794937:web:d2eb32429586f018e2a928"
-        };
-        
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
-        
-        const db = firebase.firestore();
-        console.log('✅ Firebase inicializado!');
-    </script>
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -49,8 +32,22 @@
             box-shadow: 0 5px 20px rgba(0,0,0,0.2);
         }
         .logo h1 { color: #2c3e50; font-size: 1.3rem; }
+        .admin-info {
+            background: #667eea;
+            padding: 5px 15px;
+            border-radius: 20px;
+            color: white;
+            font-size: 0.9rem;
+        }
+        .admin-info small {
+            display: block;
+            font-size: 0.7rem;
+            opacity: 0.8;
+        }
         .top-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
         .btn-manutencao { background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; }
+        .btn-sair { background: #e74c3c; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; }
+        .btn-sair:hover { background: #c0392b; }
         
         .card { background: white; border-radius: 20px; padding: 25px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
         .card-header { border-bottom: 2px solid #e0e0e0; margin-bottom: 20px; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
@@ -265,16 +262,62 @@
         option {
             padding: 8px;
         }
+        
+        .filtro-info {
+            background: #e3f2fd;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            color: #2980b9;
+        }
+
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            flex-direction: column;
+        }
+        .loading-screen .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .loading-screen p {
+            color: white;
+            margin-top: 20px;
+            font-size: 1.2rem;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div id="loadingScreen" class="loading-screen">
+        <div class="spinner"></div>
+        <p>🔐 Verificando autenticação...</p>
+    </div>
+
+    <div class="container" id="mainContent" style="display: none;">
         <div class="top-bar">
             <div class="logo">
                 <h1>🎯 Controle de Presença</h1>
             </div>
+            <div id="adminInfo" class="admin-info" style="display: none;"></div>
             <div class="top-buttons">
                 <a href="index.html" class="btn-manutencao">📋 Manutenção</a>
+                <button id="btnSair" class="btn-sair" style="display: none;" onclick="logout()">🚪 Sair</button>
             </div>
         </div>
 
@@ -282,6 +325,7 @@
             <div class="card-header">
                 <h2>📅 Selecionar Evento</h2>
             </div>
+            <div id="filtroInfoEventos" class="filtro-info" style="display: none;"></div>
             <div class="form-group">
                 <label>Evento:</label>
                 <select id="eventoSelect" required>
@@ -296,6 +340,8 @@
             <p id="eventoPermissoes"></p>
             <div id="avisoData" class="aviso-data" style="display: none;"></div>
         </div>
+        
+        <div id="filtroCongregacao" class="filtro-congregacao" style="display: none;"></div>
 
         <div id="qrControlCard" class="card" style="display: none;">
             <div class="card-header">
@@ -346,7 +392,6 @@
         </div>
     </div>
 
-    <!-- Modal de confirmação de presença -->
     <div id="modalConfirm" class="modal-confirm">
         <div class="modal-confirm-content">
             <h3 id="modalTitulo">📋 Confirmar Presença</h3>
@@ -362,7 +407,6 @@
         </div>
     </div>
 
-    <!-- Modal de Visitantes -->
     <div id="modalVisitantes" class="modal-visitantes">
         <div class="modal-visitantes-content">
             <h3>👥 Registro de Visitantes</h3>
@@ -407,6 +451,24 @@
     </div>
 
     <script>
+        // ==================== CONFIGURAÇÃO FIREBASE ====================
+        const firebaseConfig = {
+            apiKey: "AIzaSyA4COgeJSENsHrQHDx39gpZvif3zVrGjYE",
+            authDomain: "identidadeccb.firebaseapp.com",
+            projectId: "identidadeccb",
+            storageBucket: "identidadeccb.firebasestorage.app",
+            messagingSenderId: "385467794937",
+            appId: "1:385467794937:web:d2eb32429586f018e2a928"
+        };
+        
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // ==================== REFERÊNCIAS DAS COLEÇÕES ====================
         const eventosCollection = db.collection("eventos");
         const tiposEventoCollection = db.collection("tipos_evento");
         const permissoesCollection = db.collection("permissoes_evento");
@@ -419,6 +481,7 @@
         const visitantesInstrumentoCollection = db.collection("visitantes_instrumento");
         const visitantesCargoCollection = db.collection("visitantes_cargo");
 
+        // ==================== VARIÁVEIS GLOBAIS ====================
         let eventos = [];
         let tiposEvento = [];
         let eventoSelecionado = null;
@@ -439,7 +502,24 @@
         
         let quantidadeInstrumento = 0;
         let quantidadeCargo = 0;
+        
+        let usuarioLogado = null;
+        let congregacoesIdUsuario = null;
+        let congregacaoEventoSelecionado = null;
+        let papelUsuario = null;
 
+        // ==================== FUNÇÃO PARA VALIDAR PERMISSÃO DO EVENTO ====================
+        function temPermissaoParaEvento(evento) {
+            if (!evento) return false;
+            
+            if (congregacoesIdUsuario === 0 || congregacoesIdUsuario === '0') {
+                return true;
+            }
+            
+            return String(evento.congregacaoId) === String(congregacoesIdUsuario);
+        }
+
+        // ==================== FUNÇÕES AUXILIARES ====================
         function formatarDataLocal(dataISO) {
             if (!dataISO) return '';
             const partes = dataISO.split('-');
@@ -476,6 +556,45 @@
             return item ? item.nome : `${tipo} não encontrado`;
         }
 
+        function atualizarStatusLeitor(mensagem, tipo) {
+            const statusDiv = document.getElementById('leitorStatus');
+            if (statusDiv) {
+                statusDiv.textContent = mensagem;
+                statusDiv.className = `leitor-status ${tipo}`;
+            }
+        }
+
+        async function logout() {
+            try {
+                await auth.signOut();
+                sessionStorage.removeItem('adminLogado');
+                window.location.href = 'login.html';
+            } catch(error) {
+                console.error('Erro ao sair:', error);
+                mostrarToast('Erro ao sair: ' + error.message, 'error');
+            }
+        }
+
+        function getMembrosFiltrados() {
+            if (eventoSelecionado && eventoSelecionado.congregacaoId) {
+                return todosMembros.filter(m => String(m.congregacaoId) === String(eventoSelecionado.congregacaoId));
+            }
+            
+            if (congregacoesIdUsuario && congregacoesIdUsuario !== 0 && congregacoesIdUsuario !== '0') {
+                return todosMembros.filter(m => String(m.congregacaoId) === String(congregacoesIdUsuario));
+            }
+            
+            return todosMembros;
+        }
+
+        function isMembroAutorizado(membro) {
+            if (permissoesEvento.length === 0) return true;
+            return permissoesEvento.some(permissao => 
+                String(permissao.cargoId) === String(membro.cargoId) && 
+                String(permissao.nivelId) === String(membro.nivelId)
+            );
+        }
+
         async function carregarDados() {
             try {
                 const instSnapshot = await instrumentosCollection.get();
@@ -484,7 +603,6 @@
                     todosInstrumentos.push({ id: doc.data().id, nome: doc.data().nome });
                 });
                 todosInstrumentos.sort((a, b) => a.id - b.id);
-                console.log('✅ Instrumentos carregados:', todosInstrumentos.length);
 
                 const cargoSnapshot = await cargosCollection.get();
                 todosCargos = [];
@@ -492,7 +610,6 @@
                     todosCargos.push({ id: doc.data().id, nome: doc.data().nome });
                 });
                 todosCargos.sort((a, b) => a.id - b.id);
-                console.log('✅ Cargos carregados:', todosCargos.length);
 
                 const nivelSnapshot = await niveisCollection.get();
                 niveis = [];
@@ -500,7 +617,15 @@
 
                 const congSnapshot = await congregacoesCollection.get();
                 congregacoes = [];
-                congSnapshot.forEach(doc => congregacoes.push({ id: doc.id, nome: doc.data().nome }));
+                congSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    congregacoes.push({ 
+                        id: doc.id,
+                        numero: data.id,
+                        nome: data.nome, 
+                        cidade: data.cidade 
+                    });
+                });
 
                 const tipoSnapshot = await tiposEventoCollection.get();
                 tiposEvento = [];
@@ -516,11 +641,11 @@
                         nome: data.nome,
                         instrumentoId: data.instrumentoId,
                         cargoId: data.cargoId,
-                        nivelId: data.nivelId
+                        nivelId: data.nivelId,
+                        congregacaoId: data.congregacaoId || '0'
                     });
                 });
                 
-                console.log('✅ Dados carregados, membros:', todosMembros.length);
             } catch(error) {
                 console.error('Erro ao carregar dados:', error);
                 mostrarToast('Erro ao carregar dados: ' + error.message, 'error');
@@ -529,29 +654,84 @@
 
         async function carregarEventos() {
             try {
-                const snapshot = await eventosCollection.orderBy('data', 'desc').get();
-                eventos = [];
+                let query = eventosCollection;
                 
+                if (congregacoesIdUsuario && congregacoesIdUsuario !== 0 && congregacoesIdUsuario !== '0') {
+                    query = eventosCollection.where('congregacaoId', '==', String(congregacoesIdUsuario));
+                }
+                
+                const snapshot = await query.get();
+                
+                const filtroInfo = document.getElementById('filtroInfoEventos');
+                if (congregacoesIdUsuario && congregacoesIdUsuario !== 0 && congregacoesIdUsuario !== '0') {
+                    filtroInfo.style.display = 'block';
+                    filtroInfo.innerHTML = `📍 <strong>Filtro ativo:</strong> Exibindo apenas eventos da sua congregação (ID: ${congregacoesIdUsuario})`;
+                } else {
+                    filtroInfo.style.display = 'none';
+                }
+                
+                if (snapshot.empty) {
+                    eventos = [];
+                    renderizarSelectEventos();
+                    return;
+                }
+                
+                const eventosTemp = [];
                 for (const doc of snapshot.docs) {
                     const data = doc.data();
                     const tipoEvento = tiposEvento.find(t => String(t.id) === String(data.tipoEventoId));
-                    const congregacao = congregacoes.find(c => String(c.id) === String(data.congregacaoId));
                     
-                    eventos.push({
+                    let congregacaoNome = 'Desconhecida';
+                    let congregacaoEncontrada = null;
+                    
+                    congregacaoEncontrada = congregacoes.find(c => String(c.id) === String(data.congregacaoId));
+                    
+                    if (!congregacaoEncontrada) {
+                        congregacaoEncontrada = congregacoes.find(c => String(c.numero) === String(data.congregacaoId));
+                    }
+                    
+                    if (congregacaoEncontrada) {
+                        congregacaoNome = congregacaoEncontrada.nome;
+                    } else {
+                        try {
+                            const congDoc = await congregacoesCollection.doc(String(data.congregacaoId)).get();
+                            if (congDoc.exists) {
+                                congregacaoNome = congDoc.data().nome;
+                                congregacoes.push({
+                                    id: congDoc.id,
+                                    numero: congDoc.data().id,
+                                    nome: congDoc.data().nome,
+                                    cidade: congDoc.data().cidade
+                                });
+                            }
+                        } catch(e) {
+                            console.error('Erro ao buscar congregação:', e);
+                        }
+                    }
+                    
+                    eventosTemp.push({
                         id: doc.id,
                         data: data.data,
                         congregacaoId: data.congregacaoId,
-                        congregacaoNome: congregacao ? congregacao.nome : 'Desconhecida',
+                        congregacaoNome: congregacaoNome,
                         tipoEventoId: data.tipoEventoId,
                         tipoEventoNome: tipoEvento ? tipoEvento.nome : 'Desconhecido'
                     });
                 }
                 
+                eventosTemp.sort((a, b) => {
+                    if (a.data > b.data) return -1;
+                    if (a.data < b.data) return 1;
+                    return 0;
+                });
+                
+                eventos = eventosTemp;
                 renderizarSelectEventos();
-                console.log(`📋 ${eventos.length} eventos carregados`);
+                
             } catch(error) {
                 console.error('Erro ao carregar eventos:', error);
-                mostrarToast('Erro ao carregar eventos: ' + error.message, 'error');
+                eventos = [];
+                renderizarSelectEventos();
             }
         }
 
@@ -587,19 +767,10 @@
                         nivelId: permissao.nivelId
                     });
                 });
-                console.log('📋 Permissões carregadas:', permissoesEvento.length);
             } catch(error) {
                 console.error('Erro ao buscar permissões:', error);
                 permissoesEvento = [];
             }
-        }
-
-        function isMembroAutorizado(membro) {
-            if (permissoesEvento.length === 0) return true;
-            return permissoesEvento.some(permissao => 
-                String(permissao.cargoId) === String(membro.cargoId) && 
-                String(permissao.nivelId) === String(membro.nivelId)
-            );
         }
 
         async function verificarPresencasEvento(eventoId) {
@@ -620,6 +791,11 @@
         async function registrarPresenca(membroId, membroNome, naoAutorizado = false) {
             if (!eventoSelecionado) {
                 mostrarToast('⚠️ Nenhum evento selecionado!', 'warning');
+                return false;
+            }
+            
+            if (!temPermissaoParaEvento(eventoSelecionado)) {
+                mostrarToast('⚠️ Você não tem permissão para este evento!', 'error');
                 return false;
             }
             
@@ -674,6 +850,11 @@
                 return;
             }
             
+            if (!temPermissaoParaEvento(eventoSelecionado)) {
+                mostrarToast('⚠️ Você não tem permissão para este evento!', 'error');
+                return;
+            }
+            
             const statusEvento = compararDatas(eventoSelecionado.data);
             
             if (statusEvento !== 'hoje') {
@@ -697,20 +878,19 @@
 
         async function renderizarListaMembros() {
             if (!eventoSelecionado) {
-                console.log('Nenhum evento selecionado');
                 return;
             }
-            
-            console.log('Renderizando lista para evento:', eventoSelecionado.id);
             
             const presentesMap = await verificarPresencasEvento(eventoSelecionado.id);
             const statusEvento = compararDatas(eventoSelecionado.data);
             const podeAlterarHoje = statusEvento === 'hoje';
             
+            const membrosFiltrados = getMembrosFiltrados();
+            
             const membrosParaExibir = [];
             const membrosLidosSemPermissao = [];
             
-            for (const membro of todosMembros) {
+            for (const membro of membrosFiltrados) {
                 const isAutorizado = isMembroAutorizado(membro);
                 const foiLido = !!presentesMap[membro.id];
                 
@@ -754,7 +934,7 @@
             if (!tbody) return;
             
             if (listaFinal.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="loading">Nenhum membro encontrado</td></tr>';
+                tbody.innerHTML = `<td><td colspan="6" class="loading">Nenhum membro encontrado para a congregação ${eventoSelecionado.congregacaoNome}<\/td><\/tr>`;
                 return;
             }
             
@@ -802,15 +982,20 @@
                     <td>${nivelNome}</td>
                     <td>${statusHtml}</td>
                     <td>${botoesHtml}</td>
-                </tr>`;
+                </table>`;
             }
             tbody.innerHTML = html;
-            console.log('Lista renderizada com sucesso, total:', listaFinal.length);
         }
 
         async function iniciarLeitor() {
             if (!eventoSelecionado) {
                 mostrarToast('⚠️ Selecione um evento primeiro!', 'warning');
+                return;
+            }
+            
+            if (!temPermissaoParaEvento(eventoSelecionado)) {
+                mostrarToast('⚠️ Você não tem permissão para este evento!', 'error');
+                atualizarStatusLeitor('⛔ Evento não pertence à sua congregação', 'warning');
                 return;
             }
             
@@ -828,7 +1013,6 @@
             const btnIniciar = document.getElementById('btnIniciarLeitor');
             
             if (!readerDiv) {
-                console.error('Elemento reader não encontrado!');
                 atualizarStatusLeitor('❌ Erro: Elemento do leitor não encontrado', 'error');
                 return;
             }
@@ -896,14 +1080,6 @@
             atualizarStatusLeitor('⏹️ Leitor parado.', 'info');
         }
 
-        function atualizarStatusLeitor(mensagem, tipo) {
-            const statusDiv = document.getElementById('leitorStatus');
-            if (statusDiv) {
-                statusDiv.textContent = mensagem;
-                statusDiv.className = `leitor-status ${tipo}`;
-            }
-        }
-
         function processarQRCode(decodedText) {
             if (!eventoSelecionado) {
                 atualizarStatusLeitor('❌ Nenhum evento selecionado', 'error');
@@ -923,10 +1099,11 @@
                 const dados = JSON.parse(decodedText);
                 const membroId = dados.id;
                 
-                const membro = todosMembros.find(m => String(m.nomeId) === String(membroId) || String(m.id) === String(membroId));
+                const membrosFiltrados = getMembrosFiltrados();
+                const membro = membrosFiltrados.find(m => String(m.nomeId) === String(membroId) || String(m.id) === String(membroId));
                 
                 if (!membro) {
-                    atualizarStatusLeitor(`❌ Membro com ID ${membroId} não encontrado`, 'error');
+                    atualizarStatusLeitor(`❌ Membro com ID ${membroId} não encontrado na lista da sua congregação`, 'error');
                     return;
                 }
                 
@@ -1092,6 +1269,11 @@
                 return;
             }
             
+            if (!temPermissaoParaEvento(eventoSelecionado)) {
+                mostrarToast('⚠️ Você não tem permissão para este evento!', 'error');
+                return;
+            }
+            
             const instId = document.getElementById('selectInstrumento').value;
             const cargoId = document.getElementById('selectCargo').value;
             
@@ -1149,9 +1331,20 @@
                 mostrarToast('⚠️ Selecione um evento primeiro!', 'warning');
                 return;
             }
+            
+            if (!temPermissaoParaEvento(eventoSelecionado)) {
+                mostrarToast('⚠️ Você não tem permissão para este evento!', 'error');
+                return;
+            }
+            
             popularSelectsVisitantes();
             carregarModalVisitantes();
             document.getElementById('modalVisitantes').style.display = 'flex';
+        }
+
+        async function init() {
+            await carregarDados();
+            await carregarEventos();
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -1195,14 +1388,29 @@
                         document.getElementById('presencaCard').style.display = 'none';
                         document.getElementById('infoEvento').style.display = 'none';
                         document.getElementById('qrControlCard').style.display = 'none';
+                        document.getElementById('filtroCongregacao').style.display = 'none';
                         if (leitorAtivo) await pararLeitor();
                         eventoSelecionado = null;
+                        congregacaoEventoSelecionado = null;
                         return;
                     }
                     
                     eventoSelecionado = eventos.find(ev => ev.id === eventoId);
                     
                     if (eventoSelecionado) {
+                        if (!temPermissaoParaEvento(eventoSelecionado)) {
+                            mostrarToast('⚠️ Você não tem permissão para acessar este evento!', 'error');
+                            eventoSelect.value = '';
+                            eventoSelecionado = null;
+                            return;
+                        }
+                        
+                        congregacaoEventoSelecionado = eventoSelecionado.congregacaoId;
+                        
+                        const filtroCongDiv = document.getElementById('filtroCongregacao');
+                        filtroCongDiv.style.display = 'block';
+                        filtroCongDiv.innerHTML = `🏠 <strong>Exibindo membros da congregação:</strong> ${eventoSelecionado.congregacaoNome} (ID: ${eventoSelecionado.congregacaoId})`;
+                        
                         await buscarPermissoes(eventoSelecionado.tipoEventoId);
                         
                         const statusEvento = compararDatas(eventoSelecionado.data);
@@ -1272,14 +1480,81 @@
             }
         });
 
-        async function init() {
-            console.log('🚀 Inicializando sistema...');
-            await carregarDados();
-            await carregarEventos();
-            console.log('✅ Sistema inicializado!');
-        }
-        
-        init();
+        // ==================== AUTENTICAÇÃO ====================
+        auth.onAuthStateChanged(async (user) => {
+            console.log("Auth state changed. User:", user ? user.email : "null");
+            
+            if (!user) {
+                console.log("Usuário não logado. Redirecionando para login.html");
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            try {
+                console.log("Verificando se é admin. UID:", user.uid);
+                const adminDoc = await db.collection("administradores").doc(user.uid).get();
+                
+                if (!adminDoc.exists || !adminDoc.data().ativo) {
+                    console.log("Não é admin ou está desativado. Deslogando...");
+                    await auth.signOut();
+                    window.location.href = 'login.html';
+                    return;
+                }
+                
+                const adminData = adminDoc.data();
+                papelUsuario = adminData.papel || 'Administrador';
+                
+                usuarioLogado = {
+                    uid: user.uid,
+                    email: user.email,
+                    nome: adminData.nome || 'Administrador',
+                    congregacoes_id: adminData.congregacoes_id || 0,
+                    papel: papelUsuario
+                };
+                
+                congregacoesIdUsuario = usuarioLogado.congregacoes_id;
+                
+                console.log("Configurações do usuário:", {
+                    congregacoes_id: congregacoesIdUsuario,
+                    tipo: congregacoesIdUsuario === 0 ? "ACESSO TOTAL" : "ACESSO RESTRITO",
+                    papel: papelUsuario
+                });
+                
+                const adminInfoDiv = document.getElementById('adminInfo');
+                adminInfoDiv.style.display = 'inline-block';
+                let infoText = `👤 ${usuarioLogado.nome} (${usuarioLogado.email})`;
+                infoText += `<br><small>🎭 Papel: ${papelUsuario}</small>`;
+                if (congregacoesIdUsuario && congregacoesIdUsuario !== 0 && congregacoesIdUsuario !== '0') {
+                    infoText += `<br><small>📍 Acesso restrito à congregação ID: ${congregacoesIdUsuario}</small>`;
+                } else {
+                    infoText += `<br><small>🌍 Acesso: Todas as congregações</small>`;
+                }
+                adminInfoDiv.innerHTML = infoText;
+                
+                // Configurar botões baseado no papel
+                const btnManutencao = document.querySelector('.btn-manutencao');
+                const btnSair = document.getElementById('btnSair');
+                
+                if (papelUsuario === 'Secretário') {
+                    if (btnManutencao) btnManutencao.style.display = 'none';
+                    if (btnSair) btnSair.style.display = 'inline-block';
+                    console.log("🔒 Modo Secretário - apenas Presença e Sair");
+                } else {
+                    if (btnManutencao) btnManutencao.style.display = 'inline-block';
+                    if (btnSair) btnSair.style.display = 'none';
+                    console.log("👑 Modo Administrador - acesso total");
+                }
+                
+                document.getElementById('loadingScreen').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+                
+                await init();
+                
+            } catch(error) {
+                console.error('Erro ao verificar admin:', error);
+                window.location.href = 'login.html';
+            }
+        });
     </script>
 </body>
 </html>

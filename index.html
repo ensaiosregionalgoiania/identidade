@@ -38,6 +38,11 @@
             color: white;
             font-size: 0.9rem;
         }
+        .admin-info small {
+            display: block;
+            font-size: 0.7rem;
+            opacity: 0.8;
+        }
         .top-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
         .btn-evento { background: #f39c12; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; }
         .btn-presenca { background: #9b59b6; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; }
@@ -117,7 +122,15 @@
             margin-left: 10px;
         }
         
-        /* Tela de carregamento */
+        .filtro-info {
+            background: #e3f2fd;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            color: #2980b9;
+        }
+        
         .loading-screen {
             position: fixed;
             top: 0;
@@ -147,10 +160,24 @@
             margin-top: 20px;
             font-size: 1.2rem;
         }
+        
+        select:disabled {
+            background: #f0f0f0;
+            cursor: not-allowed;
+        }
+        
+        .id-info {
+            background: #e8f4fd;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            color: #2980b9;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
-    <!-- Tela de carregamento inicial -->
     <div id="loadingScreen" class="loading-screen">
         <div class="spinner"></div>
         <p>🔐 Verificando autenticação...</p>
@@ -164,25 +191,26 @@
             <div id="adminInfo" class="admin-info" style="display: none;"></div>
             <div class="top-buttons">
                 <button class="btn-presenca" onclick="window.location.href='presenca.html'">✅ Presença</button>
-                <button class="btn-evento" onclick="window.location.href='cadastro_evento.html'">🎉 Cadastrar Evento</button>
-                <button class="btn-congregacao" onclick="window.location.href='cadastro_congregacao.html'">🏛️ Cadastrar Congregação</button>
-                <button class="btn-novo" onclick="abrirFormularioNovo()">➕ Novo Membro</button>
-                <button class="btn-novo" onclick="window.open('cadastrar_admin.html', '_blank')" style="background:#e74c3c;">👑 Novo Admin</button>
-                <button class="btn-sair" onclick="logout()">🚪 Sair</button>
+                <button class="btn-evento" id="btnEvento" onclick="window.location.href='cadastro_evento.html'">🎉 Cadastrar Evento</button>
+                <button class="btn-congregacao" id="btnCongregacao" onclick="window.location.href='cadastro_congregacao.html'">🏛️ Cadastrar Congregação</button>
+                <button class="btn-novo" id="btnNovoMembro" onclick="abrirFormularioNovo()">➕ Novo Membro</button>
+                <button class="btn-novo" id="btnNovoAdmin" onclick="window.open('cadastrar_admin.html', '_blank')" style="background:#e74c3c;">👑 Novo Admin</button>
+                <button class="btn-sair" id="btnSair" onclick="logout()">🚪 Sair</button>
             </div>
         </div>
 
-        <!-- Lista de Membros -->
         <div class="card" id="cardLista">
             <div class="card-header">
                 <h2>📋 Membros Cadastrados <span id="contadorMembros" class="contador">0</span></h2>
-                <button onclick="carregarMembros()" style="background:#3498db; margin:0;">🔄 Atualizar</button>
+                <button id="btnAtualizar" onclick="carregarMembros()" style="background:#3498db; margin:0;">🔄 Atualizar</button>
             </div>
+            <div id="filtroInfo" class="filtro-info" style="display: none;"></div>
             <input type="text" id="busca" class="search-box" placeholder="🔍 Buscar por nome..." onkeyup="filtrarMembros()">
             <div class="table-container">
                 <table id="tabelaMembros">
                     <thead>
                         <tr>
+                            <th>ID</th>
                             <th>Nome</th>
                             <th>Instrumento</th>
                             <th>Congregação</th>
@@ -192,17 +220,22 @@
                         </tr>
                     </thead>
                     <tbody id="corpoTabela">
-                        <tr><td colspan="6" class="loading">🔄 Carregando membros...</td></tr>
+                        <tr><td colspan="7" class="loading">🔄 Carregando membros...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <!-- Formulário de Adicionar/Editar -->
         <div class="card" id="cardFormulario" style="display: none;">
             <div class="card-header"><h2 id="formTitle">➕ Adicionar Membro</h2></div>
             <form id="formMembro">
                 <input type="hidden" id="membroDocId">
+                <input type="hidden" id="membroIdHidden">
+                
+                <div id="idInfo" class="id-info" style="display: none;">
+                    🔢 <strong>ID do Membro:</strong> <span id="displayMembroId">-</span>
+                </div>
+                
                 <div class="form-group"><label>Nome Completo *</label><input type="text" id="nome" required></div>
                 <div class="form-group"><label>Instrumento *</label><select id="instrumentoId" required></select></div>
                 <div class="form-group">
@@ -227,7 +260,6 @@
         </div>
     </div>
 
-    <!-- Modal Excluir -->
     <div id="modalExcluir" class="modal">
         <div class="modal-content">
             <h3>Confirmar exclusão</h3>
@@ -240,7 +272,6 @@
     </div>
 
     <script>
-        // ========== CONFIGURAÇÃO DO FIREBASE ==========
         const firebaseConfig = {
             apiKey: "AIzaSyA4COgeJSENsHrQHDx39gpZvif3zVrGjYE",
             authDomain: "identidadeccb.firebaseapp.com",
@@ -250,7 +281,6 @@
             appId: "1:385467794937:web:d2eb32429586f018e2a928"
         };
 
-        // Inicializar Firebase
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
@@ -258,86 +288,11 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
 
-        // ========== VERIFICAÇÃO DE LOGIN ==========
-        // Aguarda o Firebase Auth carregar completamente
-        auth.onAuthStateChanged(async (user) => {
-            console.log("Auth state changed. User:", user ? user.email : "null");
-            
-            if (!user) {
-                // Não está logado, redireciona para o login
-                console.log("Usuário não logado. Redirecionando para login.html");
-                window.location.href = 'login.html';
-                return;
-            }
-            
-            // Usuário está logado, verificar se é admin
-            try {
-                console.log("Verificando se é admin. UID:", user.uid);
-                const adminDoc = await db.collection("administradores").doc(user.uid).get();
-                
-                if (!adminDoc.exists) {
-                    console.log("Não é admin. Deslogando...");
-                    await auth.signOut();
-                    sessionStorage.removeItem('adminLogado');
-                    window.location.href = 'login.html';
-                    return;
-                }
-                
-                if (!adminDoc.data().ativo) {
-                    console.log("Admin desativado. Deslogando...");
-                    await auth.signOut();
-                    sessionStorage.removeItem('adminLogado');
-                    window.location.href = 'login.html';
-                    return;
-                }
-                
-                // É administrador! Libera o acesso
-                console.log("Admin verificado com sucesso!");
-                const adminData = {
-                    uid: user.uid,
-                    email: user.email,
-                    nome: adminDoc.data().nome || 'Administrador'
-                };
-                sessionStorage.setItem('adminLogado', JSON.stringify(adminData));
-                
-                // Mostrar nome do admin na tela
-                const adminInfoDiv = document.getElementById('adminInfo');
-                adminInfoDiv.style.display = 'inline-block';
-                adminInfoDiv.innerHTML = `👤 ${adminData.nome} (${adminData.email})`;
-                
-                // Esconder tela de loading e mostrar conteúdo
-                document.getElementById('loadingScreen').style.display = 'none';
-                document.getElementById('mainContent').style.display = 'block';
-                
-                // Carregar os dados do sistema
-                carregarDados();
-                
-            } catch(error) {
-                console.error('Erro ao verificar admin:', error);
-                window.location.href = 'login.html';
-            }
-        });
-
-        // ========== FUNÇÃO DE LOGOUT ==========
-        async function logout() {
-            try {
-                await auth.signOut();
-                sessionStorage.removeItem('adminLogado');
-                window.location.href = 'login.html';
-            } catch(error) {
-                console.error('Erro ao sair:', error);
-                mostrarToast('Erro ao sair: ' + error.message, 'error');
-            }
-        }
-
-        // ========== REFERÊNCIAS DAS COLEÇÕES ==========
-        const membrosCollection = db.collection("membros");
-        const instrumentosCollection = db.collection("instrumentos");
-        const congregacoesCollection = db.collection("congregacoes");
-        const cargosCollection = db.collection("cargos");
-        const niveisCollection = db.collection("niveis");
-
-        // ========== VARIÁVEIS GLOBAIS ==========
+        let usuarioLogado = null;
+        let congregacoesIdUsuario = null;
+        let congregacaoNomeUsuario = null;
+        let papelUsuario = null;
+        
         let instrumentos = [];
         let congregacoes = [];
         let cargos = [];
@@ -345,7 +300,6 @@
         let membros = [];
         let membroParaExcluir = null;
 
-        // ========== UTILITÁRIOS ==========
         function mostrarToast(msg, tipo = 'success') {
             const toast = document.createElement('div');
             toast.className = `toast ${tipo === 'error' ? 'error' : ''}`;
@@ -390,103 +344,66 @@
             return item ? item.nome : '?';
         }
 
-        // ========== CARREGAR DADOS ==========
-        async function carregarDados() {
-            console.log("Carregando dados do Firebase...");
-            
+        async function gerarProximoId() {
             try {
-                // Carregar instrumentos
-                const instSnap = await instrumentosCollection.get();
-                instrumentos = [];
-                instSnap.forEach(doc => {
-                    const data = doc.data();
-                    instrumentos.push({ id: data.id, nome: data.nome });
-                });
-                instrumentos.sort((a, b) => a.id - b.id);
-                console.log("Instrumentos carregados:", instrumentos.length);
-
-                // Carregar congregações
-                const congSnap = await congregacoesCollection.get();
-                congregacoes = [];
-                congSnap.forEach(doc => {
-                    const data = doc.data();
-                    congregacoes.push({ 
-                        id: doc.id, 
-                        nome: data.nome,
-                        cidade: data.cidade || "Cidade não informada"
-                    });
-                });
-                console.log("Congregações carregadas:", congregacoes.length);
-
-                // Carregar cargos
-                const cargoSnap = await cargosCollection.get();
-                cargos = [];
-                cargoSnap.forEach(doc => {
-                    const data = doc.data();
-                    cargos.push({ id: data.id, nome: data.nome });
-                });
-                cargos.sort((a, b) => a.id - b.id);
-                console.log("Cargos carregados:", cargos.length);
-
-                // Carregar níveis
-                const nivelSnap = await niveisCollection.get();
-                niveis = [];
-                nivelSnap.forEach(doc => {
-                    const data = doc.data();
-                    niveis.push({ id: data.id, nome: data.nome });
-                });
-                niveis.sort((a, b) => a.id - b.id);
-                console.log("Níveis carregados:", niveis.length);
-
-                // Carregar membros
-                await carregarMembros();
+                const snapshot = await membrosCollection.get();
+                let maiorId = 0;
                 
-                // Popular os selects
-                popularSelects();
-                
-            } catch(error) {
-                console.error("Erro ao carregar dados:", error);
-                mostrarToast("Erro ao carregar dados: " + error.message, "error");
-                document.getElementById('corpoTabela').innerHTML = '<tr><td colspan="6" class="loading">❌ Erro ao carregar membros: ' + error.message + '</td></tr>';
-            }
-        }
-
-        async function carregarMembros() {
-            console.log("Carregando membros...");
-            
-            try {
-                const snap = await membrosCollection.get();
-                membros = [];
-                
-                snap.forEach(doc => {
+                snapshot.forEach(doc => {
                     const data = doc.data();
-                    if (data.nome) {
-                        membros.push({
-                            docId: doc.id,
-                            nomeId: data.id,
-                            nome: data.nome || '',
-                            instrumentoId: data.instrumentoId || data.instrumento || 0,
-                            congregacaoId: data.congregacaoId || data.congregacao || '',
-                            cargoId: data.cargoId || data.cargo || 0,
-                            nivelId: data.nivelId || data.nivel || 0
-                        });
+                    if (data.id && !isNaN(Number(data.id))) {
+                        const idNum = Number(data.id);
+                        if (idNum > maiorId) {
+                            maiorId = idNum;
+                        }
                     }
                 });
                 
-                console.log("Total de membros carregados:", membros.length);
-                
-                const contadorSpan = document.getElementById('contadorMembros');
-                if (contadorSpan) contadorSpan.textContent = membros.length;
-                
-                if (membros.length === 0) {
-                    document.getElementById('corpoTabela').innerHTML = '<tr><td colspan="6" class="loading">📭 Nenhum membro cadastrado ainda. Clique em "Novo Membro" para adicionar.</td></tr>';
-                } else {
-                    renderizarTabela();
-                }
+                const proximoId = maiorId + 1;
+                console.log(`Próximo ID disponível: ${proximoId}`);
+                return proximoId;
                 
             } catch(error) {
-                console.error("Erro ao carregar membros:", error);
-                document.getElementById('corpoTabela').innerHTML = '<tr><td colspan="6" class="loading">❌ Erro ao carregar membros: ' + error.message + '</td></tr>';
+                console.error('Erro ao gerar próximo ID:', error);
+                return Date.now();
+            }
+        }
+
+        async function verificarECorrigirMembrosSemId() {
+            console.log("=== VERIFICANDO MEMBROS SEM ID ===");
+            
+            try {
+                const snapshot = await membrosCollection.get();
+                let corrigidos = 0;
+                
+                for (const doc of snapshot.docs) {
+                    const data = doc.data();
+                    
+                    if (!data.id || data.id === '' || data.id === undefined || data.id === null) {
+                        console.log(`⚠️ Membro sem ID encontrado: ${data.nome} (Doc: ${doc.id})`);
+                        
+                        const novoId = await gerarProximoId();
+                        
+                        await membrosCollection.doc(doc.id).update({
+                            id: novoId
+                        });
+                        
+                        console.log(`✅ Corrigido: ${data.nome} recebeu ID ${novoId}`);
+                        corrigidos++;
+                    }
+                }
+                
+                if (corrigidos > 0) {
+                    console.log(`✅ Total de membros corrigidos: ${corrigidos}`);
+                    mostrarToast(`✅ ${corrigidos} membros foram corrigidos com ID automático`, 'success');
+                } else {
+                    console.log("✅ Todos os membros já possuem ID");
+                }
+                
+                await carregarMembros();
+                
+            } catch(error) {
+                console.error('Erro ao verificar membros sem ID:', error);
             }
         }
 
@@ -502,10 +419,17 @@
             const congSelect = document.getElementById('congregacaoId');
             if (congSelect) {
                 congSelect.innerHTML = '<option value="">Selecione...</option>';
-                for (let i = 0; i < congregacoes.length; i++) {
-                    const cidadeTexto = congregacoes[i].cidade ? ` (${congregacoes[i].cidade})` : '';
-                    congSelect.innerHTML += '<option value="' + congregacoes[i].id + '">' + congregacoes[i].nome + cidadeTexto + '</option>';
+                
+                if (congregacoes.length > 0) {
+                    for (let i = 0; i < congregacoes.length; i++) {
+                        const cidadeTexto = congregacoes[i].cidade ? ` (${congregacoes[i].cidade})` : '';
+                        congSelect.innerHTML += '<option value="' + congregacoes[i].id + '">' + congregacoes[i].nome + cidadeTexto + '</option>';
+                    }
+                } else {
+                    congSelect.innerHTML = '<option value="">Nenhuma congregação disponível</option>';
                 }
+                
+                congSelect.disabled = false;
             }
 
             const cargoSelect = document.getElementById('cargoId');
@@ -525,24 +449,146 @@
             }
         }
 
+        async function carregarDados() {
+            console.log("Carregando dados do Firebase...");
+            
+            try {
+                const instSnap = await instrumentosCollection.get();
+                instrumentos = [];
+                instSnap.forEach(doc => {
+                    const data = doc.data();
+                    instrumentos.push({ id: data.id, nome: data.nome });
+                });
+                instrumentos.sort((a, b) => a.id - b.id);
+                console.log("Instrumentos carregados:", instrumentos.length);
+
+                const congSnap = await congregacoesCollection.get();
+                congregacoes = [];
+                
+                console.log("Total de congregações no Firestore:", congSnap.size);
+                console.log("ID do usuário (número):", congregacoesIdUsuario);
+                
+                for (const doc of congSnap.docs) {
+                    const data = doc.data();
+                    const congregacao = { 
+                        docId: doc.id,
+                        id: data.id,
+                        nome: data.nome, 
+                        cidade: data.cidade || ""
+                    };
+                    
+                    if (congregacoesIdUsuario && congregacoesIdUsuario !== 0 && congregacoesIdUsuario !== '0') {
+                        if (String(data.id) === String(congregacoesIdUsuario)) {
+                            congregacoes.push(congregacao);
+                            console.log("✅ Congregação permitida:", congregacao.nome, "(Número:", data.id, ")");
+                        }
+                    } else {
+                        congregacoes.push(congregacao);
+                    }
+                }
+                
+                console.log("Congregações carregadas:", congregacoes.length);
+
+                const cargoSnap = await cargosCollection.get();
+                cargos = [];
+                cargoSnap.forEach(doc => {
+                    const data = doc.data();
+                    cargos.push({ id: data.id, nome: data.nome });
+                });
+                cargos.sort((a, b) => a.id - b.id);
+                console.log("Cargos carregados:", cargos.length);
+
+                const nivelSnap = await niveisCollection.get();
+                niveis = [];
+                nivelSnap.forEach(doc => {
+                    const data = doc.data();
+                    niveis.push({ id: data.id, nome: data.nome });
+                });
+                niveis.sort((a, b) => a.id - b.id);
+                console.log("Níveis carregados:", niveis.length);
+
+                await carregarMembros();
+                popularSelects();
+                
+            } catch(error) {
+                console.error("Erro ao carregar dados:", error);
+                mostrarToast("Erro ao carregar dados: " + error.message, "error");
+            }
+        }
+
+        async function carregarMembros() {
+            console.log("Carregando membros...");
+            
+            try {
+                let query = membrosCollection;
+                
+                if (congregacoesIdUsuario && congregacoesIdUsuario !== 0 && congregacoesIdUsuario !== '0') {
+                    console.log(`Filtrando membros pelo ID numérico: ${congregacoesIdUsuario}`);
+                    query = membrosCollection.where('congregacaoId', '==', String(congregacoesIdUsuario));
+                }
+                
+                const snap = await query.get();
+                membros = [];
+                
+                snap.forEach(doc => {
+                    const data = doc.data();
+                    if (data.nome) {
+                        membros.push({
+                            docId: doc.id,
+                            nomeId: data.id,
+                            nome: data.nome || '',
+                            instrumentoId: data.instrumentoId || data.instrumento || 0,
+                            congregacaoId: data.congregacaoId || data.congregacao || '',
+                            cargoId: data.cargoId || data.cargo || 0,
+                            nivelId: data.nivelId || data.nivel || 0
+                        });
+                    }
+                });
+                
+                console.log(`Total de membros carregados: ${membros.length}`);
+                if (membros.length > 0) {
+                    console.log("Membros encontrados:", membros.map(m => `${m.nome} (cong: ${m.congregacaoId})`));
+                }
+                
+                const contadorSpan = document.getElementById('contadorMembros');
+                if (contadorSpan) contadorSpan.textContent = membros.length;
+                
+                if (membros.length === 0) {
+                    let mensagemVazio = '📭 Nenhum membro cadastrado ainda. Clique em "Novo Membro" para adicionar.';
+                    if (congregacoesIdUsuario && congregacoesIdUsuario !== 0) {
+                        mensagemVazio = `📭 Nenhum membro cadastrado na congregação com ID ${congregacoesIdUsuario}. Clique em "Novo Membro" para adicionar.`;
+                    }
+                    document.getElementById('corpoTabela').innerHTML = `<tr><td colspan="7" class="loading">${mensagemVazio}</td></tr>`;
+                } else {
+                    renderizarTabela();
+                }
+                
+            } catch(error) {
+                console.error("Erro ao carregar membros:", error);
+                document.getElementById('corpoTabela').innerHTML = `<tr><td colspan="7" class="loading">❌ Erro ao carregar membros: ${error.message}</td></tr>`;
+            }
+        }
+
         function renderizarTabela() {
             const busca = document.getElementById('busca').value.toLowerCase();
             const filtrados = membros.filter(m => m.nome.toLowerCase().includes(busca));
             const tbody = document.getElementById('corpoTabela');
             
             if (filtrados.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="loading">🔍 Nenhum membro encontrado com este nome</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="loading">🔍 Nenhum membro encontrado com este nome</td></tr>';
                 return;
             }
             
             let html = '';
             for (let i = 0; i < filtrados.length; i++) {
                 const m = filtrados[i];
-                const congregacao = congregacoes.find(c => c.id == m.congregacaoId);
-                const congregacaoTexto = congregacao ? `${congregacao.nome}${congregacao.cidade ? ` (${congregacao.cidade})` : ''}` : '?';
+                const congregacao = congregacoes.find(c => String(c.id) === String(m.congregacaoId));
+                const congregacaoTexto = congregacao ? `${congregacao.nome}${congregacao.cidade ? ` (${congregacao.cidade})` : ''}` : (m.congregacaoId || '?');
                 const instrumentoTexto = getInstrumentoNome(m.instrumentoId);
+                const idTexto = m.nomeId || '-';
                 
                 html += '<tr>';
+                html += '<td><strong>' + idTexto + '</strong></td>';
                 html += '<td><strong>' + m.nome + '</strong></td>';
                 html += '<td>' + instrumentoTexto + '</td>';
                 html += '<td>' + congregacaoTexto + '</td>';
@@ -557,17 +603,23 @@
             tbody.innerHTML = html;
         }
 
-        // ========== FUNÇÕES DE FORMULÁRIO ==========
         function abrirFormularioNovo() {
             document.getElementById('formTitle').innerHTML = '➕ Adicionar Membro';
             document.getElementById('membroDocId').value = '';
+            document.getElementById('membroIdHidden').value = '';
             document.getElementById('nome').value = '';
             document.getElementById('instrumentoId').value = '';
-            document.getElementById('congregacaoId').value = '';
+            
+            const congSelect = document.getElementById('congregacaoId');
+            if (!congSelect.disabled) {
+                congSelect.value = '';
+            }
+            
             document.getElementById('cargoId').value = '';
             document.getElementById('nivelId').value = '';
             document.getElementById('qrArea').style.display = 'none';
             document.getElementById('btnGerarQRCode').style.display = 'none';
+            document.getElementById('idInfo').style.display = 'none';
             document.getElementById('cardLista').style.display = 'none';
             document.getElementById('cardFormulario').style.display = 'block';
         }
@@ -583,15 +635,29 @@
             if (membro) {
                 document.getElementById('formTitle').innerHTML = '✏️ Editar Membro';
                 document.getElementById('membroDocId').value = membro.docId;
+                document.getElementById('membroIdHidden').value = membro.nomeId || '';
                 document.getElementById('nome').value = membro.nome;
                 document.getElementById('qrArea').style.display = 'none';
                 document.getElementById('btnGerarQRCode').style.display = 'inline-block';
+                
+                if (membro.nomeId) {
+                    document.getElementById('idInfo').style.display = 'block';
+                    document.getElementById('displayMembroId').textContent = membro.nomeId;
+                } else {
+                    document.getElementById('idInfo').style.display = 'none';
+                }
+                
                 document.getElementById('cardLista').style.display = 'none';
                 document.getElementById('cardFormulario').style.display = 'block';
                 
                 setTimeout(function() {
                     document.getElementById('instrumentoId').value = membro.instrumentoId;
-                    document.getElementById('congregacaoId').value = membro.congregacaoId;
+                    
+                    const congSelect = document.getElementById('congregacaoId');
+                    if (!congSelect.disabled) {
+                        congSelect.value = membro.congregacaoId;
+                    }
+                    
                     document.getElementById('cargoId').value = membro.cargoId;
                     document.getElementById('nivelId').value = membro.nivelId;
                 }, 100);
@@ -606,7 +672,6 @@
             }
         }
 
-        // ========== QR CODE ==========
         function gerarQRCodeIndividual(membroId, membroNome, membroNomeId, instrumentoNome) {
             return new Promise((resolve) => {
                 const container = document.createElement('div');
@@ -685,13 +750,18 @@
                 return;
             }
             
+            if (!membro.nomeId) {
+                mostrarToast('⚠️ Este membro não possui ID. Salve o membro novamente para gerar o ID.', 'warning');
+                return;
+            }
+            
             const instrumento = instrumentos.find(i => i.id == membro.instrumentoId);
             const instrumentoNome = instrumento ? instrumento.nome : null;
             
             document.getElementById('qrArea').style.display = 'block';
             document.getElementById('qrCodeImage').innerHTML = '<div class="loading">Gerando QR Code...</div>';
             
-            const imgData = await gerarQRCodeIndividual(membro.docId, membro.nome, membro.nomeId || membro.docId, instrumentoNome);
+            const imgData = await gerarQRCodeIndividual(membro.docId, membro.nome, membro.nomeId, instrumentoNome);
             
             if (imgData) {
                 document.getElementById('qrCodeImage').innerHTML = '<img src="' + imgData + '" style="max-width:200px;">';
@@ -715,36 +785,67 @@
             }
         }
 
-        // ========== SALVAR MEMBRO ==========
         document.getElementById('formMembro').addEventListener('submit', async (e) => {
             e.preventDefault();
             const docId = document.getElementById('membroDocId').value;
-            const dados = {
-                nome: document.getElementById('nome').value,
-                instrumentoId: parseInt(document.getElementById('instrumentoId').value),
-                congregacaoId: document.getElementById('congregacaoId').value,
-                cargoId: parseInt(document.getElementById('cargoId').value),
-                nivelId: parseInt(document.getElementById('nivelId').value),
-                atualizadoEm: new Date().toISOString()
-            };
+            
+            let congregacaoId = document.getElementById('congregacaoId').value;
+            if (!congregacaoId && congregacoesIdUsuario && congregacoesIdUsuario !== 0) {
+                if (congregacoes.length > 0) {
+                    congregacaoId = String(congregacoes[0].id);
+                } else {
+                    congregacaoId = String(congregacoesIdUsuario);
+                }
+            }
             
             try {
                 if (docId) {
+                    const membroExistente = membros.find(m => m.docId === docId);
+                    const dados = {
+                        nome: document.getElementById('nome').value,
+                        instrumentoId: parseInt(document.getElementById('instrumentoId').value),
+                        congregacaoId: congregacaoId,
+                        cargoId: parseInt(document.getElementById('cargoId').value),
+                        nivelId: parseInt(document.getElementById('nivelId').value),
+                        atualizadoEm: new Date().toISOString()
+                    };
+                    
+                    if (membroExistente && membroExistente.nomeId) {
+                        dados.id = membroExistente.nomeId;
+                    }
+                    
                     await membrosCollection.doc(docId).update(dados);
                     mostrarToast('✅ Membro atualizado!');
+                    
                 } else {
+                    const novoId = await gerarProximoId();
+                    
+                    const dados = {
+                        id: novoId,
+                        nome: document.getElementById('nome').value,
+                        instrumentoId: parseInt(document.getElementById('instrumentoId').value),
+                        congregacaoId: congregacaoId,
+                        cargoId: parseInt(document.getElementById('cargoId').value),
+                        nivelId: parseInt(document.getElementById('nivelId').value),
+                        criadoEm: new Date().toISOString(),
+                        atualizadoEm: new Date().toISOString()
+                    };
+                    
+                    console.log(`➕ Adicionando novo membro com ID: ${novoId}, Congregação: ${congregacaoId}`);
                     await membrosCollection.add(dados);
-                    mostrarToast('✅ Membro adicionado!');
+                    mostrarToast(`✅ Membro adicionado! ID: ${novoId}`);
                 }
+                
                 cancelarEdicao();
+                
             } catch(error) {
+                console.error('Erro ao salvar:', error);
                 mostrarToast('❌ Erro: ' + error.message, 'error');
             }
         });
 
         document.getElementById('btnBaixarQRCode').addEventListener('click', baixarQRCode);
 
-        // ========== EXCLUIR MEMBRO ==========
         function abrirModalExcluir(docId, nome) {
             membroParaExcluir = docId;
             document.getElementById('modalMsg').innerHTML = 'Excluir <strong>' + nome + '</strong>?';
@@ -766,6 +867,108 @@
         }
 
         function filtrarMembros() { renderizarTabela(); }
+
+        async function inicializarSistema() {
+            console.log("🚀 Inicializando sistema de manutenção...");
+            
+            // Se for Secretário, redireciona para presenca.html
+            if (papelUsuario === 'Secretário') {
+                console.log("🔒 Usuário Secretário - redirecionando para presenca.html");
+                window.location.href = 'presenca.html';
+                return;
+            }
+            
+            // Administrador - carrega o sistema normalmente
+            console.log("👑 Usuário Administrador - carregando sistema");
+            await carregarDados();
+            await verificarECorrigirMembrosSemId();
+            console.log("✅ Sistema inicializado!");
+        }
+
+        auth.onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            try {
+                const adminDoc = await db.collection("administradores").doc(user.uid).get();
+                
+                if (!adminDoc.exists || !adminDoc.data().ativo) {
+                    await auth.signOut();
+                    window.location.href = 'login.html';
+                    return;
+                }
+                
+                const adminData = adminDoc.data();
+                
+                papelUsuario = adminData.papel || 'Administrador';
+                
+                usuarioLogado = {
+                    uid: user.uid,
+                    email: user.email,
+                    nome: adminData.nome || 'Administrador',
+                    congregacoes_id: adminData.congregacoes_id || 0,
+                    papel: papelUsuario
+                };
+                
+                congregacoesIdUsuario = usuarioLogado.congregacoes_id;
+                
+                // Se for Secretário, redireciona imediatamente
+                if (papelUsuario === 'Secretário') {
+                    console.log("🔒 Usuário Secretário - redirecionando para presenca.html");
+                    window.location.href = 'presenca.html';
+                    return;
+                }
+                
+                // Exibir informações do admin
+                const adminInfoDiv = document.getElementById('adminInfo');
+                adminInfoDiv.style.display = 'inline-block';
+                let infoText = `👤 ${usuarioLogado.nome} (${usuarioLogado.email})`;
+                infoText += `<br><small>🎭 Papel: ${papelUsuario}</small>`;
+                
+                if (congregacoesIdUsuario && congregacoesIdUsuario !== 0 && congregacoesIdUsuario !== '0') {
+                    infoText += `<br><small>📍 Acesso restrito à congregação ID: ${congregacoesIdUsuario}</small>`;
+                } else {
+                    infoText += `<br><small>🌍 Acesso: Todas as congregações</small>`;
+                }
+                adminInfoDiv.innerHTML = infoText;
+                
+                const filtroInfo = document.getElementById('filtroInfo');
+                if (congregacoesIdUsuario && congregacoesIdUsuario !== 0 && congregacoesIdUsuario !== '0') {
+                    filtroInfo.style.display = 'block';
+                    filtroInfo.innerHTML = `📍 <strong>Filtro ativo:</strong> Exibindo apenas membros da congregação com ID ${congregacoesIdUsuario}`;
+                } else {
+                    filtroInfo.style.display = 'none';
+                }
+                
+                document.getElementById('loadingScreen').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+                
+                await inicializarSistema();
+                
+            } catch(error) {
+                console.error('Erro ao verificar admin:', error);
+                window.location.href = 'login.html';
+            }
+        });
+
+        async function logout() {
+            try {
+                await auth.signOut();
+                sessionStorage.removeItem('adminLogado');
+                window.location.href = 'login.html';
+            } catch(error) {
+                console.error('Erro ao sair:', error);
+                mostrarToast('Erro ao sair: ' + error.message, 'error');
+            }
+        }
+
+        const membrosCollection = db.collection("membros");
+        const instrumentosCollection = db.collection("instrumentos");
+        const congregacoesCollection = db.collection("congregacoes");
+        const cargosCollection = db.collection("cargos");
+        const niveisCollection = db.collection("niveis");
     </script>
 </body>
 </html>
