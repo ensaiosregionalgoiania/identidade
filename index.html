@@ -47,6 +47,8 @@
         .btn-evento { background: #f39c12; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; }
         .btn-presenca { background: #9b59b6; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; }
         .btn-congregacao { background: #1abc9c; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; }
+        .btn-instrumento { background: #e67e22; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; }
+        .btn-nivel { background: #16a085; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; }
         .btn-novo { background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
         .btn-qrcode { background: #f39c12; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-left: 10px; }
         .btn-sair { background: #e74c3c; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
@@ -175,6 +177,11 @@
             color: #2980b9;
             text-align: center;
         }
+        
+        .btn-instrumento.hidden,
+        .btn-nivel.hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -193,6 +200,8 @@
                 <button class="btn-presenca" onclick="window.location.href='presenca.html'">✅ Presença</button>
                 <button class="btn-evento" id="btnEvento" onclick="window.location.href='cadastro_evento.html'">🎉 Cadastrar Evento</button>
                 <button class="btn-congregacao" id="btnCongregacao" onclick="window.location.href='cadastro_congregacao.html'">🏛️ Cadastrar Congregação</button>
+                <button id="btnInstrumento" class="btn-instrumento" onclick="window.location.href='cadastro_instrumento.html'">🎸 Cadastrar Instrumento</button>
+                <button id="btnNivel" class="btn-nivel" onclick="window.location.href='cadastro_niveis.html'">📊 Cadastrar Níveis</button>
                 <button class="btn-novo" id="btnNovoMembro" onclick="abrirFormularioNovo()">➕ Novo Membro</button>
                 <button class="btn-novo" id="btnNovoAdmin" onclick="window.open('cadastrar_admin.html', '_blank')" style="background:#e74c3c;">👑 Novo Admin</button>
                 <button class="btn-sair" id="btnSair" onclick="logout()">🚪 Sair</button>
@@ -502,7 +511,7 @@
                 niveis = [];
                 nivelSnap.forEach(doc => {
                     const data = doc.data();
-                    niveis.push({ id: data.id, nome: data.nome });
+                    niveis.push({ id: data.id, nome: data.nome, descricao: data.descricao || '' });
                 });
                 niveis.sort((a, b) => a.id - b.id);
                 console.log("Níveis carregados:", niveis.length);
@@ -871,14 +880,12 @@
         async function inicializarSistema() {
             console.log("🚀 Inicializando sistema de manutenção...");
             
-            // Se for Secretário, redireciona para presenca.html
             if (papelUsuario === 'Secretário') {
                 console.log("🔒 Usuário Secretário - redirecionando para presenca.html");
                 window.location.href = 'presenca.html';
                 return;
             }
             
-            // Administrador - carrega o sistema normalmente
             console.log("👑 Usuário Administrador - carregando sistema");
             await carregarDados();
             await verificarECorrigirMembrosSemId();
@@ -914,11 +921,38 @@
                 
                 congregacoesIdUsuario = usuarioLogado.congregacoes_id;
                 
-                // Se for Secretário, redireciona imediatamente
                 if (papelUsuario === 'Secretário') {
                     console.log("🔒 Usuário Secretário - redirecionando para presenca.html");
                     window.location.href = 'presenca.html';
                     return;
+                }
+                
+                // CONTROLE DO BOTÃO DE INSTRUMENTOS - Só aparece se congregacoes_id = 0
+                const btnInstrumento = document.getElementById('btnInstrumento');
+                const btnNivel = document.getElementById('btnNivel');
+                
+                if (congregacoesIdUsuario === 0 || congregacoesIdUsuario === '0') {
+                    // Acesso total - mostra os botões
+                    if (btnInstrumento) {
+                        btnInstrumento.classList.remove('hidden');
+                        btnInstrumento.style.display = 'inline-block';
+                    }
+                    if (btnNivel) {
+                        btnNivel.classList.remove('hidden');
+                        btnNivel.style.display = 'inline-block';
+                    }
+                    console.log("✅ Botões 'Cadastrar Instrumento' e 'Cadastrar Níveis' visíveis (acesso total)");
+                } else {
+                    // Acesso restrito - oculta os botões
+                    if (btnInstrumento) {
+                        btnInstrumento.classList.add('hidden');
+                        btnInstrumento.style.display = 'none';
+                    }
+                    if (btnNivel) {
+                        btnNivel.classList.add('hidden');
+                        btnNivel.style.display = 'none';
+                    }
+                    console.log("🔒 Botões 'Cadastrar Instrumento' e 'Cadastrar Níveis' ocultos (acesso restrito à congregação)");
                 }
                 
                 // Exibir informações do admin

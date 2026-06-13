@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Importar com IDs - Firebase</title>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 { color: #2c3e50; margin-bottom: 20px; }
+        button {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 5px;
+        }
+        button:hover { background: #219a52; }
+        .log-area {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        .success { color: #27ae60; }
+        .error { color: #e74c3c; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>📥 Importar Coleções com IDs Numéricos</h1>
+            <p>Este script vai recriar as coleções com campos <strong>id</strong> numéricos:</p>
+            <ul style="margin: 15px 0 15px 25px;">
+                <li>instrumentos (com ids 1-16)</li>
+                <li>congregacoes (com id 1)</li>
+                <li>cargos (com ids 1-11)</li>
+                <li>niveis (com ids 1-6)</li>
+            </ul>
+            
+            <button id="btnImportar">📥 Importar Tudo</button>
+            
+            <div class="log-area" id="log">
+                📋 Aguardando ação...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyA4COgeJSENsHrQHDx39gpZvif3zVrGjYE",
+            authDomain: "identidadeccb.firebaseapp.com",
+            projectId: "identidadeccb",
+            storageBucket: "identidadeccb.firebasestorage.app",
+            messagingSenderId: "385467794937",
+            appId: "1:385467794937:web:d2eb32429586f018e2a928"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Dados com IDs numéricos
+        const instrumentos = [
+            { id: 1, nome: "VIOLINO" },
+            { id: 2, nome: "VIOLONCELO" },
+            { id: 3, nome: "FLAUTA" },
+            { id: 4, nome: "CLARINETE" },
+            { id: 5, nome: "CLARINETE BAIXO" },
+            { id: 6, nome: "SAXOFONE SOPRINO" },
+            { id: 7, nome: "SAXOFONE SOPRANO RET" },
+            { id: 8, nome: "SAXOFONE ALTO" },
+            { id: 9, nome: "SAXOFONE TENOR" },
+            { id: 10, nome: "SAXOFONE BARÍTONO" },
+            { id: 11, nome: "TROMPETE" },
+            { id: 12, nome: "TROMBONE" },
+            { id: 13, nome: "EUPHÔNIO" },
+            { id: 14, nome: "TUBA" },
+            { id: 15, nome: "ÓRGÃO" },
+            { id: 16, nome: "Não tem" }
+        ];
+
+        const congregacoes = [
+            { id: 2, nome: "MADRE GERMANA 2" }
+        ];
+
+        const cargos = [
+            { id: 1, nome: "MÚSICO" },
+            { id: 2, nome: "INSTRUTOR" },
+            { id: 3, nome: "INSTRUTORA" },
+            { id: 4, nome: "ENCARREGADO LOCAL" },
+            { id: 5, nome: "SECRETÁRIO DO GEM" },
+            { id: 6, nome: "SECRETÁRIO (A) DA MÚSICA" },
+            { id: 7, nome: "ORGANISTA" },
+            { id: 8, nome: "COOPERADOR DO OFÍCIO MINISTERIAL" },
+            { id: 9, nome: "COOPERADOR DE JOVENS E MENORES" },
+            { id: 10, nome: "ANCIÃO" },
+            { id: 11, nome: "DIÁCONO" }
+        ];
+
+        const niveis = [
+            { id: 1, nome: "OFICIALIZADO(A)" },
+            { id: 2, nome: "RJM" },
+            { id: 3, nome: "CULTO OFICIAL" },
+            { id: 4, nome: "MEIA HORA" },
+            { id: 5, nome: "Não tem" },
+            { id: 6, nome: "CANDIDATO(A)" }
+        ];
+
+        const logDiv = document.getElementById('log');
+        
+        function adicionarLog(mensagem, tipo) {
+            const p = document.createElement('div');
+            p.innerHTML = mensagem;
+            p.className = tipo || 'info';
+            logDiv.appendChild(p);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(mensagem);
+        }
+
+        async function importarColecao(nomeColecao, dados) {
+            adicionarLog(`🔄 Importando ${nomeColecao} (${dados.length} itens)...`, 'info');
+            let sucesso = 0;
+            let erro = 0;
+            
+            // Usar o ID como nome do documento
+            for (const item of dados) {
+                try {
+                    await db.collection(nomeColecao).doc(item.id.toString()).set(item);
+                    sucesso++;
+                    adicionarLog(`   ✅ ${item.id} - ${item.nome}`, 'success');
+                } catch (error) {
+                    erro++;
+                    adicionarLog(`   ❌ Erro: ${item.id} - ${error.message}`, 'error');
+                }
+            }
+            
+            adicionarLog(`✅ ${nomeColecao}: ${sucesso} importados, ${erro} erros`, 'success');
+        }
+
+        async function importarTudo() {
+            logDiv.innerHTML = '';
+            adicionarLog('🚀 INICIANDO IMPORTAÇÃO...', 'info');
+            
+            await importarColecao('instrumentos', instrumentos);
+            await importarColecao('congregacoes', congregacoes);
+            await importarColecao('cargos', cargos);
+            await importarColecao('niveis', niveis);
+            
+            adicionarLog('🎉 IMPORTAÇÃO CONCLUÍDA!', 'success');
+            adicionarLog('⚠️ Agora suas coleções têm IDs numéricos!', 'warning');
+        }
+
+        document.getElementById('btnImportar').addEventListener('click', importarTudo);
+        adicionarLog('✅ Firebase conectado!', 'success');
+    </script>
+</body>
+</html>

@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Níveis - Identidade Ministerial</title>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        
+        .top-bar {
+            background: white;
+            border-radius: 15px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+        .logo h1 { color: #2c3e50; font-size: 1.3rem; }
+        .logo h1 i { color: #f39c12; margin-right: 10px; }
+        .admin-info {
+            background: #667eea;
+            padding: 5px 15px;
+            border-radius: 20px;
+            color: white;
+            font-size: 0.9rem;
+        }
+        .admin-info small {
+            display: block;
+            font-size: 0.7rem;
+            opacity: 0.8;
+        }
+        .top-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn-voltar { 
+            background: #3498db; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            text-decoration: none; 
+            display: inline-block; 
+        }
+        .btn-voltar:hover { background: #2980b9; }
+        
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .card-header {
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .card-header h2 { color: #2c3e50; }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label { 
+            display: block; 
+            margin-bottom: 5px; 
+            font-weight: 600; 
+            color: #555; 
+        }
+        .form-group input, .form-group select, .form-group textarea { 
+            width: 100%; 
+            padding: 10px; 
+            border: 2px solid #e0e0e0; 
+            border-radius: 8px; 
+            font-size: 1rem; 
+            font-family: inherit; 
+        }
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        button { 
+            background: #27ae60; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            margin-top: 10px;
+            transition: all 0.3s ease;
+        }
+        button:hover { background: #219a52; }
+        .btn-danger { background: #e74c3c; }
+        .btn-danger:hover { background: #c0392b; }
+        .btn-editar { background: #3498db; }
+        .btn-editar:hover { background: #2980b9; }
+        .btn-salvar { background: #27ae60; }
+        .btn-cancelar { background: #95a5a6; }
+        .btn-cancelar:hover { background: #7f8c8d; }
+        
+        .modal { 
+            display: none; 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(0,0,0,0.5); 
+            justify-content: center; 
+            align-items: center; 
+            z-index: 1000; 
+        }
+        .modal-content { 
+            background: white; 
+            border-radius: 15px; 
+            padding: 25px; 
+            width: 90%; 
+            max-width: 500px; 
+        }
+        .modal-content h3 { margin-bottom: 20px; color: #2c3e50; }
+        .modal-buttons { 
+            margin-top: 20px; 
+            display: flex; 
+            gap: 10px; 
+            justify-content: center; 
+        }
+        
+        .toast { 
+            position: fixed; 
+            bottom: 20px; 
+            right: 20px; 
+            background: #27ae60; 
+            color: white; 
+            padding: 12px 24px; 
+            border-radius: 8px; 
+            z-index: 1000; 
+            animation: fadeIn 0.3s ease; 
+        }
+        .toast.error { background: #e74c3c; }
+        @keyframes fadeIn { 
+            from { opacity: 0; transform: translateY(20px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+        
+        .nivel-item { 
+            background: #f8f9fa; 
+            padding: 15px; 
+            border-radius: 10px; 
+            margin-bottom: 10px; 
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .nivel-item:hover { 
+            background: #e3f2fd; 
+            transform: translateX(5px); 
+        }
+        .nivel-info {
+            flex: 1;
+        }
+        .nivel-nome { 
+            color: #2c3e50; 
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        .nivel-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .nivel-actions button {
+            margin-top: 0;
+            padding: 5px 12px;
+            font-size: 0.8rem;
+        }
+        
+        .lista-niveis { 
+            max-height: 500px; 
+            overflow-y: auto; 
+        }
+        .loading { 
+            text-align: center; 
+            padding: 20px; 
+            color: #999; 
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            color: #ddd;
+        }
+        
+        .info-bar {
+            background: #e8f4f8;
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            color: #2980b9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .search-box {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .search-box input {
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            width: 200px;
+        }
+        
+        .search-box button {
+            margin: 0;
+            padding: 8px 15px;
+            background: #667eea;
+        }
+        
+        .search-box button:hover {
+            background: #5a67d8;
+        }
+        
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            flex-direction: column;
+        }
+        .loading-screen .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .loading-screen p {
+            color: white;
+            margin-top: 20px;
+            font-size: 1.2rem;
+        }
+        
+        @media (max-width: 600px) {
+            .nivel-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .nivel-actions {
+                width: 100%;
+                justify-content: flex-end;
+                margin-top: 10px;
+            }
+            .search-box {
+                width: 100%;
+            }
+            .search-box input {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="loadingScreen" class="loading-screen">
+        <div class="spinner"></div>
+        <p>🔐 Verificando autenticação...</p>
+    </div>
+
+    <div class="container" id="mainContent" style="display: none;">
+        <div class="top-bar">
+            <div class="logo">
+                <h1><i class="fas fa-layer-group"></i> Cadastro de Níveis</h1>
+            </div>
+            <div id="adminInfo" class="admin-info" style="display: none;"></div>
+            <div class="top-buttons">
+                <a href="index.html" class="btn-voltar">📋 Menu Principal</a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2 id="formTitle">➕ Adicionar Novo Nível</h2>
+            </div>
+            
+            <form id="formNivel">
+                <input type="hidden" id="nivelEditandoId">
+                
+                <div class="form-group">
+                    <label>Nome do Nível *</label>
+                    <input type="text" id="nivelNome" placeholder="Ex: Iniciante, Intermediário, Avançado..." required autofocus>
+                </div>
+                
+                <div class="botoes-form" style="display: flex; gap: 15px; margin-top: 20px;">
+                    <button type="submit" class="btn-salvar">💾 Salvar Nível</button>
+                    <button type="button" onclick="cancelarEdicao()" class="btn-cancelar">❌ Cancelar</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>📊 Lista de Níveis</h2>
+            </div>
+            
+            <div class="info-bar">
+                <div>Total de níveis: <strong id="totalNiveis">0</strong></div>
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Buscar por nome..." onkeyup="filtrarNiveis()">
+                    <button onclick="filtrarNiveis()">🔍 Buscar</button>
+                    <button onclick="limparBusca()" style="background:#95a5a6;">✖️ Limpar</button>
+                </div>
+            </div>
+            
+            <div id="listaNiveis" class="lista-niveis">
+                <div class="loading">Carregando níveis...</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalExcluir" class="modal">
+        <div class="modal-content">
+            <h3>⚠️ Confirmar Exclusão</h3>
+            <p>Tem certeza que deseja excluir este nível?</p>
+            <p><strong id="excluirNome"></strong></p>
+            <p style="color: #e74c3c; font-size: 0.9rem;">Esta ação não poderá ser desfeita!</p>
+            <div class="modal-buttons">
+                <button onclick="fecharModalExcluir()" style="background:#95a5a6;">Cancelar</button>
+                <button onclick="confirmarExcluirNivel()" style="background:#e74c3c;">Excluir</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyA4COgeJSENsHrQHDx39gpZvif3zVrGjYE",
+            authDomain: "identidadeccb.firebaseapp.com",
+            projectId: "identidadeccb",
+            storageBucket: "identidadeccb.firebasestorage.app",
+            messagingSenderId: "385467794937",
+            appId: "1:385467794937:web:d2eb32429586f018e2a928"
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        const niveisCollection = db.collection("niveis");
+        
+        let niveis = [];
+        let niveisFiltrados = [];
+        let excluirNivelId = null;
+        let excluirNivelNome = null;
+        let excluirNivelNumeroId = null;
+        let usuarioLogado = null;
+
+        // Função para gerar o próximo ID numérico automaticamente (oculto do usuário)
+        async function gerarProximoId() {
+            try {
+                const snapshot = await niveisCollection.get();
+                let maiorId = 0;
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.id && !isNaN(Number(data.id))) {
+                        const idNum = Number(data.id);
+                        if (idNum > maiorId) {
+                            maiorId = idNum;
+                        }
+                    }
+                });
+                
+                const proximoId = maiorId + 1;
+                console.log(`ID do nível gerado automaticamente: ${proximoId}`);
+                return proximoId;
+                
+            } catch(error) {
+                console.error('Erro ao gerar próximo ID:', error);
+                return Date.now();
+            }
+        }
+
+        auth.onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            try {
+                const adminDoc = await db.collection("administradores").doc(user.uid).get();
+                
+                if (!adminDoc.exists || !adminDoc.data().ativo) {
+                    await auth.signOut();
+                    window.location.href = 'login.html';
+                    return;
+                }
+                
+                const adminData = adminDoc.data();
+                usuarioLogado = {
+                    uid: user.uid,
+                    email: user.email,
+                    nome: adminData.nome || 'Administrador'
+                };
+                
+                const adminInfoDiv = document.getElementById('adminInfo');
+                adminInfoDiv.style.display = 'inline-block';
+                adminInfoDiv.innerHTML = `👤 ${usuarioLogado.nome} (${usuarioLogado.email})<br><small>📊 Gerenciamento de Níveis</small>`;
+                
+                document.getElementById('loadingScreen').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+                
+                await carregarNiveis();
+                
+            } catch(error) {
+                console.error('Erro ao verificar admin:', error);
+                window.location.href = 'login.html';
+            }
+        });
+
+        function mostrarToast(msg, tipo = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${tipo === 'error' ? 'error' : ''}`;
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // ========== SALVAR NÍVEL COM ID NUMÉRICO AUTOMÁTICO ==========
+        document.getElementById('formNivel').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const nivelDocId = document.getElementById('nivelEditandoId').value;
+            const nome = document.getElementById('nivelNome').value.trim();
+            
+            if (!nome) {
+                mostrarToast('Preencha o nome do nível!', 'error');
+                return;
+            }
+            
+            try {
+                if (nivelDocId) {
+                    // Atualizar nível existente (mantém o ID original)
+                    const dadosNivel = {
+                        nome: nome,
+                        atualizadoEm: new Date().toISOString()
+                    };
+                    
+                    await niveisCollection.doc(nivelDocId).update(dadosNivel);
+                    mostrarToast('✅ Nível atualizado com sucesso!');
+                } else {
+                    // Criar novo nível com ID numérico automático
+                    const novoId = await gerarProximoId();
+                    
+                    const dadosNivel = {
+                        id: novoId,  // ID numérico gerado automaticamente
+                        nome: nome,
+                        criadoEm: new Date().toISOString(),
+                        atualizadoEm: new Date().toISOString()
+                    };
+                    
+                    console.log(`Novo nível: ID=${novoId}, Nome=${nome}`);
+                    await niveisCollection.add(dadosNivel);
+                    mostrarToast(`✅ Nível "${nome}" cadastrado com sucesso!`);
+                }
+                
+                cancelarEdicao();
+                await carregarNiveis();
+                
+            } catch(error) {
+                console.error('Erro ao salvar:', error);
+                mostrarToast('❌ Erro: ' + error.message, 'error');
+            }
+        });
+
+        async function editarNivel(docId, nivel) {
+            document.getElementById('formTitle').innerHTML = '✏️ Editar Nível';
+            document.getElementById('nivelEditandoId').value = docId;
+            document.getElementById('nivelNome').value = nivel.nome;
+            
+            document.getElementById('nivelNome').focus();
+        }
+
+        function cancelarEdicao() {
+            document.getElementById('formTitle').innerHTML = '➕ Adicionar Novo Nível';
+            document.getElementById('nivelEditandoId').value = '';
+            document.getElementById('nivelNome').value = '';
+            document.getElementById('nivelNome').focus();
+        }
+
+        // ========== LISTAR NÍVEIS ==========
+        async function carregarNiveis() {
+            const container = document.getElementById('listaNiveis');
+            container.innerHTML = '<div class="loading">Carregando níveis...</div>';
+            
+            try {
+                // Ordenar por nome para melhor visualização
+                const snapshot = await niveisCollection.orderBy('nome').get();
+                
+                niveis = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    niveis.push({
+                        docId: doc.id,
+                        nome: data.nome,
+                        criadoEm: data.criadoEm,
+                        id: data.id  // ID numérico armazenado (não é exibido)
+                    });
+                });
+                
+                niveisFiltrados = [...niveis];
+                exibirNiveis();
+                
+                document.getElementById('totalNiveis').textContent = niveis.length;
+                
+            } catch(error) {
+                console.error('Erro detalhado:', error);
+                container.innerHTML = `<div class="loading">❌ Erro: ${error.message}</div>`;
+            }
+        }
+
+        function exibirNiveis() {
+            const container = document.getElementById('listaNiveis');
+            
+            if (niveisFiltrados.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-chart-line"></i>
+                        <p>Nenhum nível cadastrado</p>
+                        <small>Clique em "Adicionar Novo Nível" para começar</small>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            for (const nivel of niveisFiltrados) {
+                // Formatar data de criação se existir
+                let dataCriacao = '';
+                if (nivel.criadoEm) {
+                    const data = new Date(nivel.criadoEm);
+                    dataCriacao = `<small style="color:#999; font-size:0.7rem;">📅 ${data.toLocaleDateString('pt-BR')}</small>`;
+                }
+                
+                html += `
+                    <div class="nivel-item">
+                        <div class="nivel-info">
+                            <div class="nivel-nome">📊 ${escapeHtml(nivel.nome)}</div>
+                            ${dataCriacao}
+                        </div>
+                        <div class="nivel-actions">
+                            <button class="btn-editar" onclick='editarNivel("${nivel.docId}", ${JSON.stringify({nome: nivel.nome})})'>✏️ Editar</button>
+                            <button class="btn-danger" onclick="abrirModalExcluirNivel('${nivel.docId}', '${escapeHtml(nivel.nome)}', ${nivel.id})">🗑️ Excluir</button>
+                        </div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        function filtrarNiveis() {
+            const termo = document.getElementById('searchInput').value.toLowerCase().trim();
+            
+            if (!termo) {
+                niveisFiltrados = [...niveis];
+            } else {
+                niveisFiltrados = niveis.filter(nivel => 
+                    nivel.nome.toLowerCase().includes(termo)
+                );
+            }
+            
+            exibirNiveis();
+            document.getElementById('totalNiveis').textContent = niveisFiltrados.length;
+        }
+
+        function limparBusca() {
+            document.getElementById('searchInput').value = '';
+            niveisFiltrados = [...niveis];
+            exibirNiveis();
+            document.getElementById('totalNiveis').textContent = niveis.length;
+        }
+
+        // ========== EXCLUIR NÍVEL ==========
+        function abrirModalExcluirNivel(docId, nome, idNumero) {
+            excluirNivelId = docId;
+            excluirNivelNome = nome;
+            excluirNivelNumeroId = idNumero;
+            document.getElementById('excluirNome').innerHTML = `<strong>${escapeHtml(nome)}</strong>`;
+            document.getElementById('modalExcluir').style.display = 'flex';
+        }
+
+        function fecharModalExcluir() {
+            excluirNivelId = null;
+            excluirNivelNome = null;
+            excluirNivelNumeroId = null;
+            document.getElementById('modalExcluir').style.display = 'none';
+        }
+
+        async function confirmarExcluirNivel() {
+            if (!excluirNivelId) return;
+            
+            try {
+                // Verificar se o nível está sendo usado por algum membro
+                if (excluirNivelNumeroId) {
+                    const membrosComNivel = await db.collection("membros")
+                        .where('nivelId', '==', excluirNivelNumeroId)
+                        .get();
+                    
+                    if (!membrosComNivel.empty) {
+                        mostrarToast(`❌ Não é possível excluir: existem ${membrosComNivel.size} membro(s) usando este nível!`, 'error');
+                        fecharModalExcluir();
+                        return;
+                    }
+                    
+                    // Verificar se o nível está sendo usado em permissões de eventos
+                    const permissoesComNivel = await db.collection("permissoes_evento")
+                        .where('nivelId', '==', excluirNivelNumeroId)
+                        .get();
+                    
+                    if (!permissoesComNivel.empty) {
+                        mostrarToast(`❌ Não é possível excluir: existem ${permissoesComNivel.size} permissão(ões) de evento usando este nível!`, 'error');
+                        fecharModalExcluir();
+                        return;
+                    }
+                }
+                
+                await niveisCollection.doc(excluirNivelId).delete();
+                
+                mostrarToast(`✅ Nível "${excluirNivelNome}" excluído com sucesso!`);
+                fecharModalExcluir();
+                await carregarNiveis();
+                
+            } catch(error) {
+                console.error('Erro ao excluir:', error);
+                mostrarToast('❌ Erro ao excluir: ' + error.message, 'error');
+                fecharModalExcluir();
+            }
+        }
+
+        // Inicialização - Enter no campo nome submete o formulário
+        document.getElementById('nivelNome').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('formNivel').dispatchEvent(new Event('submit'));
+            }
+        });
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</body>
+</html>
