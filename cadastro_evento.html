@@ -448,7 +448,8 @@
         const niveisCollection = db.collection("niveis");
         const instrumentosCollection = db.collection("instrumentos");
         const membrosCollection = db.collection("membros");
-
+        const visitantesInstrumentoCollection = db.collection("visitantes_instrumento");
+        const visitantesCargoCollection = db.collection("visitantes_cargo");
         let congregacoes = [];      // Array com { id, nome, cidade, numeroId }
         let tiposEvento = [];
         let cargos = [];
@@ -914,9 +915,337 @@ auth.onAuthStateChanged(async (user) => {
             }
         }
 
-        function gerarRelatorio(eventoId, eventoNome, eventoData, congregacaoNome, congregacaoCidade) {
-            mostrarToast('Função de relatório disponível', 'info');
+async function gerarRelatorio(eventoId, eventoNome, eventoData, congregacaoNome, congregacaoCidade) {
+    try {
+        console.log('🚀 Iniciando geração do relatório para evento:', eventoId);
+        
+        // Buscar o evento completo com os dados
+        const eventoDoc = await eventosCollection.doc(eventoId).get();
+        const evento = eventoDoc.data();
+        
+        if (!evento) {
+            mostrarToast('❌ Evento não encontrado!', 'error');
+            return;
         }
+        
+        // Buscar o nome do tipo de evento
+        const tipoEvento = tiposEvento.find(t => t.id === evento.tipoEventoId);
+        const tipoEventoNome = tipoEvento ? tipoEvento.nome : 'Evento';
+        
+        // ========== CARREGAR DADOS NECESSÁRIOS PARA O RELATÓRIO ==========
+        // Carregar instrumentos
+        const instSnapshot = await instrumentosCollection.get();
+        const instrumentos = [];
+        instSnapshot.forEach(doc => {
+            instrumentos.push({ id: doc.data().id, nome: doc.data().nome });
+        });
+        instrumentos.sort((a, b) => a.id - b.id);
+        
+        // Carregar membros
+        const membroSnapshot = await membrosCollection.get();
+        const todosMembros = [];
+        membroSnapshot.forEach(doc => {
+            const data = doc.data();
+            todosMembros.push({
+                id: doc.id,
+                nomeId: data.id,
+                nome: data.nome,
+                instrumentoId: data.instrumentoId,
+                cargoId: data.cargoId,
+                nivelId: data.nivelId
+            });
+        });
+        
+        // Carregar visitantes
+        const visitantesInstrumentoCollection = db.collection("visitantes_instrumento");
+        const visitantesCargoCollection = db.collection("visitantes_cargo");
+        
+        // ========== 1. BUSCAR MÚSICOS QUE MARCARAM PRESENÇA ==========
+        const presencasSnapshot = await db.collection("presencas")
+            .where('eventoId', '==', eventoId)
+            .get();
+        
+        const membrosPresentes = [];
+        for (const doc of presencasSnapshot.docs) {
+            const presenca = doc.data();
+            const membro = todosMembros.find(m => m.id === presenca.membroId);
+            if (membro) {
+                membrosPresentes.push(membro);
+            }
+        }
+        
+        console.log('Membros presentes:', membrosPresentes.length);
+        
+        // ========== 2. BUSCAR TODOS OS CARGOS DO FIRESTORE ==========
+        const cargosSnapshot = await db.collection("cargos").get();
+        const todosCargosTemp = [];
+        for (const doc of cargosSnapshot.docs) {
+            todosCargosTemp.push({
+                id: doc.data().id,
+                nome: doc.data().nome,
+                tipo: doc.data().tipo || ''
+            });
+        }
+        
+        // ========== 3. CONTAR ORGANISTAS ==========
+        let quantidadeOrganistas = 0;
+        
+        for (const membro of membrosPresentes) {
+            const instrumento = instrumentos.find(i => i.id === membro.instrumentoId);
+            if (instrumento && instrumento.nome.toLowerCase() === 'organista') {
+                quantidadeOrganistas++;
+                continue;
+            }
+            const cargo = todosCargosTemp.find(c => c.id === membro.cargoId);
+            if (cargo && cargo.nome.toLowerCase() === 'organista') {
+                quantidadeOrganistas++;
+            }
+        }
+        
+        // ========== 4. BUSCAR VISITANTES POR INSTRUMENTO ==========
+        const visitantesInstrumentosSnapshot = await visitantesInstrumentoCollection
+            .where('eventoId', '==', eventoId)
+            .get();
+        
+        const visitantesPorInstrumento = {};
+        for (const doc of visitantesInstrumentosSnapshot.docs) {
+            const data = doc.data();
+            visitantesPorInstrumento[data.instrumentoId] = data.quantidade || 0;
+        }
+        
+        // ========== 5. LISTAR INSTRUMENTOS ==========
+        const instrumentosFiltrados = instrumentos.filter(inst => {
+            const nomeLower = inst.nome.toLowerCase();
+            return nomeLower !== 'orgão' && nomeLower !== 'órgão' && 
+                   nomeLower !== 'organista' && nomeLower !== 'não tem' && nomeLower !== 'nao tem';
+        });
+        instrumentosFiltrados.sort((a, b) => a.id - b.id);
+        
+        const musicosPorInstrumento = [];
+        let totalMusicos = 0;
+        
+        for (const instrumento of instrumentosFiltrados) {
+            const musicosDoInstrumento = membrosPresentes.filter(membro => {
+                const instMembro = instrumentos.find(i => i.id === membro.instrumentoId);
+                return instMembro && instMembro.nome.toLowerCase() === instrumento.nome.toLowerCase();
+            });
+            const quantidadeMembros = musicosDoInstrumento.length;
+            const quantidadeVisitantes = visitantesPorInstrumento[instrumento.id] || 0;
+            const quantidadeTotal = quantidadeMembros + quantidadeVisitantes;
+            musicosPorInstrumento.push({ nome: instrumento.nome, quantidadeTotal: quantidadeTotal });
+            totalMusicos += quantidadeTotal;
+        }
+        
+        // ========== 6. CARGOS DO MINISTÉRIO ==========
+        const cargosMinisterio = [];
+        for (const cargo of todosCargosTemp) {
+            if ((cargo.tipo || '').toLowerCase() === 'ministerio') {
+                cargosMinisterio.push({ id: cargo.id, nome: cargo.nome });
+            }
+        }
+        cargosMinisterio.sort((a, b) => a.id - b.id);
+        
+        // ========== 7. CARGOS DE ENCARREGADOS ==========
+        const cargosEncarregados = [];
+        for (const cargo of todosCargosTemp) {
+            if ((cargo.tipo || '').toLowerCase() === 'encarregado') {
+                cargosEncarregados.push({ id: cargo.id, nome: cargo.nome });
+            }
+        }
+        cargosEncarregados.sort((a, b) => a.id - b.id);
+        
+        // ========== 8. BUSCAR VISITANTES POR CARGO ==========
+        const visitantesCargosSnapshot = await visitantesCargoCollection
+            .where('eventoId', '==', eventoId)
+            .get();
+        const visitantesPorCargo = {};
+        for (const doc of visitantesCargosSnapshot.docs) {
+            visitantesPorCargo[doc.data().cargoId] = doc.data().quantidade || 0;
+        }
+        
+        // ========== 9. CONTAGENS ==========
+        const ministerioQuantidades = [];
+        for (const cargo of cargosMinisterio) {
+            const membrosDoCargo = membrosPresentes.filter(m => String(m.cargoId) === String(cargo.id));
+            const quantidadeTotal = membrosDoCargo.length + (visitantesPorCargo[cargo.id] || 0);
+            ministerioQuantidades.push({ nome: cargo.nome, quantidadeTotal: quantidadeTotal });
+        }
+        
+        const encarregadosQuantidades = [];
+        for (const cargo of cargosEncarregados) {
+            const membrosDoCargo = membrosPresentes.filter(m => String(m.cargoId) === String(cargo.id));
+            const quantidadeTotal = membrosDoCargo.length + (visitantesPorCargo[cargo.id] || 0);
+            encarregadosQuantidades.push({ nome: cargo.nome, quantidadeTotal: quantidadeTotal });
+        }
+        
+        const totalGeral = totalMusicos + quantidadeOrganistas;
+        
+        // ========== FORMATAÇÃO DA DATA CORRIGIDA ==========
+        // Formatar data CORRETAMENTE (sem problema de fuso horário)
+        const partesData = evento.data.split('-');
+        const ano = parseInt(partesData[0]);
+        const mes = parseInt(partesData[1]) - 1;
+        const dia = parseInt(partesData[2]);
+        const dataObj = new Date(ano, mes, dia);
+        const dataFormatada = dataObj.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+        
+        const cidadeSemParenteses = (congregacaoCidade || '').replace(/[()]/g, '');
+        
+        // VERIFICAR SE TEM CONTEÚDO NOS BLOCOS
+        const temMinisterio = (evento.cargoMinisterio && evento.nomeMinisterio);
+        const temAtendimento1 = (evento.cargoAtendimento1 && evento.nomeAtendimento1);
+        const temAtendimento2 = (evento.cargoAtendimento2 && evento.nomeAtendimento2);
+        const temAtendimento = temAtendimento1 || temAtendimento2;
+        
+        // Construir texto do atendimento
+        let atendimentoText = '';
+        if (temAtendimento1) {
+            atendimentoText = `${evento.cargoAtendimento1}: ${evento.nomeAtendimento1}`;
+            if (temAtendimento2) {
+                atendimentoText += `<br>${evento.cargoAtendimento2}: ${evento.nomeAtendimento2}`;
+            }
+        } else if (temAtendimento2) {
+            atendimentoText = `${evento.cargoAtendimento2}: ${evento.nomeAtendimento2}`;
+        }
+        
+        // Construir HTML das tabelas
+        let instrumentosHtml = '';
+        for (const item of musicosPorInstrumento) {
+            instrumentosHtml += `<tr><td style="padding: 4px 6px; font-size: 10px; border-bottom: 1px dotted #ccc;">${item.nome}</td><td style="text-align: center; padding: 4px 6px; font-size: 10px; border-bottom: 1px dotted #ccc;">${item.quantidadeTotal > 0 ? item.quantidadeTotal : '--'}</td></tr>`;
+        }
+        if (instrumentosHtml === '') {
+            instrumentosHtml = `<tr><td style="padding: 4px 6px; font-size: 10px;">Nenhum instrumento cadastrado</td><td style="text-align: center; padding: 4px 6px; font-size: 10px;">--</td></tr>`;
+        }
+        
+        let ministerioHtml = '';
+        for (const item of ministerioQuantidades) {
+            ministerioHtml += `<tr><td style="padding: 4px 6px; font-size: 10px; border-bottom: 1px dotted #ccc;">${item.nome}</td><td style="text-align: center; padding: 4px 6px; font-size: 10px; border-bottom: 1px dotted #ccc;">${item.quantidadeTotal > 0 ? item.quantidadeTotal : '--'}</td></tr>`;
+        }
+        if (ministerioQuantidades.length === 0) {
+            ministerioHtml = `<tr><td style="padding: 4px 6px; font-size: 10px;">Nenhum cargo do ministério cadastrado</td><td style="text-align: center; padding: 4px 6px; font-size: 10px;">--</td></tr>`;
+        }
+        
+        let encarregadosHtml = '';
+        for (const item of encarregadosQuantidades) {
+            encarregadosHtml += `<tr><td style="padding: 4px 6px; font-size: 10px; border-bottom: 1px dotted #ccc;">${item.nome}</td><td style="text-align: center; padding: 4px 6px; font-size: 10px; border-bottom: 1px dotted #ccc;">${item.quantidadeTotal > 0 ? item.quantidadeTotal : '--'}</td></tr>`;
+        }
+        if (encarregadosQuantidades.length === 0) {
+            encarregadosHtml = `<tr><td style="padding: 4px 6px; font-size: 10px;">Nenhum cargo de encarregado cadastrado</td><td style="text-align: center; padding: 4px 6px; font-size: 10px;">--</td></tr>`;
+        }
+        
+        // Construir o HTML - ocultando os blocos quando vazios
+        const blocoMinisterio = temMinisterio ? `
+            <div style="font-weight: bold; background-color: #f0f0f0; padding: 10px; margin-bottom: 15px; text-align: left; border-radius: 5px;">
+                ${evento.cargoMinisterio}: ${evento.nomeMinisterio}
+            </div>
+        ` : '';
+        
+        const blocoAtendimento = temAtendimento ? `
+            <div style="font-weight: bold; background-color: #f0f0f0; padding: 10px; margin-bottom: 15px; text-align: left; border-radius: 5px; line-height: 1.3;">
+                ${atendimentoText}
+            </div>
+        ` : '';
+        
+        // Montar a tabela principal
+        const tabelaPrincipalHtml = `
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="width: 50%; vertical-align: top; border-right: 2px solid #ddd; padding-right: 15px;">
+                        ${blocoMinisterio}
+                        
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                            <thead><tr style="background-color: #e0e0e0;"><th style="text-align: left; padding: 6px; font-size: 11px;">INSTRUMENTO</th><th style="text-align: center; padding: 6px; font-size: 11px; width: 80px;">QUANTIDADE</th></tr></thead>
+                            <tbody>${instrumentosHtml}</tbody>
+                            <tfoot><tr style="border-top: 2px solid #333; background-color: #d4d4d4;"><td style="padding: 6px; font-weight: bold; font-size: 11px;">SUBTOTAL</td><td style="text-align: center; padding: 6px; font-weight: bold; font-size: 11px;">${totalMusicos}</td></tr></tfoot>
+                        </table>
+                        
+                        <div style="margin-top: 10px;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tbody><tr><td style="padding: 4px 6px; font-size: 10px;">Organistas</td><td style="text-align: center; padding: 4px 6px; font-size: 10px;">${quantidadeOrganistas > 0 ? quantidadeOrganistas : '--'}</td></tr></tbody>
+                                <tfoot><tr style="border-top: 2px solid #333; background-color: #d4d4d4;"><td style="padding: 6px; font-weight: bold; font-size: 11px;">TOTAL GERAL</td><td style="text-align: center; padding: 6px; font-weight: bold; font-size: 11px;">${totalGeral}</td></tr></tfoot>
+                            </table>
+                        </div>
+                        ${totalMusicos > 10 ? '<div style="margin-top: 10px; font-style: italic; color: #27ae60; font-size: 11px;">✅ Muitos músicos participaram do ensaio!</div>' : ''}
+                    </td>
+                    <td style="width: 50%; vertical-align: top; padding-left: 15px;">
+                        ${blocoAtendimento}
+                        
+                        <div style="font-weight: bold; background-color: #d4d4d4; padding: 6px; margin: 10px 0; text-align: center; font-size: 12px; border-radius: 5px;">MINISTÉRIO</div>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead><tr style="background-color: #e0e0e0;"><th style="text-align: left; padding: 6px; font-size: 11px;">MINISTÉRIO</th><th style="text-align: center; padding: 6px; font-size: 11px; width: 80px;">QUANTIDADE</th></tr></thead>
+                            <tbody>${ministerioHtml}</tbody>
+                        </table>
+                        
+                        <div style="font-weight: bold; background-color: #d4d4d4; padding: 6px; margin: 20px 0 10px 0; text-align: center; font-size: 12px; border-radius: 5px;">ENCARREGADOS</div>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead><tr style="background-color: #e0e0e0;"><th style="text-align: left; padding: 6px; font-size: 11px;">ENCARREGADOS</th><th style="text-align: center; padding: 6px; font-size: 11px; width: 80px;">QUANTIDADE</th></tr></thead>
+                            <tbody>${encarregadosHtml}</tbody>
+                        </table>
+                        
+                        <div style="margin-top: 20px; padding: 10px; background: #f8f9fa; border-radius: 8px;">
+                            <strong style="font-size: 11px;">🎵 HINOS ENSAIADOS/TOCADOS:</strong><br>
+                            <div style="font-size: 10px; margin-top: 5px;">${evento.hinosTocados ? evento.hinosTocados.replace(/\n/g, '<br>') : 'Nenhum hino registrado'}</div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        `;
+        
+        // HTML completo do relatório
+        const relatorioHTML = `
+            <div style="padding: 40px; font-family: 'Times New Roman', Arial, sans-serif; max-width: 1000px; margin: 0 auto;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h1 style="font-size: 16px; font-weight: bold; text-transform: uppercase; margin-bottom: 5px;">CONGREGAÇÃO CRISTÃ NO BRASIL</h1>
+                    <h2 style="font-size: 14px; font-weight: normal; margin-bottom: 3px;">${tipoEventoNome} - ${congregacaoNome}</h2>
+                    <h3 style="font-size: 12px; font-weight: normal; color: #555;">${cidadeSemParenteses}, ${dataFormatada}</h3>
+                </div>
+                
+                ${tabelaPrincipalHtml}
+                
+                <div style="margin-top: 30px; font-size: 10px; text-align: center; color: #666;">
+                    Relatório gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}<br>
+                    Total de membros presentes: ${membrosPresentes.length}
+                </div>
+            </div>
+        `;
+        
+        // Abrir janela
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+            mostrarToast('❌ Popup bloqueado! Permita popups para este site.', 'error');
+            return;
+        }
+        
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Relatório - ${tipoEventoNome} - ${congregacaoNome}</title>
+                <meta charset="UTF-8">
+                <style>
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    body { font-family: 'Times New Roman', Arial, sans-serif; padding: 20px; background: white; }
+                    @media print { body { padding: 0; margin: 0; } .no-print { display: none; } }
+                </style>
+            </head>
+            <body>
+                ${relatorioHTML}
+                <div style="text-align: center; margin-top: 20px;" class="no-print">
+                    <button onclick="window.print()" style="padding: 10px 20px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer;">🖨️ Imprimir / Salvar PDF</button>
+                    <button onclick="window.close()" style="padding: 10px 20px; background: #95a5a6; color: white; border: none; border-radius: 5px; cursor: pointer; margin-left: 10px;">❌ Fechar</button>
+                </div>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+        
+        console.log('✅ Relatório gerado com sucesso!');
+        
+    } catch(error) {
+        console.error('❌ Erro ao gerar relatório:', error);
+        mostrarToast('❌ Erro ao gerar relatório: ' + error.message, 'error');
+    }
+}
 
         function cancelarEdicao() {
             document.getElementById('formTitle').innerHTML = '📅 Criar Novo Evento';
@@ -1221,6 +1550,7 @@ auth.onAuthStateChanged(async (user) => {
                 }
             }
         }
+        
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </body>

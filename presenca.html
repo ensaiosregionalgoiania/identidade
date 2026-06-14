@@ -876,116 +876,253 @@
         window.registrarPresenca = registrarPresenca;
         window.removerPresenca = removerPresenca;
 
-        async function renderizarListaMembros() {
-            if (!eventoSelecionado) {
-                return;
-            }
-            
-            const presentesMap = await verificarPresencasEvento(eventoSelecionado.id);
-            const statusEvento = compararDatas(eventoSelecionado.data);
-            const podeAlterarHoje = statusEvento === 'hoje';
-            
-            const membrosFiltrados = getMembrosFiltrados();
-            
-            const membrosParaExibir = [];
-            const membrosLidosSemPermissao = [];
-            
-            for (const membro of membrosFiltrados) {
-                const isAutorizado = isMembroAutorizado(membro);
-                const foiLido = !!presentesMap[membro.id];
-                
-                if (isAutorizado) {
-                    membrosParaExibir.push(membro);
-                } else if (foiLido) {
-                    membrosParaExibir.push(membro);
-                    membrosLidosSemPermissao.push(membro);
-                }
-            }
-            
-            const totalNaLista = membrosParaExibir.length;
-            let totalPresentes = 0;
-            let totalAusentes = 0;
-            
-            for (const m of membrosParaExibir) {
-                if (presentesMap[m.id]) totalPresentes++;
-                else totalAusentes++;
-            }
-            
-            document.getElementById('totalMembros').textContent = totalNaLista;
-            document.getElementById('totalPresentes').textContent = totalPresentes;
-            document.getElementById('totalAusentes').textContent = totalAusentes;
-            document.getElementById('totalLidosSemPermissao').textContent = membrosLidosSemPermissao.length;
-            
-            let listaFinal = [...membrosParaExibir];
-            
-            if (statusFiltro === 'presentes') {
-                listaFinal = listaFinal.filter(m => presentesMap[m.id]);
-            } else if (statusFiltro === 'ausentes') {
-                listaFinal = listaFinal.filter(m => !presentesMap[m.id]);
-            } else if (statusFiltro === 'lidos_sem_permissao') {
-                listaFinal = [...membrosLidosSemPermissao];
-            }
-            
-            if (buscaFiltro) {
-                listaFinal = listaFinal.filter(m => m.nome.toLowerCase().includes(buscaFiltro));
-            }
-            
-            const tbody = document.getElementById('corpoTabela');
-            if (!tbody) return;
-            
-            if (listaFinal.length === 0) {
-                tbody.innerHTML = `<td><td colspan="6" class="loading">Nenhum membro encontrado para a congregação ${eventoSelecionado.congregacaoNome}<\/td><\/tr>`;
-                return;
-            }
-            
-            let html = '';
-            for (const m of listaFinal) {
-                const estaPresente = !!presentesMap[m.id];
-                const presencaInfo = presentesMap[m.id];
-                const isAutorizado = isMembroAutorizado(m);
-                const foiLidoSemPermissao = !isAutorizado && estaPresente;
-                
-                const instrumentoNome = getNome(todosInstrumentos, m.instrumentoId, 'Instrumento');
-                const cargoNome = getNome(todosCargos, m.cargoId, 'Cargo');
-                const nivelNome = getNome(niveis, m.nivelId, 'Nível');
-                
-                let statusHtml = '';
-                if (estaPresente) {
-                    if (foiLidoSemPermissao) {
-                        statusHtml = '<span class="status-lido-sem-permissao">⚠️ Presente (Lido sem Permissão)</span>';
-                    } else {
-                        statusHtml = '<span class="status-presente">✅ Presente</span>';
-                    }
-                } else {
-                    statusHtml = '<span class="status-ausente">❌ Ausente</span>';
-                }
-                
-                let botoesHtml = '';
-                if (podeAlterarHoje) {
-                    if (estaPresente) {
-                        botoesHtml = `<button class="btn-toggle-ausente" onclick="removerPresenca('${m.id}', '${m.nome.replace(/'/g, "\\'")}', '${presencaInfo.docId}')">❌ Remover</button>`;
-                    } else {
-                        botoesHtml = `<button class="btn-toggle-presente" onclick="registrarPresenca('${m.id}', '${m.nome.replace(/'/g, "\\'")}', false)">✅ Marcar</button>`;
-                    }
-                } else {
-                    const mensagemTooltip = statusEvento === 'passado' ? 'Evento encerrado' : 'Evento futuro';
-                    botoesHtml = `<button class="btn-desabilitado" disabled title="${mensagemTooltip}">🔒 ${mensagemTooltip}</button>`;
-                }
-                
-                const badgeLido = foiLidoSemPermissao ? '<span class="badge-lido">📷 Lido sem permissão</span>' : '';
-                const linhaClasse = foiLidoSemPermissao ? 'lido-sem-permissao' : '';
-                
-                html += `<tr class="${linhaClasse}">
-                    <td><strong>${m.nome}</strong> ${badgeLido}</td>
-                    <td>${instrumentoNome}</td>
-                    <td>${cargoNome}</td>
-                    <td>${nivelNome}</td>
-                    <td>${statusHtml}</td>
-                    <td>${botoesHtml}</td>
-                </table>`;
-            }
-            tbody.innerHTML = html;
+async function listarMembrosPorEvento(eventoId) {
+    try {
+        console.log('🔍 Buscando membros para evento:', eventoId);
+        
+        // 1. Buscar o evento
+        const eventoDoc = await eventosCollection.doc(eventoId).get();
+        const evento = eventoDoc.data();
+        
+        if (!evento) {
+            console.log('❌ Evento não encontrado');
+            return [];
         }
+        
+        console.log('📋 Tipo de evento ID:', evento.tipoEventoId);
+        console.log('📋 Congregação ID:', evento.congregacaoId);
+        
+        // 2. Buscar as permissões do tipo de evento
+        const permissoesSnapshot = await permissoesCollection
+            .where('tipoEventoId', '==', evento.tipoEventoId)
+            .get();
+        
+        const permissoes = [];
+        permissoesSnapshot.forEach(doc => {
+            const permissao = doc.data();
+            permissoes.push({
+                cargoId: String(permissao.cargoId),  // Converter para string
+                nivelId: String(permissao.nivelId)   // Converter para string
+            });
+        });
+        
+        console.log('📋 Permissões encontradas:', permissoes.length);
+        console.log('📋 Detalhes das permissões:', permissoes);
+        
+        // Se não há permissões definidas, retorna array vazio (ninguém pode participar)
+        if (permissoes.length === 0) {
+            console.log('⚠️ Nenhuma permissão definida para este tipo de evento');
+            return [];
+        }
+        
+        // 3. Buscar todos os membros
+        const membrosSnapshot = await membrosCollection.get();
+        const todosMembrosTemp = [];
+        
+        membrosSnapshot.forEach(doc => {
+            const data = doc.data();
+            if (!data.nome) return;
+            
+            todosMembrosTemp.push({
+                id: doc.id,
+                nomeId: data.id || doc.id,
+                nome: data.nome,
+                instrumentoId: data.instrumentoId ? String(data.instrumentoId) : null,
+                cargoId: data.cargoId ? String(data.cargoId) : null,
+                nivelId: data.nivelId ? String(data.nivelId) : null,
+                congregacaoId: data.congregacaoId ? String(data.congregacaoId) : null
+            });
+        });
+        
+        // 4. Filtrar pela congregação do evento
+        const membrosDaCongregacao = todosMembrosTemp.filter(membro => 
+            membro.congregacaoId === String(evento.congregacaoId)
+        );
+        
+        console.log('📋 Membros da congregação do evento:', membrosDaCongregacao.length);
+        
+        // 5. Filtrar membros que atendem às permissões
+        const membrosFiltrados = membrosDaCongregacao.filter(membro => {
+            // Verificar se o membro tem cargo e nível
+            if (!membro.cargoId || !membro.nivelId) {
+                console.log(`❌ Membro ${membro.nome} sem cargo ou nível definido`);
+                return false;
+            }
+            
+            // Verificar se atende a alguma permissão
+            const autorizado = permissoes.some(permissao => {
+                const cargoMatch = permissao.cargoId === membro.cargoId;
+                const nivelMatch = permissao.nivelId === membro.nivelId;
+                
+                if (cargoMatch && nivelMatch) {
+                    console.log(`✅ Membro ${membro.nome} - Cargo: ${membro.cargoId}, Nível: ${membro.nivelId} - AUTORIZADO`);
+                }
+                
+                return cargoMatch && nivelMatch;
+            });
+            
+            if (!autorizado) {
+                console.log(`❌ Membro ${membro.nome} - Cargo: ${membro.cargoId}, Nível: ${membro.nivelId} - NÃO autorizado`);
+            }
+            
+            return autorizado;
+        });
+        
+        console.log('✅ Membros autorizados:', membrosFiltrados.length);
+        console.log('📋 Lista de autorizados:', membrosFiltrados.map(m => `${m.nome} (Cargo: ${m.cargoId}, Nível: ${m.nivelId})`));
+        
+        return membrosFiltrados;
+        
+    } catch(error) {
+        console.error('❌ Erro ao listar membros por evento:', error);
+        return [];
+    }
+}
+
+
+async function renderizarListaMembros() {
+    if (!eventoSelecionado) {
+        console.log('Nenhum evento selecionado');
+        return;
+    }
+    
+    console.log('Renderizando lista para evento:', eventoSelecionado.id);
+    
+    // Buscar membros autorizados baseado nas permissões do tipo de evento
+    const membrosAutorizados = await listarMembrosPorEvento(eventoSelecionado.id);
+    
+    // Buscar presenças já registradas
+    const presencasSnapshot = await presencasCollection
+        .where('eventoId', '==', eventoSelecionado.id)
+        .get();
+    
+    const presentesMap = {};
+    presencasSnapshot.forEach(doc => {
+        const data = doc.data();
+        presentesMap[data.membroId] = { docId: doc.id, naoAutorizado: data.naoAutorizado || false };
+    });
+    
+    // ===== NOVA LÓGICA: NÃO adicionar membros não autorizados à lista principal =====
+    // Apenas marcar quais membros autorizados estão presentes
+    
+    // Construir lista final APENAS com membros autorizados
+    const listaFinal = [];
+    
+    for (const membro of membrosAutorizados) {
+        const estaPresente = !!presentesMap[membro.id];
+        const presencaInfo = presentesMap[membro.id];
+        
+        listaFinal.push({
+            ...membro,
+            presente: estaPresente,
+            presencaDocId: presencaInfo?.docId,
+            naoAutorizadoPresenca: presencaInfo?.naoAutorizado || false
+        });
+    }
+    
+    // Separar os membros não autorizados que estão presentes (apenas para contagem, não para exibição)
+    const membrosNaoAutorizadosPresentes = [];
+    for (const [membroId, presencaInfo] of Object.entries(presentesMap)) {
+        const isAutorizado = membrosAutorizados.some(m => m.id === membroId);
+        if (!isAutorizado && presencaInfo.naoAutorizado) {
+            const membroDoc = await membrosCollection.doc(membroId).get();
+            if (membroDoc.exists) {
+                const data = membroDoc.data();
+                membrosNaoAutorizadosPresentes.push({
+                    id: membroId,
+                    nome: data.nome,
+                    instrumentoId: data.instrumentoId,
+                    cargoId: data.cargoId,
+                    nivelId: data.nivelId,
+                    presente: true,
+                    presencaDocId: presencaInfo.docId
+                });
+            }
+        }
+    }
+    
+    // Atualizar estatísticas
+    const totalNaLista = listaFinal.length;
+    const totalPresentes = listaFinal.filter(m => m.presente).length;
+    const totalAusentes = totalNaLista - totalPresentes;
+    
+    document.getElementById('totalMembros').textContent = totalNaLista;
+    document.getElementById('totalPresentes').textContent = totalPresentes;
+    document.getElementById('totalAusentes').textContent = totalAusentes;
+    document.getElementById('totalLidosSemPermissao').textContent = membrosNaoAutorizadosPresentes.length;
+    
+    // Aplicar filtros
+    let listaExibir = [...listaFinal];
+    
+    if (statusFiltro === 'presentes') {
+        listaExibir = listaExibir.filter(m => m.presente);
+    } else if (statusFiltro === 'ausentes') {
+        listaExibir = listaExibir.filter(m => !m.presente);
+    } else if (statusFiltro === 'lidos_sem_permissao') {
+        // Mostrar apenas os não autorizados (visitantes) quando este filtro for selecionado
+        listaExibir = [...membrosNaoAutorizadosPresentes];
+    }
+    
+    if (buscaFiltro) {
+        listaExibir = listaExibir.filter(m => m.nome.toLowerCase().includes(buscaFiltro));
+    }
+    
+    // Renderizar tabela
+    const tbody = document.getElementById('corpoTabela');
+    if (!tbody) return;
+    
+    if (listaExibir.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="loading">Nenhum membro encontrado</td></tr>';
+        return;
+    }
+    
+    let html = '';
+    for (const m of listaExibir) {
+        const instrumentoNome = getNome(todosInstrumentos, m.instrumentoId, 'Instrumento');
+        const cargoNome = getNome(todosCargos, m.cargoId, 'Cargo');
+        const nivelNome = getNome(niveis, m.nivelId, 'Nível');
+        
+        let statusHtml = '';
+        if (m.presente) {
+            // Se for da lista de não autorizados (visitantes)
+            if (statusFiltro === 'lidos_sem_permissao' || m.naoAutorizadoPresenca) {
+                statusHtml = '<span class="status-lido-sem-permissao">⚠️ Visitante (Lido)</span>';
+            } else {
+                statusHtml = '<span class="status-presente">✅ Presente</span>';
+            }
+        } else {
+            statusHtml = '<span class="status-ausente">❌ Ausente</span>';
+        }
+        
+        const podeAlterar = compararDatas(eventoSelecionado.data) === 'hoje';
+        
+        let botoesHtml = '';
+        if (podeAlterar) {
+            if (m.presente) {
+                botoesHtml = `<button class="btn-toggle-ausente" onclick="removerPresenca('${m.id}', '${m.nome.replace(/'/g, "\\'")}', '${m.presencaDocId}')">❌ Remover</button>`;
+            } else {
+                botoesHtml = `<button class="btn-toggle-presente" onclick="registrarPresenca('${m.id}', '${m.nome.replace(/'/g, "\\'")}', false)">✅ Marcar</button>`;
+            }
+        } else {
+            botoesHtml = `<button class="btn-desabilitado" disabled>🔒 Evento ${compararDatas(eventoSelecionado.data) === 'passado' ? 'encerrado' : 'futuro'}</button>`;
+        }
+        
+        // Badge apenas para visitantes não autorizados
+        const badgeLido = (statusFiltro === 'lidos_sem_permissao' || m.naoAutorizadoPresenca) ? '<span class="badge-lido">📷 Visitante</span>' : '';
+        const linhaClasse = (statusFiltro === 'lidos_sem_permissao' || m.naoAutorizadoPresenca) ? 'lido-sem-permissao' : '';
+        
+        html += `<tr class="${linhaClasse}">
+            <td><strong>${m.nome}</strong> ${badgeLido}</td>
+            <td>${instrumentoNome}</td>
+            <td>${cargoNome}</td>
+            <td>${nivelNome}</td>
+            <td>${statusHtml}</td>
+            <td>${botoesHtml}</td>
+        </tr>`;
+    }
+    tbody.innerHTML = html;
+}
+
 
         async function iniciarLeitor() {
             if (!eventoSelecionado) {
@@ -1412,7 +1549,19 @@
                         filtroCongDiv.innerHTML = `🏠 <strong>Exibindo membros da congregação:</strong> ${eventoSelecionado.congregacaoNome} (ID: ${eventoSelecionado.congregacaoId})`;
                         
                         await buscarPermissoes(eventoSelecionado.tipoEventoId);
-                        
+// Substitua esta linha:
+// await debugPermissoesEvento(eventoSelecionado.tipoEventoId);
+
+// Por esta:
+const diagnostico = await diagnosticarEvento(eventoId);
+console.log('Resultado do diagnóstico:', diagnostico);
+
+// Se não houver permissões, mostrar alerta
+if (diagnostico.permissoes.length === 0) {
+    mostrarToast('⚠️ Este tipo de evento não tem permissões configuradas! Nenhum membro será listado.', 'warning');
+} else if (diagnostico.membrosAutorizados === 0 && diagnostico.membrosComCargoNivel > 0) {
+    mostrarToast('⚠️ Nenhum membro da congregação tem cargo/nível compatível com as permissões do evento!', 'warning');
+}                        
                         const statusEvento = compararDatas(eventoSelecionado.data);
                         const dataFormatada = formatarDataLocal(eventoSelecionado.data);
                         
@@ -1447,6 +1596,7 @@
                         }
                         
                         await renderizarListaMembros();
+                    
                     }
                 });
             }
@@ -1555,6 +1705,137 @@
                 window.location.href = 'login.html';
             }
         });
+
+async function debugPermissoesEvento(tipoEventoId) {
+    console.log('=== DEBUG PERMISSÕES ===');
+    console.log('Tipo Evento ID:', tipoEventoId);
+    
+    const permissoesSnapshot = await permissoesCollection
+        .where('tipoEventoId', '==', tipoEventoId)
+        .get();
+    
+    console.log('Permissões encontradas:', permissoesSnapshot.size);
+    
+    permissoesSnapshot.forEach(doc => {
+        const data = doc.data();
+        console.log(`- Cargo ID: ${data.cargoId}, Nível ID: ${data.nivelId}`);
+    });
+    
+    // Buscar todos os cargos
+    const cargosSnapshot = await cargosCollection.get();
+    console.log('\nCargos disponíveis:');
+    cargosSnapshot.forEach(doc => {
+        const data = doc.data();
+        console.log(`ID: ${data.id} - Nome: ${data.nome}`);
+    });
+    
+    // Buscar todos os níveis
+    const niveisSnapshot = await niveisCollection.get();
+    console.log('\nNíveis disponíveis:');
+    niveisSnapshot.forEach(doc => {
+        const data = doc.data();
+        console.log(`ID: ${data.id} - Nome: ${data.nome}`);
+    });
+    
+    console.log('=== FIM DEBUG ===');
+}
+
+// Adicione esta função ANTES da função listarMembrosPorEvento
+async function diagnosticarEvento(eventoId) {
+    console.log('=== DIAGNÓSTICO DO EVENTO ===');
+    
+    // Buscar evento
+    const eventoDoc = await eventosCollection.doc(eventoId).get();
+    const evento = eventoDoc.data();
+    console.log('Evento:', {
+        id: eventoId,
+        tipoEventoId: evento.tipoEventoId,
+        congregacaoId: evento.congregacaoId,
+        data: evento.data
+    });
+    
+    // Buscar permissões
+    const permissoesSnapshot = await permissoesCollection
+        .where('tipoEventoId', '==', evento.tipoEventoId)
+        .get();
+    
+    console.log('Permissões encontradas:', permissoesSnapshot.size);
+    const permissoesList = [];
+    permissoesSnapshot.forEach(doc => {
+        const data = doc.data();
+        permissoesList.push({
+            cargoId: String(data.cargoId),
+            nivelId: String(data.nivelId)
+        });
+        console.log(`Permissão: cargoId=${data.cargoId} (${typeof data.cargoId}), nivelId=${data.nivelId} (${typeof data.nivelId})`);
+    });
+    
+    // Buscar membros da congregação
+    const membrosSnapshot = await membrosCollection.get();
+    console.log(`\nMembros da congregação ${evento.congregacaoId}:`);
+    
+    let encontrouAlgum = false;
+    let membrosNaCongregacao = 0;
+    let membrosComCargoNivel = 0;
+    let membrosAutorizados = 0;
+    
+    for (const doc of membrosSnapshot.docs) {
+        const data = doc.data();
+        const membroCongregacaoId = String(data.congregacaoId);
+        const eventoCongregacaoId = String(evento.congregacaoId);
+        
+        if (membroCongregacaoId === eventoCongregacaoId) {
+            membrosNaCongregacao++;
+            const cargoId = data.cargoId ? String(data.cargoId) : null;
+            const nivelId = data.nivelId ? String(data.nivelId) : null;
+            
+            if (cargoId && nivelId) {
+                membrosComCargoNivel++;
+                
+                const autorizado = permissoesList.some(p => p.cargoId === cargoId && p.nivelId === nivelId);
+                if (autorizado) {
+                    membrosAutorizados++;
+                    encontrouAlgum = true;
+                    console.log(`✅ AUTORIZADO: ${data.nome} - cargoId: ${cargoId}, nivelId: ${nivelId}`);
+                } else {
+                    console.log(`❌ NÃO autorizado: ${data.nome} - cargoId: ${cargoId}, nivelId: ${nivelId}`);
+                }
+            } else {
+                console.log(`⚠️ SEM cargo/nível: ${data.nome} - cargoId: ${cargoId}, nivelId: ${nivelId}`);
+            }
+        }
+    }
+    
+    console.log(`\n=== RESUMO ===`);
+    console.log(`Membros na congregação: ${membrosNaCongregacao}`);
+    console.log(`Membros com cargo/nível definido: ${membrosComCargoNivel}`);
+    console.log(`Membros autorizados pelas permissões: ${membrosAutorizados}`);
+    
+    if (permissoesList.length === 0) {
+        console.log('⚠️ NENHUMA PERMISSÃO DEFINIDA para este tipo de evento!');
+        console.log('Para resolver, adicione documentos na coleção "permissoes_evento" com:');
+        console.log(`  - tipoEventoId: ${evento.tipoEventoId}`);
+        console.log('  - cargoId: ID do cargo permitido (ex: ID de "Músico")');
+        console.log('  - nivelId: ID do nível permitido (ex: ID de "Executante")');
+    }
+    
+    if (permissoesList.length > 0 && membrosAutorizados === 0) {
+        console.log('⚠️ NENHUM MEMBRO corresponde às permissões!');
+        console.log('Verifique se os IDs de cargo/nível dos membros correspondem aos IDs das permissões.');
+        console.log('Permissões esperadas:', permissoesList);
+    }
+    
+    console.log('=== FIM DIAGNÓSTICO ===');
+    
+    return {
+        temPermissoes: permissoesList.length > 0,
+        membrosNaCongregacao,
+        membrosComCargoNivel,
+        membrosAutorizados,
+        permissoes: permissoesList
+    };
+}
+
     </script>
 </body>
 </html>
