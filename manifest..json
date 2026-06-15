@@ -1,8 +1,9 @@
 {
   "name": "Controle de Presença - Orquestra - Regional Goiânia",
-  "short_name": "Controle de Presença",
+  "short_name": "Identidade CCB",
   "description": "Sistema de controle de presença para eventos Musicais da Regional Goiânia",
-  "start_url": "/",
+  "start_url": "/index.html",
+  "scope": "/",
   "display": "standalone",
   "theme_color": "#667eea",
   "background_color": "#667eea",
