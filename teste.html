@@ -1,0 +1,17 @@
+<!-- test.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="manifest" href="test-manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <meta name="theme-color" content="#667eea">
+</head>
+<body>
+    <h1>Teste PWA</h1>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js');
+        }
+    </script>
+</body>
+</html>
