@@ -1,26 +1,25 @@
-const CACHE_NAME = 'identidade-ccb-v2';
+const CACHE_NAME = 'identidade-ccb-v3';
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/presenca.html',
-  '/cadastro_evento.html',
-  '/cadastro_congregacao.html',
-  '/cadastro_instrumento.html',
-  '/cadastro_niveis.html',
-  '/login.html',
-  '/manifest.json',
-  '/presenca.png',
-  // ADICIONAR OS ÍCONES:
-  '/icons/icon-72.png',
-  '/icons/icon-96.png',
-  '/icons/icon-128.png',
-  '/icons/icon-144.png',
-  '/icons/icon-152.png',
-  '/icons/icon-192.png',
-  '/icons/icon-384.png',
-  '/icons/icon-512.png'
+  '/identidade/',
+  '/identidade/index.html',
+  '/identidade/presenca.html',
+  '/identidade/cadastro_evento.html',
+  '/identidade/cadastro_congregacao.html',
+  '/identidade/cadastro_instrumento.html',
+  '/identidade/cadastro_niveis.html',
+  '/identidade/login.html',
+  '/identidade/manifest.json',
+  '/identidade/presenca.png',
+  '/identidade/icons/icon-72.png',
+  '/identidade/icons/icon-96.png',
+  '/identidade/icons/icon-144.png',
+  '/identidade/icons/icon-152.png',
+  '/identidade/icons/icon-192.png',
+  '/identidade/icons/icon-384.png',
+  '/identidade/icons/icon-512.png'
 ];
 
+// Resto do código permanece igual...
 // Instalação do Service Worker
 self.addEventListener('install', event => {
   console.log('Service Worker instalado');
