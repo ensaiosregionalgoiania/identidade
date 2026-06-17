@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#4CAF50">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <title>PWA Teste</title>
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Ícones -->
+    <link rel="icon" type="image/png" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+        h1 { color: #2c3e50; margin-bottom: 10px; }
+        .status {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .btn-instalar {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            display: none;
+        }
+        .btn-instalar:hover { background: #45a049; }
+        .info { color: #666; font-size: 0.9rem; margin-top: 20px; }
+        .badge {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+        .detalhes {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            color: #666;
+            text-align: left;
+        }
+        .detalhes strong { color: #333; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 PWA Teste</h1>
+        <p style="color: #666; margin-bottom: 5px;">Aplicativo Progressivo</p>
+        
+        <div class="status" id="statusMsg">
+            <strong>✅ Pronto para instalar</strong><br>
+            <small>Clique no botão abaixo ou use o menu do navegador</small>
+        </div>
+        
+        <button id="btnInstalar" class="btn-instalar">📲 Instalar App</button>
+        
+        <div style="margin-top: 20px;">
+            <span class="badge">Versão 1.0.0</span>
+            <span class="badge" style="background: #2196F3;">PWA</span>
+            <span class="badge" style="background: #FF9800;">Teste</span>
+        </div>
+        
+        <div class="detalhes">
+            <strong>📄 Página:</strong> testepwa.html<br>
+            <strong>📱 Status:</strong> <span id="statusApp">Navegador</span><br>
+            <strong>🔗 URL:</strong> <span id="urlAtual">-</span>
+        </div>
+        
+        <p class="info">
+            💡 Teste de instalação PWA<br>
+            <small style="color: #999;">Abra pelo navegador e instale</small>
+        </p>
+    </div>
+
+    <script>
+        // ====== INFORMAÇÕES DA PÁGINA ======
+        document.getElementById('urlAtual').textContent = window.location.href;
+
+        // ====== DETECTAR MODO DE EXECUÇÃO ======
+        function atualizarStatus() {
+            const statusApp = document.getElementById('statusApp');
+            const statusMsg = document.getElementById('statusMsg');
+            const btnInstalar = document.getElementById('btnInstalar');
+            
+            if (window.matchMedia('(display-mode: standalone)').matches) {
+                statusApp.textContent = '📱 Standalone (App instalado)';
+                statusApp.style.color = '#2e7d32';
+                statusMsg.innerHTML = '📱 <strong>App em execução</strong><br><small>Modo standalone - instalado com sucesso!</small>';
+                btnInstalar.style.display = 'none';
+            } else if (window.matchMedia('(display-mode: fullscreen)').matches) {
+                statusApp.textContent = '🖥️ Tela Cheia';
+                statusApp.style.color = '#1976D2';
+            } else if (window.matchMedia('(display-mode: minimal-ui)').matches) {
+                statusApp.textContent = '📱 Minimal UI';
+                statusApp.style.color = '#F57C00';
+            } else {
+                statusApp.textContent = '🌐 Navegador';
+                statusApp.style.color = '#666';
+            }
+        }
+
+        // Executa ao carregar
+        atualizarStatus();
+
+        // Monitora mudanças no modo de exibição
+        window.matchMedia('(display-mode: standalone)').addEventListener('change', atualizarStatus);
+
+        // ====== INSTALAÇÃO PWA ======
+        let deferredPrompt;
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            const btn = document.getElementById('btnInstalar');
+            btn.style.display = 'inline-block';
+            
+            // Mostra que o navegador detectou o PWA
+            document.getElementById('statusMsg').innerHTML = '📲 <strong>PWA detectado!</strong><br><small>Clique em "Instalar" para adicionar à tela inicial</small>';
+        });
+
+        // Evento do botão instalar
+        document.getElementById('btnInstalar').addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const result = await deferredPrompt.userChoice;
+                console.log('Resultado da instalação:', result.outcome);
+                
+                if (result.outcome === 'accepted') {
+                    document.getElementById('statusMsg').innerHTML = '✅ <strong>Instalação concluída!</strong><br><small>O app foi adicionado à tela inicial</small>';
+                } else {
+                    document.getElementById('statusMsg').innerHTML = '⏳ <strong>Instalação cancelada</strong><br><small>Você pode tentar novamente</small>';
+                    document.getElementById('statusMsg').style.background = '#fff3cd';
+                    document.getElementById('statusMsg').style.color = '#856404';
+                }
+                
+                deferredPrompt = null;
+                document.getElementById('btnInstalar').style.display = 'none';
+            }
+        });
+
+        // Evento disparado quando o app é instalado com sucesso
+        window.addEventListener('appinstalled', () => {
+            console.log('App instalado com sucesso!');
+            document.getElementById('statusMsg').innerHTML = '✅ <strong>App instalado!</strong><br><small>Obrigado por instalar! 🎉</small>';
+            document.getElementById('statusMsg').style.background = '#e8f5e9';
+            document.getElementById('statusMsg').style.color = '#2e7d32';
+            document.getElementById('btnInstalar').style.display = 'none';
+            
+            // Atualiza o status
+            setTimeout(atualizarStatus, 1000);
+        });
+
+        // ====== LOG PARA DEBUG ======
+        console.log('🚀 PWA Teste carregado');
+        console.log('📄 Página:', window.location.href);
+        console.log('📱 Modo:', window.matchMedia('(display-mode: standalone)').matches ? 'Standalone' : 'Navegador');
+        
+        // Verifica se o manifest foi carregado
+        fetch('manifest.json')
+            .then(res => res.json())
+            .then(data => console.log('✅ Manifest carregado:', data))
+            .catch(err => console.error('❌ Erro ao carregar manifest:', err));
+
+        console.log('✅ Teste PWA pronto!');
+    </script>
+</body>
+</html>
