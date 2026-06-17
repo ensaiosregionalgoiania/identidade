@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Offline - Identidade Ministerial</title>
+    <link rel="icon" type="image/png" href="presenca.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+        
+        .offline-card {
+            background: white;
+            border-radius: 30px;
+            padding: 50px 40px;
+            max-width: 420px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.3);
+            animation: slideUp 0.6s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .offline-icon {
+            font-size: 80px;
+            margin-bottom: 10px;
+            display: block;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .wifi-icon {
+            display: inline-block;
+            font-size: 40px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            font-size: 26px;
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+        
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 16px;
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+        
+        .subtitle strong {
+            color: #667eea;
+        }
+        
+        .divider {
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            margin: 20px auto;
+            border-radius: 10px;
+        }
+        
+        .features {
+            text-align: left;
+            margin: 25px 0;
+            padding: 0 10px;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            color: #555;
+            font-size: 14px;
+        }
+        
+        .feature-item .emoji {
+            font-size: 20px;
+            min-width: 30px;
+        }
+        
+        .btn-retry {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+            width: 100%;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-retry:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-retry:active {
+            transform: translateY(0);
+        }
+        
+        .btn-retry .icon {
+            margin-right: 8px;
+        }
+        
+        .details {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #ecf0f1;
+        }
+        
+        .details p {
+            font-size: 12px;
+            color: #95a5a6;
+            line-height: 1.6;
+        }
+        
+        .details .cache-info {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 10px;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+        
+        .status-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: #e74c3c;
+            border-radius: 50%;
+            animation: blink 1.5s ease-in-out infinite;
+            margin-right: 8px;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        
+        .connection-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            color: #e74c3c;
+            margin-bottom: 15px;
+        }
+        
+        /* Modo escuro para iOS */
+        @media (prefers-color-scheme: dark) {
+            .offline-card {
+                background: #1a1a2e;
+            }
+            h1 {
+                color: #ecf0f1;
+            }
+            .subtitle {
+                color: #bdc3c7;
+            }
+            .feature-item {
+                color: #bdc3c7;
+            }
+            .details {
+                border-top-color: #2d2d44;
+            }
+            .details p {
+                color: #7f8c8d;
+            }
+            .details .cache-info {
+                background: #2d2d44;
+                color: #bdc3c7;
+            }
+            .connection-status {
+                color: #e74c3c;
+            }
+        }
+        
+        /* Responsivo */
+        @media (max-width: 480px) {
+            .offline-card {
+                padding: 35px 25px;
+            }
+            .offline-icon {
+                font-size: 60px;
+            }
+            h1 {
+                font-size: 22px;
+            }
+            .subtitle {
+                font-size: 14px;
+            }
+            .btn-retry {
+                padding: 12px 30px;
+                font-size: 15px;
+            }
+        }
+        
+        /* Suporte para iPhone notch */
+        @supports (padding: max(0px)) {
+            .offline-card {
+                padding-left: max(25px, env(safe-area-inset-left));
+                padding-right: max(25px, env(safe-area-inset-right));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-card">
+        <!-- Ícone principal -->
+        <span class="offline-icon">📡</span>
+        
+        <!-- Status de conexão -->
+        <div class="connection-status">
+            <span class="status-dot"></span>
+            Sem conexão com a internet
+        </div>
+        
+        <!-- Título -->
+        <h1>Você está offline</h1>
+        
+        <!-- Subtítulo -->
+        <p class="subtitle">
+            Não se preocupe! Você pode continuar usando o 
+            <strong>Identidade Ministerial</strong> com alguns dados salvos.
+        </p>
+        
+        <!-- Divisor -->
+        <div class="divider"></div>
+        
+        <!-- Funcionalidades disponíveis offline -->
+        <div class="features">
+            <div class="feature-item">
+                <span class="emoji">✅</span>
+                <span>Visualizar membros cadastrados</span>
+            </div>
+            <div class="feature-item">
+                <span class="emoji">📋</span>
+                <span>Registrar presenças (sincroniza depois)</span>
+            </div>
+            <div class="feature-item">
+                <span class="emoji">🔍</span>
+                <span>Buscar por membros</span>
+            </div>
+            <div class="feature-item">
+                <span class="emoji">📱</span>
+                <span>QR Codes dos membros</span>
+            </div>
+        </div>
+        
+        <!-- Botão Tentar Novamente -->
+        <button class="btn-retry" onclick="tentarReconectar()">
+            <span class="icon">🔄</span>
+            Tentar reconectar agora
+        </button>
+        
+        <!-- Informações adicionais -->
+        <div class="details">
+            <p>
+                ⚡ Os dados salvos serão sincronizados automaticamente 
+                quando você voltar a ter internet.
+            </p>
+            <div class="cache-info">
+                📦 Cache local ativo • Dados disponíveis offline
+            </div>
+            <p style="margin-top: 10px; font-size: 11px; color: #bdc3c7;">
+                Versão 1.0.0 • Última sincronização: <span id="lastSync">Carregando...</span>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Mostrar última sincronização
+        document.addEventListener('DOMContentLoaded', function() {
+            const lastSync = localStorage.getItem('lastSyncTime');
+            if (lastSync) {
+                const date = new Date(parseInt(lastSync));
+                document.getElementById('lastSync').textContent = 
+                    date.toLocaleString('pt-BR', { 
+                        day: '2-digit', 
+                        month: '2-digit', 
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+            } else {
+                document.getElementById('lastSync').textContent = 'Nunca sincronizado';
+            }
+        });
+
+        // Função para tentar reconectar
+        function tentarReconectar() {
+            const btn = document.querySelector('.btn-retry');
+            btn.textContent = '🔄 Verificando conexão...';
+            btn.disabled = true;
+            
+            // Tentar carregar um recurso da internet
+            fetch('/identidade/manifest.json', { 
+                method: 'HEAD',
+                cache: 'no-cache',
+                mode: 'no-cors'
+            })
+            .then(() => {
+                // Conseguiu carregar - tem internet
+                btn.textContent = '✅ Conectado! Redirecionando...';
+                setTimeout(() => {
+                    window.location.href = '/identidade/index.html';
+                }, 1000);
+            })
+            .catch(() => {
+                // Ainda offline
+                btn.innerHTML = '🔄 Tentar reconectar agora';
+                btn.disabled = false;
+                
+                // Feedback visual
+                const status = document.querySelector('.connection-status');
+                status.innerHTML = `
+                    <span class="status-dot" style="background: #f39c12;"></span>
+                    Ainda sem conexão
+                `;
+                
+                // Mostrar toast de erro
+                mostrarNotificacao('❌ Ainda sem conexão com a internet', 'error');
+            });
+        }
+
+        // Notificação simples
+        function mostrarNotificacao(msg, tipo = 'info') {
+            const existing = document.querySelector('.offline-toast');
+            if (existing) existing.remove();
+            
+            const toast = document.createElement('div');
+            toast.className = 'offline-toast';
+            toast.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: ${tipo === 'error' ? '#e74c3c' : '#3498db'};
+                color: white;
+                padding: 12px 24px;
+                border-radius: 12px;
+                font-size: 14px;
+                z-index: 9999;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+                animation: slideUp 0.3s ease-out;
+                max-width: 90%;
+                text-align: center;
+                font-weight: 500;
+            `;
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Detectar mudança de conexão (online/offline)
+        window.addEventListener('online', function() {
+            const status = document.querySelector('.connection-status');
+            status.innerHTML = `
+                <span class="status-dot" style="background: #27ae60; animation: none;"></span>
+                Conexão restaurada! Clique em "Tentar reconectar"
+            `;
+            status.style.color = '#27ae60';
+            
+            mostrarNotificacao('✅ Conexão com a internet restaurada!', 'success');
+            
+            // Atualizar botão
+            const btn = document.querySelector('.btn-retry');
+            btn.innerHTML = '🔄 Reconectar agora';
+            btn.disabled = false;
+        });
+
+        window.addEventListener('offline', function() {
+            const status = document.querySelector('.connection-status');
+            status.innerHTML = `
+                <span class="status-dot"></span>
+                Sem conexão com a internet
+            `;
+            status.style.color = '#e74c3c';
+        });
+
+        // Detectar se é iOS para ajustes
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        if (isIOS) {
+            document.querySelector('.offline-card').style.borderRadius = '40px';
+            document.querySelector('.offline-card').style.paddingTop = '60px';
+        }
+
+        // Detectar se é modo escuro
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.querySelector('.status-dot').style.background = '#e74c3c';
+        }
+
+        console.log('📡 Página offline carregada');
+        console.log('📱 Plataforma:', isIOS ? 'iOS' : (navigator.userAgent.includes('Android') ? 'Android' : 'Desktop'));
+        console.log('📦 Cache disponível:', 'caches' in window ? 'Sim' : 'Não');
+    </script>
+</body>
+</html>

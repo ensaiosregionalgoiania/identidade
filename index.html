@@ -2,23 +2,75 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
     <title>Eventos Musicais - 1 - Regional Goiânia</title>
-    <link rel="icon" type="image/png" href="presenca.png">
-    <!-- Substitua as tags existentes por estas: -->
-    <!-- Favicon padrão (para abas do navegador) -->
     
-    <!-- Ícones e configurações para iPhone/iOS -->
-    <link rel="apple-touch-icon" href="icon-192.png">
+    <!-- ===== CONFIGURAÇÕES PWA ===== -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- ===== FAVICON GERAL ===== -->
+    <link rel="icon" type="image/png" href="presenca.png">
+    
+    <!-- ===== iOS - APPLE TOUCH ICONS ===== -->
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="icons/icon-144.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="icons/icon-120.png">
+    <link rel="apple-touch-icon" sizes="76x76" href="icons/icon-76.png">
+    
+    <!-- ===== iOS - SPLASH SCREENS ===== -->
+    <!-- iPhone 14/15/16 (6.7") -->
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/iPhone-15-Pro-Max-Portrait.png">
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" href="splash/iPhone-15-Pro-Max-Landscape.png">
+    
+    <!-- iPhone 14/15/16 (6.1") -->
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/iPhone-15-Pro-Portrait.png">
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" href="splash/iPhone-15-Pro-Landscape.png">
+    
+    <!-- iPhone 13/14 (6.1") -->
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/iPhone-14-Portrait.png">
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" href="splash/iPhone-14-Landscape.png">
+    
+    <!-- iPhone 13 mini (5.4") -->
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/iPhone-13-mini-Portrait.png">
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" href="splash/iPhone-13-mini-Landscape.png">
+    
+    <!-- iPhone SE (2022) (4.7") -->
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="splash/iPhone-SE-Portrait.png">
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" href="splash/iPhone-SE-Landscape.png">
+    
+    <!-- iPad Pro 12.9" -->
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="splash/iPad-Pro-12.9-Portrait.png">
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" href="splash/iPad-Pro-12.9-Landscape.png">
+    
+    <!-- iPad Air 10.9" -->
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 820px) and (device-height: 1180px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="splash/iPad-Air-Portrait.png">
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 820px) and (device-height: 1180px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" href="splash/iPad-Air-Landscape.png">
+    
+    <!-- ===== iOS - CONFIGURAÇÕES DE STATUS BAR ===== -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Presenca">
-    <link rel="manifest" href="manifest.json">
-
+    <meta name="apple-mobile-web-app-title" content="Identidade">
+    
+    <!-- ===== iOS - PREVENIR ZOOM AUTOMÁTICO ===== -->
+    <meta name="format-detection" content="telephone=no">
+    <meta name="format-detection" content="address=no">
+    
+    <!-- ===== ANDROID - CONFIGURAÇÕES ===== -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#667eea">
+    <meta name="background-color" content="#667eea">
+    
+    <!-- ===== CORES DA STATUS BAR ===== -->
+    <meta name="apple-status-bar-style" content="black-translucent">
+    <meta name="msapplication-navbutton-color" content="#667eea">
+    
+    <!-- ===== SCRIPTS DO FIREBASE ===== -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -195,6 +247,7 @@
         }
     </style>
 </head>
+
 <body>
     <div id="loadingScreen" class="loading-screen">
         <div class="spinner"></div>

@@ -1,23 +1,98 @@
 {
-  "name": "Identidade Ministerial - Controle de Presença",
+  "name": "Identidade Ministerial",
   "short_name": "Identidade",
   "description": "Sistema de controle de presença para eventos musicais",
-  "start_url": "/identidade/",
+  "start_url": "/identidade/index.html",
   "scope": "/identidade/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#667eea",
   "theme_color": "#667eea",
+  "categories": ["productivity", "business"],
+  "lang": "pt-BR",
+  "dir": "ltr",
   "icons": [
     {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
+      "src": "/identidade/icons/icon-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "icon-512.png",
+      "src": "/identidade/icons/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/identidade/icons/icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/identidade/icons/icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/identidade/icons/icon-152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/identidade/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/identidade/icons/icon-384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/identidade/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/identidade/icons/icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "apple-touch-icon"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Presença",
+      "short_name": "Presença",
+      "description": "Registrar presença",
+      "url": "/identidade/presenca.html",
+      "icons": [
+        {
+          "src": "/identidade/icons/icon-96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Membros",
+      "short_name": "Membros",
+      "description": "Gerenciar membros",
+      "url": "/identidade/index.html",
+      "icons": [
+        {
+          "src": "/identidade/icons/icon-96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }
