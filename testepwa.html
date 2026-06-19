@@ -2,112 +2,219 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#4CAF50">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="PWA Teste">
     
-    <title>PWA Teste</title>
+    <title>PWA Teste 1</title>
     
     <!-- Manifest -->
     <link rel="manifest" href="manifest.json">
     
     <!-- Ícones -->
-    <link rel="icon" type="image/png" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
     <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png">
+    <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png">
     
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
-            font-family: Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
+            padding: 20px;
         }
+        
         .container {
             background: white;
             padding: 40px;
             border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             text-align: center;
             max-width: 400px;
-            width: 90%;
+            width: 100%;
+            transition: all 0.3s ease;
         }
-        h1 { color: #2c3e50; margin-bottom: 10px; }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 5px;
+            font-size: 2rem;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 0.95rem;
+        }
+        
         .status {
             background: #e8f5e9;
             color: #2e7d32;
             padding: 15px;
             border-radius: 10px;
             margin: 20px 0;
+            transition: all 0.3s ease;
         }
+        
         .btn-instalar {
             background: #4CAF50;
             color: white;
             border: none;
-            padding: 12px 30px;
-            border-radius: 8px;
+            padding: 14px 35px;
+            border-radius: 10px;
             font-size: 1.1rem;
+            font-weight: 600;
             cursor: pointer;
             display: none;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin: 10px 0;
         }
-        .btn-instalar:hover { background: #45a049; }
-        .info { color: #666; font-size: 0.9rem; margin-top: 20px; }
+        
+        .btn-instalar:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+        }
+        
+        .btn-instalar:active {
+            transform: translateY(0);
+        }
+        
+        .btn-instalar.visivel {
+            display: block;
+        }
+        
+        .badges {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
         .badge {
             display: inline-block;
-            background: #4CAF50;
-            color: white;
-            padding: 4px 12px;
+            padding: 4px 14px;
             border-radius: 20px;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
+        
+        .badge-green { background: #4CAF50; color: white; }
+        .badge-blue { background: #2196F3; color: white; }
+        .badge-orange { background: #FF9800; color: white; }
+        .badge-purple { background: #9C27B0; color: white; }
+        
         .detalhes {
-            margin-top: 15px;
-            padding: 10px;
-            background: #f5f5f5;
-            border-radius: 8px;
-            font-size: 0.8rem;
-            color: #666;
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            color: #555;
             text-align: left;
+            border: 1px solid #e9ecef;
         }
-        .detalhes strong { color: #333; }
+        
+        .detalhes strong {
+            color: #333;
+            display: inline-block;
+            min-width: 80px;
+        }
+        
+        .detalhes .linha {
+            padding: 4px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .detalhes .linha:last-child {
+            border-bottom: none;
+        }
+        
+        .info {
+            color: #999;
+            font-size: 0.8rem;
+            margin-top: 20px;
+            line-height: 1.6;
+        }
+        
+        .icone-grande {
+            font-size: 4rem;
+            margin-bottom: 10px;
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 30px 20px;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🚀 PWA Teste 1</h1>
-        <p style="color: #666; margin-bottom: 5px;">Aplicativo Progressivo</p>
+        <div class="icone-grande">🚀</div>
+        <h1>PWA Teste 1</h1>
+        <p class="subtitle">Aplicativo Progressivo</p>
         
         <div class="status" id="statusMsg">
             <strong>✅ Pronto para instalar</strong><br>
-            <small>Clique no botão abaixo ou use o menu do navegador</small>
+            <small>Clique no botão abaixo para instalar</small>
         </div>
         
-        <button id="btnInstalar" class="btn-instalar">📲 Instalar App</button>
+        <button id="btnInstalar" class="btn-instalar">📲 Instalar Aplicativo</button>
         
-        <div style="margin-top: 20px;">
-            <span class="badge">Versão 1.0.0</span>
-            <span class="badge" style="background: #2196F3;">PWA</span>
-            <span class="badge" style="background: #FF9800;">Teste</span>
+        <div class="badges">
+            <span class="badge badge-green">Versão 1.0.0</span>
+            <span class="badge badge-blue">PWA</span>
+            <span class="badge badge-orange">Teste</span>
+            <span class="badge badge-purple">Offline</span>
         </div>
         
         <div class="detalhes">
-            <strong>📄 Página:</strong> testepwa.html<br>
-            <strong>📱 Status:</strong> <span id="statusApp">Navegador</span><br>
-            <strong>🔗 URL:</strong> <span id="urlAtual">-</span>
+            <div class="linha">
+                <strong>📄 Página:</strong> <span id="nomePagina">index.html</span>
+            </div>
+            <div class="linha">
+                <strong>📱 Status:</strong> <span id="statusApp">Carregando...</span>
+            </div>
+            <div class="linha">
+                <strong>🔗 URL:</strong> <span id="urlAtual">-</span>
+            </div>
+            <div class="linha">
+                <strong>🔄 Cache:</strong> <span id="cacheStatus">-</span>
+            </div>
         </div>
         
         <p class="info">
-            💡 Teste de instalação PWA<br>
-            <small style="color: #999;">Abra pelo navegador e instale</small>
+            💡 Abra pelo navegador e instale o app<br>
+            <small style="color: #bbb;">Funciona offline após instalação</small>
         </p>
     </div>
 
     <script>
         // ====== INFORMAÇÕES DA PÁGINA ======
         document.getElementById('urlAtual').textContent = window.location.href;
+        document.getElementById('nomePagina').textContent = window.location.pathname.split('/').pop() || 'index.html';
 
         // ====== DETECTAR MODO DE EXECUÇÃO ======
         function atualizarStatus() {
@@ -115,10 +222,14 @@
             const statusMsg = document.getElementById('statusMsg');
             const btnInstalar = document.getElementById('btnInstalar');
             
+            // Detecta o modo de exibição
             if (window.matchMedia('(display-mode: standalone)').matches) {
-                statusApp.textContent = '📱 Standalone (App instalado)';
+                statusApp.textContent = '📱 Standalone (Instalado)';
                 statusApp.style.color = '#2e7d32';
-                statusMsg.innerHTML = '📱 <strong>App em execução</strong><br><small>Modo standalone - instalado com sucesso!</small>';
+                statusMsg.innerHTML = '📱 <strong>App em execução</strong><br><small>Modo standalone - instalado com sucesso! 🎉</small>';
+                statusMsg.style.background = '#e8f5e9';
+                statusMsg.style.color = '#2e7d32';
+                btnInstalar.classList.remove('visivel');
                 btnInstalar.style.display = 'none';
             } else if (window.matchMedia('(display-mode: fullscreen)').matches) {
                 statusApp.textContent = '🖥️ Tela Cheia';
@@ -129,14 +240,30 @@
             } else {
                 statusApp.textContent = '🌐 Navegador';
                 statusApp.style.color = '#666';
+                
+                // Se está no navegador, mostra o botão
+                if (!document.getElementById('btnInstalar').classList.contains('visivel')) {
+                    // O botão será mostrado pelo evento beforeinstallprompt
+                }
             }
         }
 
         // Executa ao carregar
-        atualizarStatus();
+        setTimeout(atualizarStatus, 100);
 
         // Monitora mudanças no modo de exibição
         window.matchMedia('(display-mode: standalone)').addEventListener('change', atualizarStatus);
+
+        // ====== VERIFICAR CACHE ======
+        if ('caches' in window) {
+            caches.keys().then(keys => {
+                document.getElementById('cacheStatus').textContent = keys.length > 0 ? '✅ Ativo' : '⏳ Aguardando';
+            }).catch(() => {
+                document.getElementById('cacheStatus').textContent = '❌ Indisponível';
+            });
+        } else {
+            document.getElementById('cacheStatus').textContent = '❌ Não suportado';
+        }
 
         // ====== INSTALAÇÃO PWA ======
         let deferredPrompt;
@@ -146,43 +273,93 @@
             deferredPrompt = e;
             
             const btn = document.getElementById('btnInstalar');
-            btn.style.display = 'inline-block';
+            btn.classList.add('visivel');
+            btn.style.display = 'block';
             
             // Mostra que o navegador detectou o PWA
             document.getElementById('statusMsg').innerHTML = '📲 <strong>PWA detectado!</strong><br><small>Clique em "Instalar" para adicionar à tela inicial</small>';
+            document.getElementById('statusMsg').style.background = '#e3f2fd';
+            document.getElementById('statusMsg').style.color = '#0d47a1';
+            
+            console.log('✅ beforeinstallprompt disparado');
         });
 
         // Evento do botão instalar
         document.getElementById('btnInstalar').addEventListener('click', async () => {
             if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const result = await deferredPrompt.userChoice;
-                console.log('Resultado da instalação:', result.outcome);
-                
-                if (result.outcome === 'accepted') {
-                    document.getElementById('statusMsg').innerHTML = '✅ <strong>Instalação concluída!</strong><br><small>O app foi adicionado à tela inicial</small>';
-                } else {
-                    document.getElementById('statusMsg').innerHTML = '⏳ <strong>Instalação cancelada</strong><br><small>Você pode tentar novamente</small>';
-                    document.getElementById('statusMsg').style.background = '#fff3cd';
-                    document.getElementById('statusMsg').style.color = '#856404';
+                try {
+                    deferredPrompt.prompt();
+                    const result = await deferredPrompt.userChoice;
+                    console.log('Resultado da instalação:', result.outcome);
+                    
+                    if (result.outcome === 'accepted') {
+                        document.getElementById('statusMsg').innerHTML = '✅ <strong>Instalação concluída!</strong><br><small>O app foi adicionado à tela inicial</small>';
+                        document.getElementById('statusMsg').style.background = '#e8f5e9';
+                        document.getElementById('statusMsg').style.color = '#2e7d32';
+                        document.getElementById('btnInstalar').style.display = 'none';
+                    } else {
+                        document.getElementById('statusMsg').innerHTML = '⏳ <strong>Instalação cancelada</strong><br><small>Você pode tentar novamente</small>';
+                        document.getElementById('statusMsg').style.background = '#fff3cd';
+                        document.getElementById('statusMsg').style.color = '#856404';
+                    }
+                    
+                    deferredPrompt = null;
+                } catch (error) {
+                    console.error('Erro na instalação:', error);
+                    document.getElementById('statusMsg').innerHTML = '❌ <strong>Erro na instalação</strong><br><small>Tente novamente ou use o menu do navegador</small>';
+                    document.getElementById('statusMsg').style.background = '#f8d7da';
+                    document.getElementById('statusMsg').style.color = '#721c24';
                 }
+            } else {
+                // Fallback: tenta instalar via menu do navegador
+                document.getElementById('statusMsg').innerHTML = 'ℹ️ <strong>Use o menu do navegador</strong><br><small>Clique nos 3 pontos e selecione "Instalar"</small>';
+                document.getElementById('statusMsg').style.background = '#e3f2fd';
+                document.getElementById('statusMsg').style.color = '#0d47a1';
                 
-                deferredPrompt = null;
-                document.getElementById('btnInstalar').style.display = 'none';
+                // Tenta abrir o prompt de instalação alternativo
+                if (window.navigator && window.navigator.share) {
+                    try {
+                        await navigator.share({
+                            title: 'PWA Teste',
+                            text: 'Instale este app!',
+                            url: window.location.href
+                        });
+                    } catch (err) {
+                        console.log('Share cancelado');
+                    }
+                }
             }
         });
 
         // Evento disparado quando o app é instalado com sucesso
         window.addEventListener('appinstalled', () => {
-            console.log('App instalado com sucesso!');
+            console.log('✅ App instalado com sucesso!');
             document.getElementById('statusMsg').innerHTML = '✅ <strong>App instalado!</strong><br><small>Obrigado por instalar! 🎉</small>';
             document.getElementById('statusMsg').style.background = '#e8f5e9';
             document.getElementById('statusMsg').style.color = '#2e7d32';
             document.getElementById('btnInstalar').style.display = 'none';
             
-            // Atualiza o status
+            // Atualiza o status após um delay
             setTimeout(atualizarStatus, 1000);
         });
+
+        // ====== REGISTRAR SERVICE WORKER ======
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('✅ Service Worker registrado com sucesso:', registration);
+                        document.getElementById('cacheStatus').textContent = '✅ Registrado';
+                    })
+                    .catch(err => {
+                        console.error('❌ Erro ao registrar Service Worker:', err);
+                        document.getElementById('cacheStatus').textContent = '❌ Erro';
+                    });
+            });
+        } else {
+            console.warn('⚠️ Service Worker não suportado neste navegador');
+            document.getElementById('cacheStatus').textContent = '❌ Não suportado';
+        }
 
         // ====== LOG PARA DEBUG ======
         console.log('🚀 PWA Teste carregado');
